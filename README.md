@@ -111,7 +111,7 @@ python -m http.server 3000 --directory public
 npx serve public
 ```
 
-The frontend automatically detects when it is running on a local dev server (any `localhost` port other than 80/443) and points API calls directly at `http://localhost:5000/api`. No configuration needed.
+The frontend automatically detects when it is running on a local dev server (any `localhost` port other than 80/443) and points API calls directly at `http://localhost:5074/api`. No configuration needed.
 
 ---
 
