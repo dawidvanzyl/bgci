@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="Api/Api.csproj" />
+  <Project Path="BggIntegration.Application/BggIntegration.Application.csproj" />
+  <Project Path="BggIntegration.Domain/BggIntegration.Domain.csproj" />
+  <Project Path="BggIntegration.Infrastructure/BggIntegration.Infrastructure.csproj" />
+  <Project Path="GameCollection.Application/GameCollection.Application.csproj" />
+  <Project Path="GameCollection.Domain/GameCollection.Domain.csproj" />
+  <Project Path="GameCollection.Infrastructure/GameCollection.Infrastructure.csproj" />
+</Solution>

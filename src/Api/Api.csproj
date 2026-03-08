@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\GameCollection.Application\GameCollection.Application.csproj" />
+    <ProjectReference Include="..\GameCollection.Infrastructure\GameCollection.Infrastructure.csproj" />
+    <ProjectReference Include="..\BggIntegration.Application\BggIntegration.Application.csproj" />
+    <ProjectReference Include="..\BggIntegration.Infrastructure\BggIntegration.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR" Version="14.1.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

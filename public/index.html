@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BoardGame Collection Insights</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>BoardGame Collection Insights</h1>
+      <button id="btn-add-manual" class="btn btn-primary">+ Add Manually</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Search / Filter Bar -->
+    <section class="toolbar">
+      <input id="filter-input" type="text" placeholder="Filter your collection..." autocomplete="off" />
+      <div class="bgg-search-wrap">
+        <input id="bgg-search-input" type="text" placeholder="Search BGG to add a game..." autocomplete="off" />
+        <ul id="bgg-search-results" class="dropdown" hidden></ul>
+      </div>
+    </section>
+
+    <!-- Game Cards -->
+    <section id="game-grid" class="game-grid">
+      <div class="empty-state" id="empty-state">
+        <p>No games in your collection yet.<br>Search BGG or add one manually.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal: Add / Edit Game -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-title">Add Game</h2>
+        <button id="modal-close" class="btn-icon">&times;</button>
+      </div>
+      <form id="game-form" novalidate>
+        <input type="hidden" id="form-id" />
+        <input type="hidden" id="form-bgg-id" />
+
+        <div class="form-grid">
+          <div class="form-group full">
+            <label for="form-name">Name *</label>
+            <input id="form-name" type="text" required />
+          </div>
+          <div class="form-group">
+            <label for="form-year">Year</label>
+            <input id="form-year" type="number" min="1900" max="2100" />
+          </div>
+          <div class="form-group">
+            <label for="form-bgg-rating">BGG Rating</label>
+            <input id="form-bgg-rating" type="number" min="0" max="10" step="0.1" />
+          </div>
+          <div class="form-group">
+            <label for="form-min-players">Min Players</label>
+            <input id="form-min-players" type="number" min="1" />
+          </div>
+          <div class="form-group">
+            <label for="form-max-players">Max Players</label>
+            <input id="form-max-players" type="number" min="1" />
+          </div>
+          <div class="form-group">
+            <label for="form-play-time">Play Time (min)</label>
+            <input id="form-play-time" type="number" min="0" />
+          </div>
+          <div class="form-group full">
+            <label for="form-cover">Cover Image URL</label>
+            <input id="form-cover" type="url" />
+          </div>
+          <div class="form-group full">
+            <label for="form-categories">Categories <span class="hint">(comma-separated)</span></label>
+            <input id="form-categories" type="text" />
+          </div>
+          <div class="form-group full">
+            <label for="form-mechanics">Mechanics <span class="hint">(comma-separated)</span></label>
+            <input id="form-mechanics" type="text" />
+          </div>
+          <div class="form-group full">
+            <label for="form-description">Description</label>
+            <textarea id="form-description" rows="4"></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="btn-cancel" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="btn-save" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirm Delete Dialog -->
+  <div id="confirm-overlay" class="modal-overlay hidden">
+    <div class="modal modal-sm">
+      <h2>Remove Game?</h2>
+      <p id="confirm-message"></p>
+      <div class="form-actions">
+        <button id="btn-confirm-cancel" class="btn btn-secondary">Cancel</button>
+        <button id="btn-confirm-delete" class="btn btn-danger">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
