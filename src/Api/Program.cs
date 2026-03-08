@@ -21,7 +21,7 @@ builder.Services.AddMediatR(cfg =>
 
 // Infrastructure
 builder.Services.AddGameCollectionInfrastructure(connectionString);
-builder.Services.AddBggIntegrationInfrastructure();
+builder.Services.AddBggIntegrationInfrastructure(builder.Configuration);
 
 // CORS — allow the nginx-served frontend
 builder.Services.AddCors(options =>

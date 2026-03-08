@@ -31,3 +31,4 @@ Thumbs.db
 # Environment / secrets
 .env
 *.env.local
+appsettings.Development.json
