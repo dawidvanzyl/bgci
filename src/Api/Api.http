@@ -1,6 +1,84 @@
-@Api_HostAddress = http://localhost:5074
+@Api_HostAddress = http://localhost:5000
 
-GET {{Api_HostAddress}}/weatherforecast/
+### Get all games
+GET {{Api_HostAddress}}/api/games
+Accept: application/json
+
+###
+
+### Get game by ID
+GET {{Api_HostAddress}}/api/games/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+###
+
+### Add game manually
+POST {{Api_HostAddress}}/api/games
+Content-Type: application/json
+
+{
+  "name": "Wingspan",
+  "year": 2019,
+  "description": "A competitive bird-collection, engine-building game.",
+  "minPlayers": 1,
+  "maxPlayers": 5,
+  "playTimeMinutes": 70,
+  "bggRating": 8.1,
+  "coverImageUrl": null,
+  "categories": ["Animals", "Card Game"],
+  "mechanics": ["Card Drafting", "Engine Building"]
+}
+
+###
+
+### Add game from BGG
+POST {{Api_HostAddress}}/api/games/from-bgg
+Content-Type: application/json
+
+{
+  "bggGameId": 266192
+}
+
+###
+
+### Update game
+PUT {{Api_HostAddress}}/api/games/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "name": "Wingspan",
+  "year": 2019,
+  "description": "Updated description.",
+  "minPlayers": 1,
+  "maxPlayers": 5,
+  "playTimeMinutes": 70,
+  "bggRating": 8.1,
+  "coverImageUrl": null,
+  "categories": ["Animals", "Card Game"],
+  "mechanics": ["Card Drafting", "Engine Building"]
+}
+
+###
+
+### Delete game
+DELETE {{Api_HostAddress}}/api/games/00000000-0000-0000-0000-000000000000
+
+###
+
+### Search BGG
+GET {{Api_HostAddress}}/api/bgg/search?q=wingspan
+Accept: application/json
+
+###
+
+### Get BGG game details
+GET {{Api_HostAddress}}/api/bgg/game/266192
+Accept: application/json
+
+###
+
+### Preview BGG game (pre-translated command)
+GET {{Api_HostAddress}}/api/bgg/game/266192/preview
 Accept: application/json
 
 ###
