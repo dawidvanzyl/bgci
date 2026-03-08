@@ -97,7 +97,7 @@ cd src/Api
 dotnet run
 ```
 
-The API starts on `http://localhost:5000` by default. In development mode it uses `appsettings.Development.json`, which stores the SQLite database as `bgci.db` in the `src/Api/` working directory.
+The API starts on `http://localhost:5074` by default. In development mode it uses `appsettings.Development.json`, which stores the SQLite database as `bgci.db` in the `src/Api/` working directory.
 
 ### Frontend
 
