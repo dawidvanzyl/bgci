@@ -111,11 +111,7 @@ python -m http.server 3000 --directory public
 npx serve public
 ```
 
-> **Note:** When running without Docker the frontend calls `/api/*`, which assumes a reverse proxy. For local development without nginx, update the `API` constant at the top of `public/app.js` to point directly at the API:
->
-> ```js
-> const API = 'http://localhost:5000/api';
-> ```
+The frontend automatically detects when it is running on a local dev server (any `localhost` port other than 80/443) and points API calls directly at `http://localhost:5000/api`. No configuration needed.
 
 ---
 

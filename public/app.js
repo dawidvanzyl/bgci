@@ -1,4 +1,5 @@
-const API = '/api';
+const isDev = window.location.hostname === 'localhost' && !['80', '443', ''].includes(window.location.port);
+const API = isDev ? 'http://localhost:5000/api' : '/api';
 
 // ── State ──────────────────────────────────────────────────
 let allGames = [];
