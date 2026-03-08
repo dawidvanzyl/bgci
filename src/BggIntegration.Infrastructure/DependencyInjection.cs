@@ -22,7 +22,7 @@ public static class DependencyInjection
 
             if (!string.IsNullOrWhiteSpace(bearerToken))
                 client.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", bearerToken);
+                    new AuthenticationHeaderValue("Bearer", bearerToken.Trim());
         });
 
         services.AddScoped<IBggTranslator, BggTranslator>();
