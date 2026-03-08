@@ -97,7 +97,7 @@ cd src/Api
 dotnet run
 ```
 
-The API starts on `http://localhost:5000` by default. In development mode it uses `appsettings.Development.json`, which stores the SQLite database as `bgci.db` in the `src/Api/` working directory.
+The API starts on `http://localhost:5074` by default. In development mode it uses `appsettings.Development.json`, which stores the SQLite database as `bgci.db` in the `src/Api/` working directory.
 
 ### Frontend
 
@@ -111,7 +111,7 @@ python -m http.server 3000 --directory public
 npx serve public
 ```
 
-The frontend automatically detects when it is running on a local dev server (any `localhost` port other than 80/443) and points API calls directly at `http://localhost:5000/api`. No configuration needed.
+The frontend automatically detects when it is running on a local dev server (any `localhost` port other than 80/443) and points API calls directly at `http://localhost:5074/api`. No configuration needed.
 
 ---
 
