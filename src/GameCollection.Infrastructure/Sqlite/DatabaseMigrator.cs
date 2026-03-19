@@ -1,7 +1,7 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
 
-namespace GameCollection.Infrastructure.Persistence;
+namespace GameCollection.Infrastructure.Sqlite;
 
 public class DatabaseMigrator
 {

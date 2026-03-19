@@ -43,6 +43,10 @@ function bindEvents() {
     if (!bggResults.contains(e.target) && e.target !== bggSearchInput) hideBggResults();
   });
 
+  document.getElementById('form-cover').addEventListener('input', e => {
+    updateCoverPreview(e.target.value.trim());
+  });
+
   document.getElementById('btn-confirm-cancel').addEventListener('click', () => {
     confirmOverlay.classList.add('hidden');
     deleteTargetId = null;
@@ -91,7 +95,7 @@ async function deleteGame(id) {
 async function searchBgg(q) {
   showBggLoading();
   try {
-    const res = await fetch(`${API}/bgg/search?q=${encodeURIComponent(q)}`);
+    const res = await fetch(`${API}/bgg/search?query=${encodeURIComponent(q)}`);
     const data = await res.json();
     renderBggResults(data);
   } catch {
@@ -209,11 +213,34 @@ async function selectBggGame(result) {
   openModal(null, preview);
 }
 
+// ── Cover Image Preview ────────────────────────────────────
+function updateCoverPreview(url) {
+  const container = document.getElementById('cover-preview');
+  if (!url) {
+    container.textContent = '';
+    container.innerHTML = '&#127921;';
+    container.className = 'cover-preview-box cover-preview-empty';
+    return;
+  }
+  const img = document.createElement('img');
+  img.src = url;
+  img.alt = 'Cover preview';
+  img.className = 'cover-preview-box';
+  img.onerror = () => {
+    container.innerHTML = '&#127921;';
+    container.className = 'cover-preview-box cover-preview-empty';
+  };
+  container.className = '';
+  container.innerHTML = '';
+  container.appendChild(img);
+}
+
 // ── Modal ──────────────────────────────────────────────────
 function openModal(game = null, bggPreview = null) {
   gameForm.reset();
   document.getElementById('form-id').value = '';
   document.getElementById('form-bgg-id').value = '';
+  updateCoverPreview('');
 
   if (game) {
     modalTitle.textContent = 'Edit Game';
@@ -226,6 +253,7 @@ function openModal(game = null, bggPreview = null) {
     document.getElementById('form-max-players').value  = game.maxPlayers ?? '';
     document.getElementById('form-play-time').value    = game.playTimeMinutes ?? '';
     document.getElementById('form-cover').value        = game.coverImageUrl ?? '';
+    updateCoverPreview(game.coverImageUrl ?? '');
     document.getElementById('form-categories').value   = (game.categories || []).join(', ');
     document.getElementById('form-mechanics').value    = (game.mechanics  || []).join(', ');
     document.getElementById('form-description').value  = game.description ?? '';
@@ -239,6 +267,7 @@ function openModal(game = null, bggPreview = null) {
     document.getElementById('form-max-players').value  = bggPreview.maxPlayers ?? '';
     document.getElementById('form-play-time').value    = bggPreview.playTimeMinutes ?? '';
     document.getElementById('form-cover').value        = bggPreview.coverImageUrl ?? '';
+    updateCoverPreview(bggPreview.coverImageUrl ?? '');
     document.getElementById('form-categories').value   = (bggPreview.categories || []).join(', ');
     document.getElementById('form-mechanics').value    = (bggPreview.mechanics  || []).join(', ');
     document.getElementById('form-description').value  = bggPreview.description ?? '';

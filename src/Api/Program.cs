@@ -1,13 +1,9 @@
 using BggIntegration.Infrastructure;
 using GameCollection.Application;
 using GameCollection.Infrastructure;
-using GameCollection.Infrastructure.Persistence;
+using GameCollection.Infrastructure.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Configuration
-var dbPath = builder.Configuration["Database:Path"] ?? "/data/bgci.db";
-var connectionString = $"Data Source={dbPath}";
 
 // Controllers
 builder.Services.AddControllers();
@@ -20,7 +16,7 @@ builder.Services.AddMediatR(cfg =>
 });
 
 // Infrastructure
-builder.Services.AddGameCollectionInfrastructure(connectionString);
+builder.Services.AddGameCollectionInfrastructure(builder.Configuration);
 builder.Services.AddBggIntegrationInfrastructure(builder.Configuration);
 
 // CORS — allow the nginx-served frontend

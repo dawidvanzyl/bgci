@@ -7,8 +7,11 @@ public record PlayTime
     public PlayTime(int minutes)
     {
         if (minutes < 0)
-            throw new ArgumentException("Play time cannot be negative.", nameof(minutes));
-        Minutes = minutes;
+		{
+			throw new ArgumentException("Play time cannot be negative.", nameof(minutes));
+		}
+
+		Minutes = minutes;
     }
 
     public override string ToString() => $"{Minutes} min";

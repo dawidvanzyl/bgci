@@ -1,3 +1,4 @@
+using Api.Requests;
 using GameCollection.Application.Commands;
 using GameCollection.Application.DTOs;
 using GameCollection.Application.Queries;
@@ -28,7 +29,9 @@ public class GamesController : ControllerBase
     public async Task<ActionResult<CollectedGameDto>> GetById(Guid id, CancellationToken cancellationToken)
     {
         var game = await _mediator.Send(new GetGameByIdQuery(id), cancellationToken);
-        return game is null ? NotFound() : Ok(game);
+        return game is null
+			? NotFound()
+			: Ok(game);
     }
 
     [HttpPost]
@@ -87,16 +90,3 @@ public class GamesController : ControllerBase
         return NoContent();
     }
 }
-
-public record UpdateGameRequest(
-    string Name,
-    int? Year,
-    string? Description,
-    int? MinPlayers,
-    int? MaxPlayers,
-    int? PlayTimeMinutes,
-    decimal? BggRating,
-    string? CoverImageUrl,
-    List<string>? Categories,
-    List<string>? Mechanics
-);
