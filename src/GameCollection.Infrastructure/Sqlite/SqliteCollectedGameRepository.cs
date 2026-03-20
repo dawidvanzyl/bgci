@@ -2,11 +2,12 @@ using Dapper;
 using GameCollection.Domain.Aggregates;
 using GameCollection.Domain.Repositories;
 using GameCollection.Domain.ValueObjects;
+using GameCollection.Infrastructure.Models;
 using Microsoft.Data.Sqlite;
 
-namespace GameCollection.Infrastructure.Persistence;
+namespace GameCollection.Infrastructure.Sqlite;
 
-public class SqliteCollectedGameRepository : ICollectedGameRepository
+public partial class SqliteCollectedGameRepository : ICollectedGameRepository
 {
     private readonly string _connectionString;
 
@@ -20,9 +21,25 @@ public class SqliteCollectedGameRepository : ICollectedGameRepository
     public async Task<CollectedGame?> GetByIdAsync(GameId id, CancellationToken cancellationToken = default)
     {
         using var conn = CreateConnection();
-        var row = await conn.QuerySingleOrDefaultAsync<GameRow>(
-            "SELECT * FROM collected_games WHERE id = @Id",
-            new { Id = id.Value.ToString() });
+        var row = await conn.QuerySingleOrDefaultAsync<GameRow>("""
+			select
+				id,
+				name,
+				year,
+				description,
+				min_players       AS MinPlayers,
+				max_players       AS MaxPlayers,
+				play_time_minutes AS PlayTimeMinutes,
+				bgg_rating        AS BggRating,
+				cover_image_url   AS CoverImageUrl,
+				categories,
+				mechanics,
+				bgg_id            AS BggId,
+				added_at          AS AddedAt,
+				updated_at        AS UpdatedAt
+			from collected_games
+			where id = @Id
+			""", new { Id = id.Value.ToString() });
 
         return row is null ? null : MapToDomain(row);
     }
@@ -30,50 +47,99 @@ public class SqliteCollectedGameRepository : ICollectedGameRepository
     public async Task<IReadOnlyList<CollectedGame>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         using var conn = CreateConnection();
-        var rows = await conn.QueryAsync<GameRow>("SELECT * FROM collected_games ORDER BY added_at DESC");
-        return rows.Select(MapToDomain).ToList().AsReadOnly();
+        var rows = await conn.QueryAsync<GameRow>("""
+			select
+				id,
+				name,
+				year,
+				description,
+				min_players       AS MinPlayers,
+				max_players       AS MaxPlayers,
+				play_time_minutes AS PlayTimeMinutes,
+				bgg_rating        AS BggRating,
+				cover_image_url   AS CoverImageUrl,
+				categories,
+				mechanics,
+				bgg_id            AS BggId,
+				added_at          AS AddedAt,
+				updated_at        AS UpdatedAt
+			from collected_games
+			order by added_at desc
+			""");
+
+        return rows
+			.Select(MapToDomain)
+			.ToList()
+			.AsReadOnly();
     }
 
     public async Task AddAsync(CollectedGame game, CancellationToken cancellationToken = default)
     {
         using var conn = CreateConnection();
         await conn.ExecuteAsync("""
-            INSERT INTO collected_games
-                (id, name, year, description, min_players, max_players, play_time_minutes,
-                 bgg_rating, cover_image_url, categories, mechanics, bgg_id, added_at, updated_at)
-            VALUES
-                (@Id, @Name, @Year, @Description, @MinPlayers, @MaxPlayers, @PlayTimeMinutes,
-                 @BggRating, @CoverImageUrl, @Categories, @Mechanics, @BggId, @AddedAt, @UpdatedAt)
-            """, MapToRow(game));
+			insert into collected_games (
+				id,
+				name,
+				year,
+				description,
+				min_players,
+				max_players,
+				play_time_minutes,
+				bgg_rating,
+				cover_image_url,
+				categories,
+				mechanics,
+				bgg_id,
+				added_at,
+				updated_at
+			)
+			values (
+				@Id,
+				@Name,
+				@Year,
+				@Description,
+				@MinPlayers,
+				@MaxPlayers,
+				@PlayTimeMinutes,
+				@BggRating,
+				@CoverImageUrl,
+				@Categories,
+				@Mechanics,
+				@BggId,
+				@AddedAt,
+				@UpdatedAt
+			)
+			""", MapToRow(game));
     }
 
     public async Task UpdateAsync(CollectedGame game, CancellationToken cancellationToken = default)
     {
         using var conn = CreateConnection();
         await conn.ExecuteAsync("""
-            UPDATE collected_games SET
-                name = @Name,
-                year = @Year,
-                description = @Description,
-                min_players = @MinPlayers,
-                max_players = @MaxPlayers,
-                play_time_minutes = @PlayTimeMinutes,
-                bgg_rating = @BggRating,
-                cover_image_url = @CoverImageUrl,
-                categories = @Categories,
-                mechanics = @Mechanics,
-                bgg_id = @BggId,
-                updated_at = @UpdatedAt
-            WHERE id = @Id
-            """, MapToRow(game));
+			update collected_games set
+				name = @Name,
+				year = @Year,
+				description = @Description,
+				min_players = @MinPlayers,
+				max_players = @MaxPlayers,
+				play_time_minutes = @PlayTimeMinutes,
+				bgg_rating = @BggRating,
+				cover_image_url = @CoverImageUrl,
+				categories = @Categories,
+				mechanics = @Mechanics,
+				bgg_id = @BggId,
+				updated_at = @UpdatedAt
+			where id = @Id
+			""", MapToRow(game));
     }
 
     public async Task DeleteAsync(GameId id, CancellationToken cancellationToken = default)
     {
         using var conn = CreateConnection();
-        await conn.ExecuteAsync(
-            "DELETE FROM collected_games WHERE id = @Id",
-            new { Id = id.Value.ToString() });
+        await conn.ExecuteAsync("""
+			delete from collected_games
+			where id = @Id
+			""", new { Id = id.Value.ToString() });
     }
 
     private static object MapToRow(CollectedGame game) => new
@@ -130,21 +196,4 @@ public class SqliteCollectedGameRepository : ICollectedGameRepository
             updatedAt: row.UpdatedAt
         );
     }
-
-    private record GameRow(
-        string Id,
-        string Name,
-        int? Year,
-        string? Description,
-        int? MinPlayers,
-        int? MaxPlayers,
-        int? PlayTimeMinutes,
-        decimal? BggRating,
-        string? CoverImageUrl,
-        string? Categories,
-        string? Mechanics,
-        int? BggId,
-        DateTime AddedAt,
-        DateTime UpdatedAt
-    );
 }

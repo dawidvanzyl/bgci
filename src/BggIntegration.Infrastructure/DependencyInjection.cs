@@ -1,9 +1,8 @@
-using System.Net.Http.Headers;
-using BggIntegration.Application.Translation;
 using BggIntegration.Domain.Interfaces;
 using BggIntegration.Infrastructure.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Headers;
 
 namespace BggIntegration.Infrastructure;
 
@@ -23,9 +22,8 @@ public static class DependencyInjection
             if (!string.IsNullOrWhiteSpace(bearerToken))
                 client.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", bearerToken.Trim());
-        });
-
-        services.AddScoped<IBggTranslator, BggTranslator>();
+        })
+        .AddStandardResilienceHandler();
 
         return services;
     }

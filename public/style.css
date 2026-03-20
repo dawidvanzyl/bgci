@@ -304,6 +304,30 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
   margin-top: 20px;
 }
 
+/* ── Cover Image Preview ───────────────────────────────────── */
+.cover-preview-wrap {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.cover-preview-wrap input { flex: 1; }
+.cover-preview-box {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  object-fit: cover;
+}
+.cover-preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  color: var(--border);
+}
+
 /* ── Scrollbar ────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

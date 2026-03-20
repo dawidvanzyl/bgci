@@ -7,8 +7,11 @@ public record GameName
     public GameName(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new ArgumentException("Game name cannot be empty.", nameof(value));
-        Value = value.Trim();
+		{
+			throw new ArgumentException("Game name cannot be empty.", nameof(value));
+		}
+
+		Value = value.Trim();
     }
 
     public override string ToString() => Value;

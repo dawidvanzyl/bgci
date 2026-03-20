@@ -1,5 +1,5 @@
+using BggIntegration.Application;
 using BggIntegration.Application.Queries;
-using BggIntegration.Domain.Interfaces;
 using BggIntegration.Domain.Models;
 using GameCollection.Application.Commands;
 using MediatR;
@@ -12,23 +12,23 @@ namespace Api.Controllers;
 public class BggController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly IBggTranslator _translator;
 
-    public BggController(IMediator mediator, IBggTranslator translator)
+    public BggController(IMediator mediator)
     {
         _mediator = mediator;
-        _translator = translator;
     }
 
     [HttpGet("search")]
     public async Task<ActionResult<IReadOnlyList<BggSearchResult>>> Search(
-        [FromQuery] string q,
+        [FromQuery] string query,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(q))
-            return BadRequest("Query parameter 'q' is required.");
+        if (string.IsNullOrWhiteSpace(query))
+		{
+			return BadRequest($"Query parameter '{nameof(query)}' is required.");
+		}
 
-        var results = await _mediator.Send(new SearchBggQuery(q), cancellationToken);
+		var results = await _mediator.Send(new SearchBggQuery(query), cancellationToken);
         return Ok(results);
     }
 
@@ -50,9 +50,12 @@ public class BggController : ControllerBase
         CancellationToken cancellationToken)
     {
         var details = await _mediator.Send(new GetBggGameDetailsQuery(bggId), cancellationToken);
-        if (details is null) return NotFound();
+        if (details is null)
+		{
+			return NotFound();
+		}
 
-        var command = _translator.ToAddGameCommand(details);
+		var command = details.ToAddGameCommand();
         return Ok(command);
     }
 }

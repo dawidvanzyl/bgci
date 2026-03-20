@@ -27,9 +27,12 @@ public static class BggXmlParser
     public static BggGameDetails? ParseGameDetails(XDocument doc, int bggId)
     {
         var item = doc.Descendants("item").FirstOrDefault();
-        if (item is null) return null;
+        if (item is null)
+		{
+			return null;
+		}
 
-        var name = item.Elements("name")
+		var name = item.Elements("name")
             .FirstOrDefault(n => n.Attribute("type")?.Value == "primary")
             ?.Attribute("value")?.Value ?? string.Empty;
 

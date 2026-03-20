@@ -57,10 +57,17 @@ public class CollectedGame
             UpdatedAt = DateTime.UtcNow
         };
 
-        if (categories is not null) game._categories.AddRange(categories);
-        if (mechanics is not null) game._mechanics.AddRange(mechanics);
+        if (categories is not null)
+		{
+			game._categories.AddRange(categories);
+		}
 
-        game._domainEvents.Add(new GameAddedToCollection(game.Id, game.Name));
+		if (mechanics is not null)
+		{
+			game._mechanics.AddRange(mechanics);
+		}
+
+		game._domainEvents.Add(new GameAddedToCollection(game.Id, game.Name));
         return game;
     }
 
@@ -85,12 +92,18 @@ public class CollectedGame
         UpdatedAt = DateTime.UtcNow;
 
         _categories.Clear();
-        if (categories is not null) _categories.AddRange(categories);
+        if (categories is not null)
+		{
+			_categories.AddRange(categories);
+		}
 
-        _mechanics.Clear();
-        if (mechanics is not null) _mechanics.AddRange(mechanics);
+		_mechanics.Clear();
+        if (mechanics is not null)
+		{
+			_mechanics.AddRange(mechanics);
+		}
 
-        _domainEvents.Add(new GameDetailsUpdated(Id, Name));
+		_domainEvents.Add(new GameDetailsUpdated(Id, Name));
     }
 
     public void ClearDomainEvents() => _domainEvents.Clear();

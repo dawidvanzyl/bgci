@@ -15,9 +15,8 @@ public class SearchBggQueryHandler : IRequestHandler<SearchBggQuery, IReadOnlyLi
 
     public async Task<IReadOnlyList<BggSearchResult>> Handle(SearchBggQuery request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Query))
-            return Array.Empty<BggSearchResult>();
-
-        return await _bggClient.SearchAsync(request.Query, cancellationToken);
-    }
+		return string.IsNullOrWhiteSpace(request.Query)
+			? Array.Empty<BggSearchResult>()
+			: await _bggClient.SearchAsync(request.Query, cancellationToken);
+	}
 }

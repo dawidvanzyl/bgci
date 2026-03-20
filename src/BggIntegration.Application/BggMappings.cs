@@ -1,12 +1,14 @@
-using BggIntegration.Domain.Interfaces;
 using BggIntegration.Domain.Models;
 using GameCollection.Application.Commands;
 
-namespace BggIntegration.Application.Translation;
+namespace BggIntegration.Application;
 
-public class BggTranslator : IBggTranslator
+public static class BggMappings
 {
-    public AddGameFromBggCommand ToAddGameCommand(BggGameDetails details) =>
+	/// <summary>
+	/// Anti-Corruption Layer: translates BGG domain concepts into GameCollection domain commands.
+	/// </summary>
+	public static AddGameFromBggCommand ToAddGameCommand(this BggGameDetails details) =>
         new(
             Name: details.Name,
             Year: details.Year,

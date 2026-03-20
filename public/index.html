@@ -70,7 +70,10 @@
           </div>
           <div class="form-group full">
             <label for="form-cover">Cover Image URL</label>
-            <input id="form-cover" type="url" />
+            <div class="cover-preview-wrap">
+              <input id="form-cover" type="url" />
+              <div id="cover-preview" class="cover-preview-box cover-preview-empty" aria-hidden="true">&#127921;</div>
+            </div>
           </div>
           <div class="form-group full">
             <label for="form-categories">Categories <span class="hint">(comma-separated)</span></label>

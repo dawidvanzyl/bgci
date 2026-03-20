@@ -16,6 +16,9 @@ public class GetAllGamesQueryHandler : IRequestHandler<GetAllGamesQuery, IReadOn
     public async Task<IReadOnlyList<CollectedGameDto>> Handle(GetAllGamesQuery request, CancellationToken cancellationToken)
     {
         var games = await _repository.GetAllAsync(cancellationToken);
-        return games.Select(g => g.ToDto()).ToList().AsReadOnly();
+        return games
+			.Select(g => g.ToDto())
+			.ToList()
+			.AsReadOnly();
     }
 }
