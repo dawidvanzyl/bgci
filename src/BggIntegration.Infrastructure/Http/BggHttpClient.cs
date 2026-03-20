@@ -23,6 +23,11 @@ public class BggHttpClient : IBggClient
                 BackoffType = DelayBackoffType.Exponential,
                 Delay = TimeSpan.FromSeconds(2),
                 UseJitter = false,
+                OnRetry = args =>
+                {
+                    args.Outcome.Result?.Dispose();
+                    return ValueTask.CompletedTask;
+                },
             })
             .Build();
 
@@ -47,7 +52,7 @@ public class BggHttpClient : IBggClient
 
     private async Task<XDocument> FetchXmlAsync(string url, CancellationToken cancellationToken)
     {
-        var response = await _bggPollingPipeline.ExecuteAsync(
+        using var response = await _bggPollingPipeline.ExecuteAsync(
             async ct => await _http.GetAsync(url, ct),
             cancellationToken);
 

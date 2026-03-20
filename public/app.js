@@ -5,6 +5,7 @@ const API = isDev ? 'http://localhost:5074/api' : '/api';
 let allGames = [];
 let deleteTargetId = null;
 let bggSearchTimer = null;
+let coverPreviewTimer = null;
 
 // ── DOM refs ───────────────────────────────────────────────
 const gameGrid         = document.getElementById('game-grid');
@@ -44,7 +45,9 @@ function bindEvents() {
   });
 
   document.getElementById('form-cover').addEventListener('input', e => {
-    updateCoverPreview(e.target.value.trim());
+    clearTimeout(coverPreviewTimer);
+    const url = e.target.value.trim();
+    coverPreviewTimer = setTimeout(() => updateCoverPreview(url), 400);
   });
 
   document.getElementById('btn-confirm-cancel').addEventListener('click', () => {
