@@ -328,6 +328,24 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
   color: var(--border);
 }
 
+/* ── BGG Search Disabled ──────────────────────────────────── */
+.bgg-search-disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+.bgg-search-notice {
+	font-size: 12px;
+	color: var(--text-muted);
+	margin-top: 6px;
+}
+.bgg-search-notice a {
+	color: var(--accent);
+	text-decoration: none;
+}
+.bgg-search-notice a:hover {
+	text-decoration: underline;
+}
+
 /* ── Scrollbar ────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

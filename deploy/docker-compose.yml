@@ -1,28 +1,26 @@
 services:
 
   bgci-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/dawidvanzyl/bgci-api:latest
     container_name: bgci-api
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - Database__Path=/data/bgci.db
+      - Bgg__BearerToken=${BGG_BEARER_TOKEN}
     volumes:
       - bgci-data:/data
     networks:
       - bgci-net
 
   bgci-web:
-    image: nginx:alpine
+    image: ghcr.io/dawidvanzyl/bgci-web:latest
     container_name: bgci-web
     restart: unless-stopped
     ports:
-      - "80:80"
-    volumes:
-      - ./public:/usr/share/nginx/html:ro
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - "80"
     depends_on:
       - bgci-api
     networks:

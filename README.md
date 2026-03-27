@@ -64,26 +64,80 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 
 ## Running Locally with Docker
 
+### Using the published image (recommended)
+
+No source code or .NET SDK required — just Docker Desktop.
+
+**1. Download the deployment files**
+
+From the [latest GitHub Release](https://github.com/dawidvanzyl/bgci/releases/latest), download:
+- `docker-compose.yml`
+- `.env.example`
+
+Place both files in the same folder.
+
+**2. Configure your environment**
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and fill in your BGG API bearer token:
+
+```
+BGG_BEARER_TOKEN=your-token-here
+```
+
+> BGG API access requires a formal application at [boardgamegeek.com/applications](https://boardgamegeek.com/applications), which may take several weeks to be approved. **Without a token, BGG search is disabled in the UI** but you can still add and manage games manually.
+
+**3. Start the application**
+
+```bash
+docker compose up -d
+```
+
+**4. Find the port and open the app**
+
+The web UI is assigned a random available port on your machine. To find it:
+
+```bash
+docker compose ps
+```
+
+Look for the port mapping under `bgci-web`, for example `0.0.0.0:49152->80/tcp`. Then open `http://localhost:49152` in your browser (substitute your actual port).
+
+**5. Stop the application**
+
+```bash
+docker compose down
+```
+
+**Data persistence**
+
+Game data is stored in a Docker volume named `bgci-data`. Your collection persists across container restarts. To wipe all data:
+
+```bash
+docker compose down -v
+```
+
+---
+
+### Building from source (for developers)
+
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) and Docker Desktop.
+
 **Start the application:**
 
 ```bash
 docker compose up --build
 ```
 
-Then open [http://localhost](http://localhost) in your browser.
+Find the assigned port with `docker compose ps`, then open `http://localhost:<port>` in your browser.
 
 **Stop the application:**
 
 ```bash
 docker compose down
-```
-
-**Data persistence:**
-
-Game data is stored in a Docker volume named `bgci-data`. Your collection persists across container restarts and rebuilds. To wipe all data:
-
-```bash
-docker compose down -v
 ```
 
 ---
@@ -120,6 +174,7 @@ The frontend automatically detects when it is running on a local dev server (any
 | Key | Description | Default |
 |---|---|---|
 | `Database:Path` | Path to the SQLite database file | `/data/bgci.db` |
+| `Bgg:BearerToken` | BGG API bearer token. Without it, BGG search is disabled. Requires approval at [boardgamegeek.com/applications](https://boardgamegeek.com/applications). | *(empty)* |
 
 **`appsettings.json`** (production / Docker):
 ```json
