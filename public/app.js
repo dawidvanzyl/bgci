@@ -1,5 +1,4 @@
-const isDev = window.location.hostname === 'localhost' && !['80', '443', ''].includes(window.location.port);
-const API = isDev ? 'http://localhost:5074/api' : '/api';
+const API = window.API_OVERRIDE ?? '/api';
 
 // ── State ──────────────────────────────────────────────────
 let allGames = [];
