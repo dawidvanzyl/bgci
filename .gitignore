@@ -32,3 +32,6 @@ Thumbs.db
 deploy/.env
 *.env.local
 appsettings.Development.json
+
+# Local API config
+public/config.js
