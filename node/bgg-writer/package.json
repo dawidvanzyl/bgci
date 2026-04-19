@@ -1,0 +1,20 @@
+{
+	"name": "bgg-writer",
+	"version": "1.0.0",
+	"description": "Playwright-based sidecar service for writing to the BGG collection API",
+	"main": "src/index.js",
+	"scripts": {
+		"start": "node src/index.js",
+		"debug": "node --inspect src/index.js",
+		"lint": "eslint src/"
+	},
+	"devDependencies": {
+		"eslint": "^9.0.0",
+		"globals": "^17.5.0"
+	},
+	"dependencies": {
+		"dotenv": "^16.4.5",
+		"express": "^4.19.2",
+		"playwright": "1.59.1"
+	}
+}

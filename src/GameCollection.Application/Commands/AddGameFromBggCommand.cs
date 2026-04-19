@@ -13,5 +13,7 @@ public record AddGameFromBggCommand(
     string? CoverImageUrl,
     List<string>? Categories,
     List<string>? Mechanics,
-    int BggId
+    int BggId,
+    long? BggCollId = null,
+    bool SkipBggWrite = false
 ) : IRequest<Guid>;

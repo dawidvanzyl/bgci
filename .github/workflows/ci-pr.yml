@@ -7,8 +7,8 @@ on:
     branches: [master]
 
 jobs:
-  build-and-test:
-    name: Build & Test
+  build-and-test-api:
+    name: Build & Test Api
     runs-on: ubuntu-latest
 
     steps:
@@ -28,3 +28,30 @@ jobs:
 
       - name: Test
         run: dotnet test src/bgci.slnx --no-build --configuration Release --verbosity normal
+
+  build-node:
+    name: Build bgg-writer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: node/bgg-writer
+
+      - name: Lint
+        run: npm run lint
+        working-directory: node/bgg-writer
+
+      - name: Check syntax
+        run: |
+          node --check src/index.js
+          node --check src/bggWriter.js
+        working-directory: node/bgg-writer

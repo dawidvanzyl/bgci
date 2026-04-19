@@ -14,6 +14,7 @@ internal class GameRow
 	public string? Categories { get; set; }
 	public string? Mechanics { get; set; }
 	public int? BggId { get; set; }
+	public long? BggCollId { get; set; }
 	public DateTime AddedAt { get; set; }
 	public DateTime UpdatedAt { get; set; }
 }

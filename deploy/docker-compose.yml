@@ -10,8 +10,22 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - Database__Path=/data/bgci.db
       - Bgg__BearerToken=${BGG_BEARER_TOKEN}
+      - Bgg__Username=${BGG_USERNAME}
+      - BggWriter__BaseUrl=http://bgg-writer:3001
+    depends_on:
+      - bgg-writer
     volumes:
       - bgci-data:/data
+    networks:
+      - bgci-net
+
+  bgg-writer:
+    image: ghcr.io/dawidvanzyl/bgci-writer:latest
+    container_name: bgg-writer
+    restart: unless-stopped
+    environment:
+      - BGG_PASSWORD=${BGG_PASSWORD}
+      - PORT=3001
     networks:
       - bgci-net
 

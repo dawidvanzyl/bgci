@@ -1,0 +1,13 @@
+FROM mcr.microsoft.com/playwright:v1.59.1-focal
+
+WORKDIR /app
+
+COPY node/bgg-writer/package.json ./
+COPY node/bgg-writer/package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY node/bgg-writer/src/ ./src/
+
+EXPOSE 3001
+
+CMD ["node", "src/index.js"]
