@@ -22,12 +22,12 @@ public static class DependencyInjection
 
 		services.AddHttpClient<IBggClient, BggHttpClient>(client =>
 		{
+			client.BaseAddress = new Uri("https://boardgamegeek.com/xmlapi2");
 			client.Timeout = TimeSpan.FromSeconds(30);
 			client.DefaultRequestHeaders.Add("User-Agent", "BoardGameCollectionInsights/1.0");
 
 			if (!string.IsNullOrWhiteSpace(bearerToken))
 			{
-				client.BaseAddress = new Uri("https://boardgamegeek.com/xmlapi2");
 				client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken.Trim());
 			}
 		})

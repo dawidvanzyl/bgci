@@ -8,6 +8,13 @@ const XMLAPI_BASE_URL = `${BGG_BASE_URL}/xmlapi2`;
 
 let cachedBrowser = null;
 let cachedContext = null;
+let sessionLock = Promise.resolve();
+
+function withLock(fn) {
+	const next = sessionLock.then(fn, fn);
+	sessionLock = next;
+	return next;
+}
 
 class AuthError extends Error {
 	constructor(message) {
@@ -64,9 +71,11 @@ async function login(context, username, password) {
 }
 
 /**
- * Ensures a cached authenticated browser context exists, launching and
- * logging in if necessary. On AuthError from the action, invalidates the
- * cache, re-logs in, and retries the action once.
+ * Ensures a cached authenticated browser context exists, serialising session
+ * init and invalidation through a mutex so concurrent requests cannot race.
+ * The action itself runs outside the lock — only session lifecycle is serialised.
+ * On AuthError from the action, re-acquires the lock, rebuilds the session,
+ * and retries the action once.
  *
  * @param {string} username
  * @param {function(import('playwright').Page): Promise<T>} action
@@ -78,12 +87,14 @@ async function withBggSession(username, action) {
 		throw new Error('BGG_PASSWORD environment variable is not set');
 	}
 
-	if (!cachedBrowser || !cachedContext) {
-		console.log('[bgg-writer] launching browser and creating session');
-		cachedBrowser = await firefox.launch({ headless: true });
-		cachedContext = await cachedBrowser.newContext();
-		await login(cachedContext, username, password);
-	}
+	await withLock(async () => {
+		if (!cachedBrowser || !cachedContext) {
+			console.log('[bgg-writer] launching browser and creating session');
+			cachedBrowser = await firefox.launch({ headless: true });
+			cachedContext = await cachedBrowser.newContext();
+			await login(cachedContext, username, password);
+		}
+	});
 
 	const page = await cachedContext.newPage();
 	await page.goto(BGG_BASE_URL, { waitUntil: 'domcontentloaded' });
@@ -97,14 +108,14 @@ async function withBggSession(username, action) {
 
 		console.log('[bgg-writer] auth failure detected — re-logging in and retrying');
 
-		await page.close();
-
-		if (cachedBrowser) {
-			await cachedBrowser.close().catch(() => {});
-		}
-		cachedBrowser = await firefox.launch({ headless: true });
-		cachedContext = await cachedBrowser.newContext();
-		await login(cachedContext, username, password);
+		await withLock(async () => {
+			if (cachedBrowser) {
+				await cachedBrowser.close().catch(() => {});
+			}
+			cachedBrowser = await firefox.launch({ headless: true });
+			cachedContext = await cachedBrowser.newContext();
+			await login(cachedContext, username, password);
+		});
 
 		const retryPage = await cachedContext.newPage();
 		await retryPage.goto(BGG_BASE_URL, { waitUntil: 'domcontentloaded' });

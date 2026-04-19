@@ -1,6 +1,5 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
-
 namespace GameCollection.Infrastructure.Sqlite;
 
 public class DatabaseMigrator
@@ -36,14 +35,12 @@ public class DatabaseMigrator
             """);
 
         // Add bgg_coll_id to databases created before this migration was introduced.
-        // SQLite does not support ADD COLUMN IF NOT EXISTS, so we catch the exception silently.
-        try
+        // SQLite does not support ADD COLUMN IF NOT EXISTS; check via PRAGMA first.
+        var columns = await conn.QueryAsync<string>("SELECT name FROM pragma_table_info('collected_games')");
+
+        if (!columns.Contains("bgg_coll_id"))
         {
             await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN bgg_coll_id INTEGER;");
-        }
-        catch (SqliteException)
-        {
-            // Column already exists — nothing to do.
         }
     }
 }

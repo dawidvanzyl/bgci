@@ -21,6 +21,9 @@ public class ConfigController : ControllerBase
 	[HttpGet]
 	public IActionResult Get()
 	{
+		// Search requires the writer sidecar because search results are only surfaced to be added.
+		// Without the writer, add would be unavailable, making search a dead-end.
+		// A bearer token alone is not sufficient.
 		var bggSearchEnabled = !string.IsNullOrWhiteSpace(_bggSettings.BearerToken) && !string.IsNullOrWhiteSpace(_bggWriterSettings.BaseUrl);
 
 		return Ok(new

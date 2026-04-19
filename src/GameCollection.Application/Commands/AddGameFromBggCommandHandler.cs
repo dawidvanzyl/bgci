@@ -43,16 +43,11 @@ public class AddGameFromBggCommandHandler : IRequestHandler<AddGameFromBggComman
 				: null,
 			categories: request.Categories,
 			mechanics: request.Mechanics,
-			bggId: BggGameId.From(request.BggId)
+			bggId: BggGameId.From(request.BggId),
+			bggCollId: resolvedCollId
 		);
 
 		await _repository.AddAsync(game, cancellationToken);
-
-		if (resolvedCollId is > 0)
-		{
-			game.SetBggCollId(resolvedCollId.Value);
-			await _repository.UpdateAsync(game, cancellationToken);
-		}
 
 		return game.Id.Value;
 	}

@@ -43,7 +43,8 @@ public class CollectedGame
         Uri? coverImageUrl = null,
         IEnumerable<string>? categories = null,
         IEnumerable<string>? mechanics = null,
-        BggGameId? bggId = null)
+        BggGameId? bggId = null,
+        long? bggCollId = null)
     {
         var game = new CollectedGame
         {
@@ -56,6 +57,7 @@ public class CollectedGame
             BggRating = bggRating,
             CoverImageUrl = coverImageUrl,
             BggId = bggId,
+            BggCollId = bggCollId,
             AddedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -110,8 +112,6 @@ public class CollectedGame
     }
 
 	public void ClearDomainEvents() => _domainEvents.Clear();
-
-	public void SetBggCollId(long collId) => BggCollId = collId;
 
 	// Factory method for reconstituting from persistence (bypasses domain logic)
     public static CollectedGame Reconstitute(

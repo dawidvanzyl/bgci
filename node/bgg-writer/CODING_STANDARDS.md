@@ -34,7 +34,7 @@
 
 ## Error Handling
 
-- All Playwright operations must be wrapped in `try/finally` to ensure the browser is always closed.
+- Wrap individual `Page` operations in `try/finally` to ensure pages are always closed. Do not close the `Browser` or `BrowserContext` in error handling — those are managed by the session lifecycle described in the Playwright Conventions section.
 - Throw `Error` instances with descriptive messages — callers (`index.js`) are responsible for translating to HTTP responses.
 - Do not swallow errors silently. Log with `console.error` before re-throwing or responding with 500.
 - Non-fatal warnings use `console.warn`. Informational steps use `console.log`.
@@ -44,8 +44,9 @@
 ## Playwright Conventions
 
 - Always use `firefox` — do not use Chromium or WebKit.
-- Launch a fresh browser per request. Do not maintain a persistent browser context across requests (simplicity over performance at this scale).
-- Always close the browser in a `finally` block — never rely on process exit to clean up.
+- Maintain a single module-level `BrowserContext` reused across requests. Launch the browser and log in once on first use; do not re-launch unless an authenticated request is rejected with a 401/403.
+- All session initialisation and invalidation must be serialised through a mutex (promise-chain lock) to prevent concurrent requests from racing to create or destroy the browser.
+- Close individual `Page` instances in a `finally` block after each request. Do not close the `Browser` or `BrowserContext` except during session invalidation.
 - Use `page.evaluate()` for all `fetch()` calls to `geekcollection.php` — this ensures requests originate from within the authenticated browser context and pass Cloudflare validation.
 - Do not navigate to pages unnecessarily. Only load what is required to complete the operation.
 

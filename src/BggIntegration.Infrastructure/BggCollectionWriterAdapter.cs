@@ -51,7 +51,7 @@ public class BggCollectionWriterAdapter : IBggCollectionWriter
 
 	public async Task RemoveFromCollectionAsync(long? bggCollId, CancellationToken cancellationToken = default)
 	{
-		if (string.IsNullOrWhiteSpace(_writerSettings.BaseUrl))
+		if (string.IsNullOrWhiteSpace(_settings.Username) || string.IsNullOrWhiteSpace(_writerSettings.BaseUrl))
 		{
 			// BGG writer not configured — skip silently
 			return;
