@@ -1,6 +1,6 @@
 # BoardGame Collection Insights
 
-A personal board game collection tracker. Search [BoardGameGeek](https://boardgamegeek.com) to populate game details automatically, or add games manually. Runs entirely on your local machine via Docker.
+A personal board game collection tracker. Search [BoardGameGeek](https://boardgamegeek.com) to populate game details automatically, or add games manually. Runs entirely on your local machine via Docker as two containers: the main API and a `bgg-writer` sidecar.
 
 ---
 
@@ -12,6 +12,7 @@ BoardGame Collection Insights lets you:
 - **Add manually** — fill in a form yourself if you prefer not to use BGG
 - **Manage your collection** — view all your games as a card grid, edit any details, or remove games
 - **Filter** — search and filter your collection by name, category, or mechanic
+- **Sync with BGG** — BGG is the source of truth for your owned games. The app syncs your collection on startup and every 6 hours. Adding or removing a game in the UI writes back to BGG automatically.
 
 ---
 
@@ -42,6 +43,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 |---|---|
 | Frontend | Vanilla JS, HTML, CSS |
 | API | ASP.NET Core Web API (.NET 10) |
+| BGG Write Layer | Node.js + Playwright (Firefox) |
 | CQRS | MediatR |
 | Database | SQLite via Dapper |
 | Web Server | nginx (reverse proxy + static files) |
@@ -54,10 +56,12 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 ### To run with Docker (recommended)
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- BGG account (optional) — required only for collection sync and write-back
 
 ### To run without Docker (development)
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [Node.js 20+](https://nodejs.org/) — required to run `bgg-writer` locally
 - A static file server or browser capable of opening local HTML files
 
 ---
@@ -66,7 +70,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 
 ### Using the published image (recommended)
 
-No source code or .NET SDK required — just Docker Desktop.
+No source code, .NET SDK, or Node.js required — just Docker Desktop.
 
 **1. Download the deployment files**
 
@@ -82,13 +86,19 @@ Place both files in the same folder.
 cp .env.example .env
 ```
 
-Open `.env` and fill in your BGG API bearer token:
+Open `.env` and fill in your values:
 
 ```
-BGG_BEARER_TOKEN=your-token-here
+BGG_BEARER_TOKEN=your-token-here    # required for BGG search
+BGG_USERNAME=your-bgg-username      # required for collection sync
+BGG_PASSWORD=your-bgg-password      # required for collection write-back
 ```
 
-> BGG API access requires a formal application at [boardgamegeek.com/applications](https://boardgamegeek.com/applications), which may take several weeks to be approved. **Without a token, BGG search is disabled in the UI** but you can still add and manage games manually.
+> `BGG_BEARER_TOKEN` requires a formal application at [boardgamegeek.com/applications](https://boardgamegeek.com/applications), which may take several weeks to be approved. **Without it, BGG search is disabled in the UI.**
+>
+> `BGG_USERNAME` and `BGG_PASSWORD` are optional — without them the app works as a standalone manual collection tracker with no BGG sync.
+>
+> `BGG_WRITER_BASE_URL` is pre-configured in `docker-compose.yml` — no manual entry needed.
 
 **3. Start the application**
 
@@ -124,7 +134,7 @@ docker compose down -v
 
 ### Building from source (for developers)
 
-Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) and Docker Desktop.
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) and Docker Desktop. Node.js is not required locally — Docker builds the `bgg-writer` image automatically.
 
 **Start the application:**
 
@@ -167,6 +177,33 @@ npx serve public
 
 The frontend automatically detects when it is running on a local dev server (any `localhost` port other than 80/443) and points API calls directly at `http://localhost:5074/api`. No configuration needed.
 
+### bgg-writer
+
+```bash
+cd node/bgg-writer
+cp .env.example .env
+# fill in BGG_PASSWORD in .env
+npm install
+npx playwright install firefox
+node src/index.js
+```
+
+The .NET API's `appsettings.Development.json` already points `BggWriter:BaseUrl` at `http://localhost:3001` — no additional configuration needed.
+
+To debug with the Playwright Inspector (visible Firefox browser with step-through execution):
+
+```bash
+PWDEBUG=1 node src/index.js
+```
+
+To attach a Node.js debugger (VS Code or similar):
+
+```bash
+node --inspect src/index.js
+```
+
+Then attach via the VS Code "Node.js: Attach" launch configuration on `localhost:9229`.
+
 ---
 
 ## Configuration
@@ -175,6 +212,8 @@ The frontend automatically detects when it is running on a local dev server (any
 |---|---|---|
 | `Database:Path` | Path to the SQLite database file | `/data/bgci.db` |
 | `Bgg:BearerToken` | BGG API bearer token. Without it, BGG search is disabled. Requires approval at [boardgamegeek.com/applications](https://boardgamegeek.com/applications). | *(empty)* |
+| `Bgg:Username` | BGG username for collection sync. | *(empty)* |
+| `BggWriter:BaseUrl` | Internal URL of the `bgg-writer` sidecar. Pre-configured in `docker-compose.yml`. | *(empty)* |
 
 **`appsettings.json`** (production / Docker):
 ```json
@@ -206,4 +245,18 @@ Note the double underscore `__` — this is the ASP.NET Core convention for nest
 
 ## BGG Integration
 
-Game data is fetched from the [BoardGameGeek XML API2](https://boardgamegeek.com/wiki/page/BGG_XML_API2). This is the official BGG API — no HTML scraping is involved.
+Game data is fetched from the [BoardGameGeek XML API2](https://boardgamegeek.com/wiki/page/BGG_XML_API2). This is the official BGG API — no HTML scraping is involved. BGG is the source of truth for your owned game collection.
+
+### Collection Writes — bgg-writer
+
+**Why it exists**
+
+BGG's collection write endpoint (`geekcollection.php`) is protected by Cloudflare bot detection. Any plain HTTP client — regardless of headers or cookies — receives a 403 response with a JavaScript challenge page. This cannot be bypassed without a real browser that executes JavaScript.
+
+**How it works**
+
+`bgg-writer` launches a real Firefox browser via [Playwright](https://playwright.dev/). It navigates to the BGG login page, fills in the credentials, and submits the form. Once authenticated, it calls `geekcollection.php` via `page.evaluate(fetch(...))` from within the browser context — Cloudflare sees a legitimate browser with valid JavaScript execution and session cookies, and allows the request through.
+
+**Architecture**
+
+`bgg-writer` runs as a separate Docker container alongside the main API. It is only reachable by `bgci-api` on the internal Docker network — no port is exposed externally. It holds `BGG_PASSWORD` directly; the main .NET API never sees it.

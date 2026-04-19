@@ -346,6 +346,27 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 	text-decoration: underline;
 }
 
+/* ── Button loading state ─────────────────────────────────── */
+.btn:disabled { opacity: 0.65; cursor: not-allowed; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn-spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  vertical-align: middle;
+  margin-right: 6px;
+  animation: spin 0.7s linear infinite;
+}
+
+/* ── Inline form error ────────────────────────────────────── */
+.form-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 8px;
+  text-align: right;
+  width: 100%;
+}
+
 /* ── Scrollbar ────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

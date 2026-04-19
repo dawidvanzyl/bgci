@@ -29,9 +29,21 @@ public class DatabaseMigrator
                 categories        TEXT,
                 mechanics         TEXT,
                 bgg_id            INTEGER,
+                bgg_coll_id       INTEGER,
                 added_at          TEXT NOT NULL,
                 updated_at        TEXT NOT NULL
             );
             """);
+
+        // Add bgg_coll_id to databases created before this migration was introduced.
+        // SQLite does not support ADD COLUMN IF NOT EXISTS, so we catch the exception silently.
+        try
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN bgg_coll_id INTEGER;");
+        }
+        catch (SqliteException)
+        {
+            // Column already exists — nothing to do.
+        }
     }
 }

@@ -35,6 +35,7 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
 				categories,
 				mechanics,
 				bgg_id            AS BggId,
+				bgg_coll_id       AS BggCollId,
 				added_at          AS AddedAt,
 				updated_at        AS UpdatedAt
 			from collected_games
@@ -61,6 +62,7 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
 				categories,
 				mechanics,
 				bgg_id            AS BggId,
+				bgg_coll_id       AS BggCollId,
 				added_at          AS AddedAt,
 				updated_at        AS UpdatedAt
 			from collected_games
@@ -90,6 +92,7 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
 				categories,
 				mechanics,
 				bgg_id,
+				bgg_coll_id,
 				added_at,
 				updated_at
 			)
@@ -106,6 +109,7 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
 				@Categories,
 				@Mechanics,
 				@BggId,
+				@BggCollId,
 				@AddedAt,
 				@UpdatedAt
 			)
@@ -128,6 +132,7 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
 				categories = @Categories,
 				mechanics = @Mechanics,
 				bgg_id = @BggId,
+				bgg_coll_id = @BggCollId,
 				updated_at = @UpdatedAt
 			where id = @Id
 			""", MapToRow(game));
@@ -156,6 +161,7 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
         Categories = string.Join("|", game.Categories),
         Mechanics = string.Join("|", game.Mechanics),
         BggId = game.BggId?.Value,
+        game.BggCollId,
         game.AddedAt,
         game.UpdatedAt
     };
@@ -192,6 +198,7 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
             bggId: row.BggId.HasValue
                 ? BggGameId.From(row.BggId.Value)
                 : null,
+            bggCollId: row.BggCollId,
             addedAt: row.AddedAt,
             updatedAt: row.UpdatedAt
         );

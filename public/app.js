@@ -6,6 +6,30 @@ let deleteTargetId = null;
 let bggSearchTimer = null;
 let coverPreviewTimer = null;
 
+// ── Loading / error helpers ────────────────────────────────
+const SPINNER_SVG = '<svg class="btn-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" /></svg>';
+
+function setButtonLoading(btn, label) {
+	btn.disabled = true;
+	btn.dataset.originalText = btn.textContent;
+	btn.innerHTML = `${SPINNER_SVG}${label}`;
+}
+
+function clearButtonLoading(btn) {
+	btn.disabled = false;
+	btn.textContent = btn.dataset.originalText;
+}
+
+function showInlineError(anchorEl, message) {
+	const existing = anchorEl.parentElement.querySelector('.form-error');
+	if (existing) existing.remove();
+	const el = document.createElement('p');
+	el.className = 'form-error';
+	el.textContent = message;
+	anchorEl.parentElement.insertBefore(el, anchorEl);
+	setTimeout(() => el.remove(), 5000);
+}
+
 // ── DOM refs ───────────────────────────────────────────────
 const gameGrid       = document.getElementById('game-grid');
 const emptyState     = document.getElementById('empty-state');
@@ -82,9 +106,17 @@ function bindEvents(bggSearchEnabled) {
 
 	document.getElementById('btn-confirm-delete').addEventListener('click', async () => {
 		if (!deleteTargetId) return;
-		await deleteGame(deleteTargetId);
-		confirmOverlay.classList.add('hidden');
-		deleteTargetId = null;
+		const confirmBtn = document.getElementById('btn-confirm-delete');
+		setButtonLoading(confirmBtn, 'Removing…');
+		try {
+			await deleteGame(deleteTargetId);
+			confirmOverlay.classList.add('hidden');
+			deleteTargetId = null;
+		} catch (err) {
+			showInlineError(confirmBtn, err.message);
+		} finally {
+			clearButtonLoading(confirmBtn);
+		}
 	});
 }
 
@@ -116,7 +148,8 @@ async function saveGameFromBgg(payload) {
 }
 
 async function deleteGame(id) {
-	await fetch(`${API}/games/${id}`, { method: 'DELETE' });
+	const res = await fetch(`${API}/games/${id}`, { method: 'DELETE' });
+	if (!res.ok) throw new Error(await res.text());
 	await loadGames();
 }
 
@@ -182,8 +215,16 @@ function buildCard(game) {
 		? `<span class="badge">&#9201; ${game.playTimeMinutes} min</span>`
 		: '';
 
+	const bggBadge = game.isBggSourced
+		? `<a class="bgg-badge" href="https://boardgamegeek.com/boardgame/${game.bggId}" target="_blank" rel="noopener" title="View on BoardGameGeek"><img src="/bgg-logo.svg" alt="BGG" class="bgg-badge-logo" /></a>`
+		: '';
+
 	const tags = [...(game.categories || []).slice(0, 3), ...(game.mechanics || []).slice(0, 2)]
 		.map(t => `<span class="tag">${esc(t)}</span>`).join('');
+
+	const editButton = game.isBggSourced
+		? ''
+		: `<button class="btn btn-secondary btn-edit">Edit</button>`;
 
 	card.innerHTML = `
 		${coverHtml}
@@ -194,12 +235,15 @@ function buildCard(game) {
 			${tags ? `<div class="game-card-categories">${tags}</div>` : ''}
 		</div>
 		<div class="game-card-actions">
-			<button class="btn btn-secondary btn-edit">Edit</button>
+			${bggBadge}
+			${editButton}
 			<button class="btn btn-danger btn-delete">Remove</button>
 		</div>
 	`;
 
-	card.querySelector('.btn-edit').addEventListener('click', () => openModal(game));
+	if (!game.isBggSourced) {
+		card.querySelector('.btn-edit').addEventListener('click', () => openModal(game));
+	}
 	card.querySelector('.btn-delete').addEventListener('click', () => confirmDelete(game));
 
 	return card;
@@ -335,6 +379,9 @@ async function handleFormSubmit(e) {
 		mechanics:       splitTags(document.getElementById('form-mechanics').value),
 	};
 
+	const saveBtn = document.getElementById('btn-save');
+	setButtonLoading(saveBtn, 'Saving…');
+
 	try {
 		if (id) {
 			await saveGame(payload, id);
@@ -346,7 +393,9 @@ async function handleFormSubmit(e) {
 		closeModal();
 		await loadGames();
 	} catch (err) {
-		alert(`Failed to save: ${err.message}`);
+		showInlineError(saveBtn, err.message);
+	} finally {
+		clearButtonLoading(saveBtn);
 	}
 }
 

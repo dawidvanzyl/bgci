@@ -20,10 +20,13 @@ public class CollectedGame
     public IReadOnlyList<string> Categories => _categories.AsReadOnly();
     public IReadOnlyList<string> Mechanics => _mechanics.AsReadOnly();
     public BggGameId? BggId { get; private set; }
+	public long? BggCollId { get; private set; }
     public DateTime AddedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
-    public IReadOnlyList<object> DomainEvents => _domainEvents.AsReadOnly();
+	public IReadOnlyList<object> DomainEvents => _domainEvents.AsReadOnly();
+
+	public bool IsBggSourced => BggId is not null;
 
     // Private constructor for reconstitution from persistence (ORM / factory use only)
 #pragma warning disable CS8618
@@ -106,9 +109,11 @@ public class CollectedGame
 		_domainEvents.Add(new GameDetailsUpdated(Id, Name));
     }
 
-    public void ClearDomainEvents() => _domainEvents.Clear();
+	public void ClearDomainEvents() => _domainEvents.Clear();
 
-    // Factory method for reconstituting from persistence (bypasses domain logic)
+	public void SetBggCollId(long collId) => BggCollId = collId;
+
+	// Factory method for reconstituting from persistence (bypasses domain logic)
     public static CollectedGame Reconstitute(
         GameId id,
         GameName name,
@@ -121,6 +126,7 @@ public class CollectedGame
         IEnumerable<string> categories,
         IEnumerable<string> mechanics,
         BggGameId? bggId,
+        long? bggCollId,
         DateTime addedAt,
         DateTime updatedAt)
     {
@@ -135,6 +141,7 @@ public class CollectedGame
             BggRating = bggRating,
             CoverImageUrl = coverImageUrl,
             BggId = bggId,
+            BggCollId = bggCollId,
             AddedAt = addedAt,
             UpdatedAt = updatedAt
         };

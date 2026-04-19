@@ -1,0 +1,13 @@
+FROM mcr.microsoft.com/playwright:v1.44.1-focal
+
+WORKDIR /app
+
+COPY node/bgg-writer/package.json ./
+RUN npm install --omit=dev
+RUN npx playwright install firefox
+
+COPY node/bgg-writer/src/ ./src/
+
+EXPOSE 3001
+
+CMD ["node", "src/index.js"]
