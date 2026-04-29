@@ -43,7 +43,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 |---|---|
 | Frontend | Vanilla JS, HTML, CSS |
 | API | ASP.NET Core Web API (.NET 10) |
-| BGG Write Layer | Node.js + Playwright (Firefox) |
+| BGG Write Layer | Node.js + Playwright (Chromium + stealth) |
 | CQRS | MediatR |
 | Database | SQLite via Dapper |
 | Web Server | nginx (reverse proxy + static files) |
@@ -184,13 +184,13 @@ cd node/bgg-writer
 cp .env.example .env
 # fill in BGG_PASSWORD in .env
 npm install
-npx playwright install firefox
+npx playwright install chromium
 node src/index.js
 ```
 
 The .NET API's `appsettings.Development.json` already points `BggWriter:BaseUrl` at `http://localhost:3001` — no additional configuration needed.
 
-To debug with the Playwright Inspector (visible Firefox browser with step-through execution):
+To debug with the Playwright Inspector (visible Chromium browser with step-through execution):
 
 ```bash
 PWDEBUG=1 node src/index.js
@@ -255,7 +255,7 @@ BGG's collection write endpoint (`geekcollection.php`) is protected by Cloudflar
 
 **How it works**
 
-`bgg-writer` launches a real Firefox browser via [Playwright](https://playwright.dev/). It navigates to the BGG login page, fills in the credentials, and submits the form. Once authenticated, it calls `geekcollection.php` via `page.evaluate(fetch(...))` from within the browser context — Cloudflare sees a legitimate browser with valid JavaScript execution and session cookies, and allows the request through.
+`bgg-writer` launches a headless Chromium browser via [Playwright](https://playwright.dev/) with the stealth plugin active (masking the headless fingerprint). It navigates to the BGG login page, fills in the credentials, and submits the form. Once authenticated, it calls `geekcollection.php` via `page.evaluate(fetch(...))` from within the browser context — Cloudflare sees a legitimate browser with valid JavaScript execution and session cookies, and allows the request through.
 
 **Architecture**
 
