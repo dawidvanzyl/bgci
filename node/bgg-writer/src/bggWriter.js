@@ -1,6 +1,9 @@
 'use strict';
 
-const { firefox } = require('playwright');
+const { chromium: baseChromium } = require('playwright-extra');
+const stealth = require('puppeteer-extra-plugin-stealth');
+baseChromium.use(stealth());
+const chromium = baseChromium;
 
 const BGG_BASE_URL = 'https://boardgamegeek.com';
 const COLLECTION_WRITE_URL = `${BGG_BASE_URL}/geekcollection.php`;
@@ -37,7 +40,11 @@ async function login(context, username, password) {
 
 	try {
 		console.log('[bgg-writer] navigating to BGG homepage to satisfy Cloudflare');
-		await page.goto(BGG_BASE_URL, { waitUntil: 'networkidle' });
+		await page.goto(BGG_BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
+		await page.waitForFunction(
+			() => !document.title.includes('Just a moment'),
+			{ timeout: 30000 }
+		);
 
 		console.log('[bgg-writer] logging in via JSON API');
 		const loginOk = await page.evaluate(async ({ credentials, bggBaseUrl }) => {
@@ -90,7 +97,7 @@ async function withBggSession(username, action) {
 	await withLock(async () => {
 		if (!cachedBrowser || !cachedContext) {
 			console.log('[bgg-writer] launching browser and creating session');
-			cachedBrowser = await firefox.launch({ headless: true });
+			cachedBrowser = await chromium.launch({ headless: true });
 			cachedContext = await cachedBrowser.newContext();
 			await login(cachedContext, username, password);
 		}
@@ -112,7 +119,7 @@ async function withBggSession(username, action) {
 			if (cachedBrowser) {
 				await cachedBrowser.close().catch(() => {});
 			}
-			cachedBrowser = await firefox.launch({ headless: true });
+			cachedBrowser = await chromium.launch({ headless: true });
 			cachedContext = await cachedBrowser.newContext();
 			await login(cachedContext, username, password);
 		});
