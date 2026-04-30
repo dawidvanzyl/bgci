@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	const config = await loadConfig();
 	if (config.version) {
 		const badge = document.getElementById('app-version');
-		if (badge) badge.textContent = config.version === 'dev' ? 'dev' : `v${config.version}`;
+		if (badge) badge.textContent = (config.version === 'dev' || config.version === 'latest') ? config.version : `v${config.version}`;
 	}
 	applyBggAvailability(config);
 	if (config.bggSyncEnabled) {
