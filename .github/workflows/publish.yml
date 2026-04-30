@@ -42,7 +42,7 @@ jobs:
           push: true
           tags: ${{ steps.meta-api.outputs.tags }}
           labels: ${{ steps.meta-api.outputs.labels }}
-          build-args: VERSION=${{ steps.meta-api.outputs.version }}
+          build-args: DISPLAY_VERSION=${{ steps.meta-api.outputs.version }}
 
       - name: Extract metadata for Web image
         id: meta-web
