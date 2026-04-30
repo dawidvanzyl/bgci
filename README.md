@@ -12,7 +12,9 @@ BoardGame Collection Insights lets you:
 - **Add manually** — fill in a form yourself if you prefer not to use BGG
 - **Manage your collection** — view all your games as a card grid, edit any details, or remove games
 - **Filter** — search and filter your collection by name, category, or mechanic
-- **Sync with BGG** — BGG is the source of truth for your owned games. The app syncs your collection on startup and every 6 hours. Adding or removing a game in the UI writes back to BGG automatically.
+- **Switch view modes** — choose from five display modes (large, medium, small, list, details) that persist across sessions
+- **Sort your collection** — multi-level sort by name, year, rating, player count, or play time; persists across sessions
+- **Sync with BGG** — BGG is the source of truth for your owned games. The app syncs your collection on startup and every 6 hours. Adding or removing a game in the UI writes back to BGG automatically. A manual **↻ Sync BGG** button is available in the header when a BGG username is configured.
 - **BGG availability detection** — the app continuously monitors BGG reachability. If BGG is unavailable, BGG features are automatically disabled and a status banner is shown. Your collection continues to load from the local cache. When BGG comes back online, all features are restored automatically without a page refresh.
 
 ---
@@ -258,6 +260,12 @@ The app monitors BGG reachability at runtime using a dedicated lightweight backg
 - When BGG becomes unavailable: BGG search is disabled, the sync button is disabled, "View on BGG" badge links are deactivated, and a status banner is shown
 - When BGG is restored: all features re-enable automatically without a page refresh, and an immediate sync is triggered to catch up any changes missed while BGG was down
 - The collection always loads from the local SQLite cache regardless of BGG availability
+
+### Info Button & Manual Sync
+
+BGG-sourced games display an **Info** button instead of Edit. Clicking it opens a read-only modal pre-populated with all game details and a direct link to the game's BGG page.
+
+When `BGG_USERNAME` is configured, a **↻ Sync BGG** button appears in the header. Clicking it triggers an immediate differential sync against your BGG collection (same logic as the automatic background sync). The background sync still runs on startup and every 6 hours regardless.
 
 ### Collection Writes — bgg-writer
 

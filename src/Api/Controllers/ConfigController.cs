@@ -3,6 +3,7 @@ using BggIntegration.Domain.Models;
 using BggIntegration.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using System.Reflection;
 
 namespace Api.Controllers;
 
@@ -33,8 +34,16 @@ public class ConfigController : ControllerBase
 		var bggConfigured = !string.IsNullOrWhiteSpace(_bggSettings.BearerToken) && !string.IsNullOrWhiteSpace(_bggWriterSettings.BaseUrl);
 		var bggReachable = _bggAvailability.IsAvailable;
 
+		var infoVersion = Assembly.GetEntryAssembly()
+			?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+			?.InformationalVersion;
+		// Strip build metadata (e.g. "+abcdef"); return "dev" for non-release builds
+		var rawVersion = infoVersion?.Split('+')[0];
+		var version = rawVersion is null || rawVersion.Contains('-') ? "dev" : rawVersion;
+
 		return Ok(new
 		{
+			version,
 			bggConfigured,
 			bggReachable,
 			bggSearchEnabled  = bggConfigured && bggReachable,

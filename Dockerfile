@@ -2,9 +2,11 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /build
 
+ARG VERSION=dev
+
 COPY src/ ./
 RUN dotnet restore bgci.slnx
-RUN dotnet publish Api/Api.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish Api/Api.csproj -c Release -o /app/publish --no-restore /p:Version=$VERSION
 
 # ── Runtime stage ──────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime

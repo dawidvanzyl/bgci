@@ -8,6 +8,8 @@ namespace BggIntegration.Application.Services;
 
 public class BggSyncService
 {
+	private static int _syncRunning = 0;
+
 	private readonly IBggClient _bggClient;
 	private readonly IMediator _mediator;
 	private readonly ILogger<BggSyncService> _logger;
@@ -20,6 +22,24 @@ public class BggSyncService
 	}
 
 	public async Task SyncAsync(string username, CancellationToken cancellationToken)
+	{
+		if (Interlocked.CompareExchange(ref _syncRunning, 1, 0) != 0)
+		{
+			_logger.LogInformation("BGG sync skipped — a sync is already in progress.");
+			return;
+		}
+
+		try
+		{
+			await SyncCoreAsync(username, cancellationToken);
+		}
+		finally
+		{
+			Interlocked.Exchange(ref _syncRunning, 0);
+		}
+	}
+
+	private async Task SyncCoreAsync(string username, CancellationToken cancellationToken)
 	{
 		_logger.LogInformation("BGG sync starting for user {Username}.", username);
 
