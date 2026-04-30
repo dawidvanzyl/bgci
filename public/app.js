@@ -10,6 +10,7 @@ const SORT_FIELDS = [
 	{ field: 'playTimeMinutes', label: 'Play time',   type: 'number',  defaultDir: 'asc'  },
 ];
 const DEFAULT_SORT = [{ field: 'name', dir: 'asc' }];
+const VIEW_MODES = ['large', 'medium', 'small', 'list', 'details'];
 
 // ── State ──────────────────────────────────────────────────
 let allGames = [];
@@ -79,7 +80,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// Restore sort criteria
 	try {
 		const saved = localStorage.getItem('bgci-sort');
-		if (saved) sortCriteria = JSON.parse(saved);
+		if (saved) {
+			const parsed = JSON.parse(saved);
+			// Sanitize: keep only known fields with valid dir values
+			const sanitized = parsed.filter(c =>
+				SORT_FIELDS.some(f => f.field === c.field) && (c.dir === 'asc' || c.dir === 'desc')
+			);
+			sortCriteria = sanitized.length > 0 ? sanitized : [...DEFAULT_SORT];
+		}
 	} catch { sortCriteria = [...DEFAULT_SORT]; }
 	renderSortBar();
 
@@ -119,9 +127,7 @@ function applyBggAvailability(config) {
 
 	// Enable/disable the sync button based on current reachability
 	const syncBtn = document.getElementById('btn-sync-bgg');
-	if (syncBtn.style.display !== 'none') {
-		syncBtn.disabled = !bggReachable;
-	}
+	if (syncBtn) syncBtn.disabled = !bggReachable;
 
 	// Re-render cards so BGG badge links reflect current reachability
 	if (wasReachable !== bggReachable) {
@@ -303,6 +309,7 @@ function sortGames(games) {
 	return [...games].sort((a, b) => {
 		for (const { field, dir } of sortCriteria) {
 			const def = SORT_FIELDS.find(f => f.field === field);
+			if (!def) continue;  // skip unknown/stale fields
 			const av = a[field] ?? null;
 			const bv = b[field] ?? null;
 			// nulls always last
@@ -335,8 +342,8 @@ function renderSortBar() {
 		chip.dataset.field = field;
 		chip.innerHTML = `
 			<span class="sort-chip-label">${def.label}</span>
-			<button class="sort-chip-dir" title="Toggle direction">${dir === 'asc' ? '&#8593;' : '&#8595;'}</button>
-			<button class="sort-chip-remove" title="Remove">&times;</button>
+			<button class="sort-chip-dir" title="Toggle direction" aria-label="Toggle sort direction for ${def.label}">${dir === 'asc' ? '&#8593;' : '&#8595;'}</button>
+			<button class="sort-chip-remove" title="Remove" aria-label="Remove sort for ${def.label}">&times;</button>
 		`;
 		chipsEl.appendChild(chip);
 	});
@@ -377,17 +384,17 @@ function hideSortDropdown() {
 
 // ── View Mode ──────────────────────────────────────────────
 function applyViewMode(mode) {
-	currentViewMode = mode;
-	localStorage.setItem('bgci-view-mode', mode);
+	const nextMode = VIEW_MODES.includes(mode) ? mode : 'large';
+	currentViewMode = nextMode;
+	localStorage.setItem('bgci-view-mode', nextMode);
 
 	// Update grid modifier class
-	const modes = ['large', 'medium', 'small', 'list', 'details'];
-	modes.forEach(m => gameGrid.classList.remove(`game-grid--${m}`));
-	gameGrid.classList.add(`game-grid--${mode}`);
+	VIEW_MODES.forEach(m => gameGrid.classList.remove(`game-grid--${m}`));
+	gameGrid.classList.add(`game-grid--${nextMode}`);
 
 	// Update active toggle button
 	document.querySelectorAll('.view-toggle-btn').forEach(btn => {
-		btn.classList.toggle('active', btn.dataset.view === mode);
+		btn.classList.toggle('active', btn.dataset.view === nextMode);
 	});
 }
 

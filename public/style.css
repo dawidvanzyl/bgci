@@ -237,6 +237,7 @@ textarea { resize: vertical; }
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
+  right: auto;
   min-width: 150px;
   z-index: 300;
 }

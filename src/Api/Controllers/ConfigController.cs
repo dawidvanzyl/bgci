@@ -49,8 +49,8 @@ public class ConfigController : ControllerBase
 			bggSearchEnabled  = bggConfigured && bggReachable,
 			bggCollectionEnabled = bggConfigured && bggReachable && !string.IsNullOrWhiteSpace(_bggSettings.Username),
 
-			// bggSyncEnabled mirrors bggCollectionEnabled — exposed separately for clarity in the frontend
-			bggSyncEnabled = bggConfigured && bggReachable && !string.IsNullOrWhiteSpace(_bggSettings.Username),
+		// bggSyncEnabled depends only on configuration — reachability controls the disabled state in the frontend
+		bggSyncEnabled = bggConfigured && !string.IsNullOrWhiteSpace(_bggSettings.Username),
 		});
 	}
 }
