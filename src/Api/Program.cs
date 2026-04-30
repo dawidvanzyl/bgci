@@ -23,6 +23,7 @@ builder.Services.AddBggIntegrationInfrastructure(builder.Configuration);
 
 // Background Services
 builder.Services.AddHostedService<BggSyncBackgroundService>();
+builder.Services.AddHostedService<BggHealthCheckBackgroundService>();
 
 // CORS — allow the nginx-served frontend
 builder.Services.AddCors(options =>
