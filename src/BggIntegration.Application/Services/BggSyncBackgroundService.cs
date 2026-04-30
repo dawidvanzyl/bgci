@@ -10,16 +10,19 @@ public class BggSyncBackgroundService : BackgroundService
 {
 	private readonly IServiceScopeFactory _scopeFactory;
 	private readonly BggSettings _settings;
+	private readonly IBggAvailabilityService _availability;
 	private readonly ILogger<BggSyncBackgroundService> _logger;
 	private int _syncRunning = 0;
 
 	public BggSyncBackgroundService(
 		IServiceScopeFactory scopeFactory,
 		IOptions<BggSettings> settings,
+		IBggAvailabilityService availability,
 		ILogger<BggSyncBackgroundService> logger)
 	{
 		_scopeFactory = scopeFactory;
 		_settings = settings.Value;
+		_availability = availability;
 		_logger = logger;
 	}
 
@@ -48,6 +51,12 @@ public class BggSyncBackgroundService : BackgroundService
 		if (string.IsNullOrWhiteSpace(_settings.Username))
 		{
 			_logger.LogInformation("BGG sync skipped — no username configured.");
+			return;
+		}
+
+		if (!_availability.IsAvailable)
+		{
+			_logger.LogInformation("BGG sync skipped — BGG is currently unavailable.");
 			return;
 		}
 

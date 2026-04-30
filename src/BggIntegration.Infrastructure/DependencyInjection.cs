@@ -1,6 +1,7 @@
 using BggIntegration.Application.Services;
 using BggIntegration.Domain.Interfaces;
 using BggIntegration.Domain.Models;
+using BggIntegration.Infrastructure.Constants;
 using BggIntegration.Infrastructure.Http;
 using GameCollection.Application.Abstractions;
 using Microsoft.Extensions.Configuration;
@@ -22,9 +23,9 @@ public static class DependencyInjection
 
 		services.AddHttpClient<IBggClient, BggHttpClient>(client =>
 		{
-			client.BaseAddress = new Uri("https://boardgamegeek.com/xmlapi2");
+			client.BaseAddress = new Uri(BggApiConstants.BaseAddress);
 			client.Timeout = TimeSpan.FromSeconds(30);
-			client.DefaultRequestHeaders.Add("User-Agent", "BoardGameCollectionInsights/1.0");
+			client.DefaultRequestHeaders.Add("User-Agent", BggApiConstants.UserAgent);
 
 			if (!string.IsNullOrWhiteSpace(bearerToken))
 			{
@@ -45,8 +46,26 @@ public static class DependencyInjection
 			}
 		});
 
+		// Dedicated lightweight named HttpClient for availability probing — no Polly retry pipeline
+		// so failures are detected immediately rather than after multiple backoff attempts.
+		services.AddHttpClient(BggAvailabilityService._httpClientName, client =>
+		{
+			client.BaseAddress = new Uri(BggApiConstants.BaseAddress);
+			client.Timeout = TimeSpan.FromSeconds(10);
+			client.DefaultRequestHeaders.Add("User-Agent", BggApiConstants.UserAgent);
+
+			if (!string.IsNullOrWhiteSpace(bearerToken))
+			{
+				client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken.Trim());
+			}
+		});
+
+		// Singleton — availability state is in-memory, intentionally resets on app restart
+		services.AddSingleton<IBggAvailabilityService, BggAvailabilityService>();
+
 		services.AddScoped<IBggCollectionWriter, BggCollectionWriterAdapter>();
 		services.AddScoped<BggSyncService>();
+		services.AddHostedService<BggHealthCheckBackgroundService>();
 
 		return services;
 	}

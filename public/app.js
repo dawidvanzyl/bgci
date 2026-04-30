@@ -5,6 +5,8 @@ let allGames = [];
 let deleteTargetId = null;
 let bggSearchTimer = null;
 let coverPreviewTimer = null;
+let bggReachable = false;   // reflects latest /api/config; false until first probe completes
+let bggPollInterval = null; // polling handle while BGG is unavailable
 
 // ── Loading / error helpers ────────────────────────────────
 const SPINNER_SVG = '<svg class="btn-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" /></svg>';
@@ -45,9 +47,9 @@ const confirmMessage = document.getElementById('confirm-message');
 // ── Bootstrap ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
 	const config = await loadConfig();
-	initBggSearch(config.bggSearchEnabled);
+	applyBggAvailability(config);
 	loadGames();
-	bindEvents(config.bggSearchEnabled);
+	bindEvents(config);
 });
 
 async function loadConfig() {
@@ -55,15 +57,82 @@ async function loadConfig() {
 		const res = await fetch(`${API}/config`);
 		return await res.json();
 	} catch {
-		return { bggSearchEnabled: false };
+		return { bggReachable: false, bggSearchEnabled: false, bggSyncEnabled: false };
 	}
 }
 
-function initBggSearch(enabled) {
-	if (!enabled) {
-		const wrap = bggSearchInput.closest('.bgg-search-wrap');
+// ── BGG Availability ───────────────────────────────────────
+
+// Single entry point for all BGG-related UI state.
+// Called on initial load and on each polling check.
+function applyBggAvailability(config) {
+	const wasReachable = bggReachable;
+	bggReachable = config.bggReachable ?? false;
+
+	initBggSearch(config);
+	applyBggBanner(bggReachable);
+
+	// Re-render cards so BGG badge links reflect current reachability
+	if (wasReachable !== bggReachable) {
+		renderGames(filterInput.value.trim().toLowerCase());
+	}
+
+	// Start or stop polling
+	if (!bggReachable && !bggPollInterval) {
+		bggPollInterval = setInterval(checkBggStatus, 2 * 60 * 1000);
+	} else if (bggReachable && bggPollInterval) {
+		clearInterval(bggPollInterval);
+		bggPollInterval = null;
+	}
+}
+
+async function checkBggStatus() {
+	const config = await loadConfig();
+	if (config.bggReachable) {
+		applyBggAvailability(config);
+	}
+}
+
+function applyBggBanner(reachable) {
+	const existingBanner = document.getElementById('bgg-status-banner');
+	if (!reachable) {
+		if (!existingBanner) {
+			const banner = document.createElement('div');
+			banner.id = 'bgg-status-banner';
+			banner.className = 'bgg-status-banner';
+			banner.textContent = 'BGG is currently unavailable \u2014 your collection is loaded from cache';
+			// Insert before the main toolbar, inside <main>
+			const main = document.querySelector('main');
+			main.insertBefore(banner, main.firstChild);
+		}
+	} else {
+		if (existingBanner) existingBanner.remove();
+	}
+}
+
+// Distinguishes between BGG unconfigured (permanent, admin concern) and BGG unavailable (transient).
+// Called on every applyBggAvailability() — idempotent: clears previous state before re-applying.
+function initBggSearch(config) {
+	const wrap = bggSearchInput.closest('.bgg-search-wrap');
+
+	// Clear previous notice so we can re-evaluate cleanly on restore
+	const existingNotice = wrap.querySelector('.bgg-search-notice');
+	if (existingNotice) existingNotice.remove();
+	bggSearchInput.classList.remove('bgg-search-disabled');
+	bggSearchInput.removeAttribute('disabled');
+
+	if (config.bggSearchEnabled) {
+		// BGG is configured and reachable — fully enabled
+		bggSearchInput.placeholder = 'Search BGG to add a game...';
+	} else if (!config.bggReachable && config.bggSearchEnabled === false && isLikelyConfigured(config)) {
+		// BGG is configured but currently unreachable — transient unavailable state
 		bggSearchInput.disabled = true;
-		bggSearchInput.placeholder = 'BGG search unavailable — no API token configured';
+		bggSearchInput.placeholder = 'BGG unavailable';
+		bggSearchInput.classList.add('bgg-search-disabled');
+	} else {
+		// BGG is not configured — permanent state, show setup notice
+		bggSearchInput.disabled = true;
+		bggSearchInput.placeholder = 'BGG search unavailable \u2014 no API token configured';
 		bggSearchInput.classList.add('bgg-search-disabled');
 		const notice = document.createElement('p');
 		notice.className = 'bgg-search-notice';
@@ -72,7 +141,17 @@ function initBggSearch(enabled) {
 	}
 }
 
-function bindEvents(bggSearchEnabled) {
+// The config response collapses configured+reachable into bggSearchEnabled.
+// When bggReachable is false but we were previously able to use BGG, the server
+// is returning bggSearchEnabled=false due to unavailability, not misconfiguration.
+// We detect this by checking whether the API returned bggReachable explicitly.
+function isLikelyConfigured(config) {
+	// bggReachable is only present when the availability service is running.
+	// If it's explicitly false (not undefined), BGG is configured but down.
+	return config.bggReachable === false && config.bggReachable !== undefined;
+}
+
+function bindEvents(config) {
 	document.getElementById('btn-add-manual').addEventListener('click', () => openModal());
 	document.getElementById('modal-close').addEventListener('click', closeModal);
 	document.getElementById('btn-cancel').addEventListener('click', closeModal);
@@ -80,18 +159,18 @@ function bindEvents(bggSearchEnabled) {
 
 	filterInput.addEventListener('input', () => renderGames(filterInput.value.trim().toLowerCase()));
 
-	if (bggSearchEnabled) {
-		bggSearchInput.addEventListener('input', () => {
-			clearTimeout(bggSearchTimer);
-			const q = bggSearchInput.value.trim();
-			if (q.length < 2) { hideBggResults(); return; }
-			bggSearchTimer = setTimeout(() => searchBgg(q), 400);
-		});
+	// BGG search input listener — always bound; the input itself is disabled when unavailable/unconfigured
+	bggSearchInput.addEventListener('input', () => {
+		if (!config.bggSearchEnabled) return;
+		clearTimeout(bggSearchTimer);
+		const q = bggSearchInput.value.trim();
+		if (q.length < 2) { hideBggResults(); return; }
+		bggSearchTimer = setTimeout(() => searchBgg(q), 400);
+	});
 
-		document.addEventListener('click', (e) => {
-			if (!bggResults.contains(e.target) && e.target !== bggSearchInput) hideBggResults();
-		});
-	}
+	document.addEventListener('click', (e) => {
+		if (!bggResults.contains(e.target) && e.target !== bggSearchInput) hideBggResults();
+	});
 
 	document.getElementById('form-cover').addEventListener('input', e => {
 		clearTimeout(coverPreviewTimer);
@@ -107,7 +186,7 @@ function bindEvents(bggSearchEnabled) {
 	document.getElementById('btn-confirm-delete').addEventListener('click', async () => {
 		if (!deleteTargetId) return;
 		const confirmBtn = document.getElementById('btn-confirm-delete');
-		setButtonLoading(confirmBtn, 'Removing…');
+		setButtonLoading(confirmBtn, 'Removing\u2026');
 		try {
 			await deleteGame(deleteTargetId);
 			confirmOverlay.classList.add('hidden');
@@ -216,7 +295,9 @@ function buildCard(game) {
 		: '';
 
 	const bggBadge = game.isBggSourced
-		? `<a class="bgg-badge" href="https://boardgamegeek.com/boardgame/${game.bggId}" target="_blank" rel="noopener" title="View on BoardGameGeek"><img src="/bgg-logo.svg" alt="BGG" class="bgg-badge-logo" /></a>`
+		? bggReachable
+			? `<a class="bgg-badge" href="https://boardgamegeek.com/boardgame/${game.bggId}" target="_blank" rel="noopener" title="View on BoardGameGeek"><img src="/bgg-logo.svg" alt="BGG" class="bgg-badge-logo" /></a>`
+			: `<span class="bgg-badge bgg-badge--disabled" title="BGG unavailable"><img src="/bgg-logo.svg" alt="BGG" class="bgg-badge-logo" /></span>`
 		: '';
 
 	const tags = [...(game.categories || []).slice(0, 3), ...(game.mechanics || []).slice(0, 2)]

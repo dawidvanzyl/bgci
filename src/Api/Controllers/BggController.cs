@@ -1,5 +1,6 @@
 using BggIntegration.Application;
 using BggIntegration.Application.Queries;
+using BggIntegration.Application.Services;
 using BggIntegration.Domain.Models;
 using GameCollection.Application.Commands;
 using MediatR;
@@ -11,11 +12,15 @@ namespace Api.Controllers;
 [Route("api/[controller]")]
 public class BggController : ControllerBase
 {
-    private readonly IMediator _mediator;
+	private const string _bggUnavailableMessage = "BGG is currently unavailable.";
 
-    public BggController(IMediator mediator)
+	private readonly IMediator _mediator;
+    private readonly IBggAvailabilityService _bggAvailability;
+
+    public BggController(IMediator mediator, IBggAvailabilityService bggAvailability)
     {
         _mediator = mediator;
+        _bggAvailability = bggAvailability;
     }
 
     [HttpGet("search")]
@@ -23,7 +28,12 @@ public class BggController : ControllerBase
         [FromQuery] string query,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(query))
+        if (!_bggAvailability.IsAvailable)
+		{
+			return StatusCode(503, _bggUnavailableMessage);
+		}
+
+		if (string.IsNullOrWhiteSpace(query))
 		{
 			return BadRequest($"Query parameter '{nameof(query)}' is required.");
 		}
@@ -37,7 +47,12 @@ public class BggController : ControllerBase
         int bggId,
         CancellationToken cancellationToken)
     {
-        var details = await _mediator.Send(new GetBggGameDetailsQuery(bggId), cancellationToken);
+        if (!_bggAvailability.IsAvailable)
+		{
+			return StatusCode(503, _bggUnavailableMessage);
+		}
+
+		var details = await _mediator.Send(new GetBggGameDetailsQuery(bggId), cancellationToken);
         return details is null ? NotFound() : Ok(details);
     }
 
@@ -49,7 +64,12 @@ public class BggController : ControllerBase
         int bggId,
         CancellationToken cancellationToken)
     {
-        var details = await _mediator.Send(new GetBggGameDetailsQuery(bggId), cancellationToken);
+        if (!_bggAvailability.IsAvailable)
+		{
+			return StatusCode(503, _bggUnavailableMessage);
+		}
+
+		var details = await _mediator.Send(new GetBggGameDetailsQuery(bggId), cancellationToken);
         if (details is null)
 		{
 			return NotFound();
