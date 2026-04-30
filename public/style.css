@@ -350,7 +350,6 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .bgg-badge--disabled {
 	opacity: 0.4;
 	cursor: default;
-	pointer-events: none;
 }
 
 /* ── BGG Status Banner ────────────────────────────────────── */

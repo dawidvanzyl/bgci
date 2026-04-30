@@ -15,15 +15,15 @@ public class BggController : ControllerBase
 	private const string _bggUnavailableMessage = "BGG is currently unavailable.";
 
 	private readonly IMediator _mediator;
-    private readonly IBggAvailabilityService _bggAvailability;
+	private readonly IBggAvailabilityService _bggAvailability;
 
-    public BggController(IMediator mediator, IBggAvailabilityService bggAvailability)
-    {
-        _mediator = mediator;
-        _bggAvailability = bggAvailability;
-    }
+	public BggController(IMediator mediator, IBggAvailabilityService bggAvailability)
+	{
+		_mediator = mediator;
+		_bggAvailability = bggAvailability;
+	}
 
-    [HttpGet("search")]
+	[HttpGet("search")]
     public async Task<ActionResult<IReadOnlyList<BggSearchResult>>> Search(
         [FromQuery] string query,
         CancellationToken cancellationToken)

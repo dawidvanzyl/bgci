@@ -60,7 +60,7 @@ public class BggHttpClient : IBggClient
 	private async Task<XDocument> FetchXmlAsync(string url, CancellationToken cancellationToken)
 	{
 		using var response = await _bggPollingPipeline.ExecuteAsync(
-			async ct => await _http.GetAsync($"{ _http.BaseAddress}/{url}", ct),
+			async ct => await _http.GetAsync(url, ct),
 			cancellationToken);
 
 		if (response.StatusCode == HttpStatusCode.Accepted)

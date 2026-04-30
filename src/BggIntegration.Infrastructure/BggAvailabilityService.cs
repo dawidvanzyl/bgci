@@ -48,9 +48,14 @@ public sealed class BggAvailabilityService : IBggAvailabilityService
 
 			probeSucceeded = response.IsSuccessStatusCode;
 		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			// Host is shutting down — propagate so the caller can clean up
+			throw;
+		}
 		catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
 		{
-			// Network-level failure — BGG is unreachable
+			// Network-level failure or HttpClient timeout — BGG is unreachable
 			probeSucceeded = false;
 		}
 

@@ -35,6 +35,7 @@ public class ConfigController : ControllerBase
 
 		return Ok(new
 		{
+			bggConfigured,
 			bggReachable,
 			bggSearchEnabled  = bggConfigured && bggReachable,
 			bggCollectionEnabled = bggConfigured && bggReachable && !string.IsNullOrWhiteSpace(_bggSettings.Username),

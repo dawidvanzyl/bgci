@@ -66,6 +66,9 @@ public static class DependencyInjection
 		services.AddScoped<IBggCollectionWriter, BggCollectionWriterAdapter>();
 		services.AddScoped<BggSyncService>();
 
+		// Hosted service — owns the health-check and sync loops
+		services.AddHostedService<BggBackgroundService>();
+
 		return services;
 	}
 }

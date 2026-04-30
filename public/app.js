@@ -6,6 +6,7 @@ let deleteTargetId = null;
 let bggSearchTimer = null;
 let coverPreviewTimer = null;
 let bggReachable = false;   // reflects latest /api/config; false until first probe completes
+let bggConfigured = false;  // reflects latest /api/config; false until first config load
 let bggPollInterval = null; // polling handle while BGG is unavailable
 
 // ── Loading / error helpers ────────────────────────────────
@@ -57,7 +58,7 @@ async function loadConfig() {
 		const res = await fetch(`${API}/config`);
 		return await res.json();
 	} catch {
-		return { bggReachable: false, bggSearchEnabled: false, bggSyncEnabled: false };
+		return { bggConfigured: false, bggReachable: false, bggSearchEnabled: false, bggSyncEnabled: false };
 	}
 }
 
@@ -68,6 +69,7 @@ async function loadConfig() {
 function applyBggAvailability(config) {
 	const wasReachable = bggReachable;
 	bggReachable = config.bggReachable ?? false;
+	bggConfigured = config.bggConfigured ?? false;
 
 	initBggSearch(config);
 	applyBggBanner(bggReachable);
@@ -124,7 +126,7 @@ function initBggSearch(config) {
 	if (config.bggSearchEnabled) {
 		// BGG is configured and reachable — fully enabled
 		bggSearchInput.placeholder = 'Search BGG to add a game...';
-	} else if (!config.bggReachable && config.bggSearchEnabled === false && isLikelyConfigured(config)) {
+	} else if (!config.bggReachable && bggConfigured) {
 		// BGG is configured but currently unreachable — transient unavailable state
 		bggSearchInput.disabled = true;
 		bggSearchInput.placeholder = 'BGG unavailable';
@@ -141,16 +143,6 @@ function initBggSearch(config) {
 	}
 }
 
-// The config response collapses configured+reachable into bggSearchEnabled.
-// When bggReachable is false but we were previously able to use BGG, the server
-// is returning bggSearchEnabled=false due to unavailability, not misconfiguration.
-// We detect this by checking whether the API returned bggReachable explicitly.
-function isLikelyConfigured(config) {
-	// bggReachable is only present when the availability service is running.
-	// If it's explicitly false (not undefined), BGG is configured but down.
-	return config.bggReachable === false && config.bggReachable !== undefined;
-}
-
 function bindEvents(config) {
 	document.getElementById('btn-add-manual').addEventListener('click', () => openModal());
 	document.getElementById('modal-close').addEventListener('click', closeModal);
@@ -161,7 +153,7 @@ function bindEvents(config) {
 
 	// BGG search input listener — always bound; the input itself is disabled when unavailable/unconfigured
 	bggSearchInput.addEventListener('input', () => {
-		if (!config.bggSearchEnabled) return;
+		if (!bggReachable || !bggConfigured) return;
 		clearTimeout(bggSearchTimer);
 		const q = bggSearchInput.value.trim();
 		if (q.length < 2) { hideBggResults(); return; }

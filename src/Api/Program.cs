@@ -1,5 +1,4 @@
 using BggIntegration.Application.Queries;
-using BggIntegration.Application.Services;
 using BggIntegration.Infrastructure;
 using GameCollection.Application;
 using GameCollection.Infrastructure;
@@ -17,13 +16,9 @@ builder.Services.AddMediatR(cfg =>
 	cfg.RegisterServicesFromAssembly(typeof(SearchBggQueryHandler).Assembly);
 });
 
-// Infrastructure
+// Infrastructure (background services registered inside AddBggIntegrationInfrastructure)
 builder.Services.AddGameCollectionInfrastructure(builder.Configuration);
 builder.Services.AddBggIntegrationInfrastructure(builder.Configuration);
-
-// Background Services
-builder.Services.AddHostedService<BggSyncBackgroundService>();
-builder.Services.AddHostedService<BggHealthCheckBackgroundService>();
 
 // CORS — allow the nginx-served frontend
 builder.Services.AddCors(options =>
