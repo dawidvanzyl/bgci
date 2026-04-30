@@ -9,12 +9,23 @@
 <body>
   <header>
     <div class="header-inner">
-      <h1>BoardGame Collection Insights</h1>
-      <button id="btn-add-manual" class="btn btn-primary">+ Add Manually</button>
+      <h1>BoardGame Collection Insights <span id="app-version" class="version-badge"></span></h1>
+      <div id="view-toggle" class="view-toggle">
+        <button class="view-toggle-btn active" data-view="large" title="Large icons" aria-label="Large icons">&#8862;</button>
+        <button class="view-toggle-btn" data-view="medium" title="Medium icons" aria-label="Medium icons">&#8863;</button>
+        <button class="view-toggle-btn" data-view="small" title="Small icons" aria-label="Small icons">&#8942;</button>
+        <button class="view-toggle-btn" data-view="list" title="List" aria-label="List">&#9776;</button>
+        <button class="view-toggle-btn" data-view="details" title="Details" aria-label="Details">&#8801;</button>
+      </div>
+      <div class="header-actions">
+        <button id="btn-sync-bgg" class="btn btn-secondary" style="display:none">&#8635; Sync BGG</button>
+        <button id="btn-add-manual" class="btn btn-primary">+ Add Manually</button>
+      </div>
     </div>
   </header>
 
   <main>
+    <div class="sticky-controls">
     <!-- Search / Filter Bar -->
     <section class="toolbar">
       <input id="filter-input" type="text" placeholder="Filter your collection..." autocomplete="off" />
@@ -23,6 +34,20 @@
         <ul id="bgg-search-results" class="dropdown" hidden></ul>
       </div>
     </section>
+
+    <!-- Sort Bar -->
+    <section id="sort-bar" class="sort-bar">
+      <span class="sort-bar-label">Order by:</span>
+      <div id="sort-chips" class="sort-chips"></div>
+      <div class="sort-bar-actions">
+        <div class="sort-add-wrap">
+          <button id="btn-sort-add" class="btn btn-secondary sort-btn-add">+ Add</button>
+          <ul id="sort-add-dropdown" class="dropdown sort-dropdown" hidden></ul>
+        </div>
+        <button id="btn-sort-clear" class="btn btn-secondary sort-btn-clear" hidden>Clear</button>
+      </div>
+    </section>
+    </div>
 
     <!-- Game Cards -->
     <section id="game-grid" class="game-grid">
@@ -91,6 +116,7 @@
 
         <div class="form-actions">
           <button type="button" id="btn-cancel" class="btn btn-secondary">Cancel</button>
+          <a id="modal-bgg-link" class="btn btn-secondary" href="#" target="_blank" rel="noopener" style="display:none">&#128279; View on BGG</a>
           <button type="submit" id="btn-save" class="btn btn-primary">Save</button>
         </div>
       </form>
