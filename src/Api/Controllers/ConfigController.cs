@@ -33,7 +33,8 @@ public class ConfigController : ControllerBase
 		var bggConfigured = !string.IsNullOrWhiteSpace(_bggSettings.BearerToken) && !string.IsNullOrWhiteSpace(_bggWriterSettings.BaseUrl);
 		var bggReachable = _bggAvailability.IsAvailable;
 
-		var version = Environment.GetEnvironmentVariable("APP_VERSION") is { Length: > 0 } v ? v : "dev";
+		var raw = Environment.GetEnvironmentVariable("APP_VERSION")?.Trim();
+		var version = string.IsNullOrWhiteSpace(raw) ? "dev" : raw.TrimStart('v');
 
 		return Ok(new
 		{
