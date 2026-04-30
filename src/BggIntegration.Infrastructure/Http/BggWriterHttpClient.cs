@@ -1,3 +1,4 @@
+using BggIntegration.Infrastructure.Constants;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
@@ -17,7 +18,7 @@ public class BggWriterHttpClient : IBggWriterClient
 	public async Task<long> AddToCollectionAsync(string username, int bggId, CancellationToken cancellationToken = default)
 	{
 		var response = await _http.PostAsJsonAsync(
-			"/collection/add",
+			BggWriterApiEndpoints.AddToCollection,
 			new { username, bggId },
 			cancellationToken);
 
@@ -38,7 +39,7 @@ public class BggWriterHttpClient : IBggWriterClient
 	public async Task RemoveFromCollectionAsync(string username, long collId, CancellationToken cancellationToken = default)
 	{
 		var response = await _http.PostAsJsonAsync(
-			"/collection/remove",
+			BggWriterApiEndpoints.RemoveFromCollection,
 			new { username, collId },
 			cancellationToken);
 

@@ -1,3 +1,4 @@
+using BggIntegration.Application.Services;
 using BggIntegration.Domain.Models;
 using BggIntegration.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
@@ -11,11 +12,16 @@ public class ConfigController : ControllerBase
 {
 	private readonly BggSettings _bggSettings;
 	private readonly BggWriterSettings _bggWriterSettings;
+	private readonly IBggAvailabilityService _bggAvailability;
 
-	public ConfigController(IOptions<BggSettings> bggSettings, IOptions<BggWriterSettings> bggWriterSettings)
+	public ConfigController(
+		IOptions<BggSettings> bggSettings,
+		IOptions<BggWriterSettings> bggWriterSettings,
+		IBggAvailabilityService bggAvailability)
 	{
 		_bggSettings = bggSettings.Value;
 		_bggWriterSettings = bggWriterSettings.Value;
+		_bggAvailability = bggAvailability;
 	}
 
 	[HttpGet]
@@ -24,12 +30,18 @@ public class ConfigController : ControllerBase
 		// Search requires the writer sidecar because search results are only surfaced to be added.
 		// Without the writer, add would be unavailable, making search a dead-end.
 		// A bearer token alone is not sufficient.
-		var bggSearchEnabled = !string.IsNullOrWhiteSpace(_bggSettings.BearerToken) && !string.IsNullOrWhiteSpace(_bggWriterSettings.BaseUrl);
+		var bggConfigured = !string.IsNullOrWhiteSpace(_bggSettings.BearerToken) && !string.IsNullOrWhiteSpace(_bggWriterSettings.BaseUrl);
+		var bggReachable = _bggAvailability.IsAvailable;
 
 		return Ok(new
 		{
-			bggSearchEnabled,
-			bggCollectionEnabled = bggSearchEnabled && !string.IsNullOrWhiteSpace(_bggSettings.Username)
+			bggConfigured,
+			bggReachable,
+			bggSearchEnabled  = bggConfigured && bggReachable,
+			bggCollectionEnabled = bggConfigured && bggReachable && !string.IsNullOrWhiteSpace(_bggSettings.Username),
+
+			// bggSyncEnabled mirrors bggCollectionEnabled — exposed separately for clarity in the frontend
+			bggSyncEnabled = bggConfigured && bggReachable && !string.IsNullOrWhiteSpace(_bggSettings.Username),
 		});
 	}
 }

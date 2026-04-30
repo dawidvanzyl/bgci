@@ -195,5 +195,6 @@ public static class DependencyInjection
 
 - `Program.cs` is the **only** place where `DependencyInjection` extension methods are called. Service registration must not be scattered across the codebase.
 - Never use the service locator pattern (`IServiceProvider.GetService<T>()`) outside of `Program.cs` or factory methods that have no other option.
-- Domain and Application layers must never reference `Microsoft.Extensions.DependencyInjection` or any DI container. They are container-agnostic.
+- Domain and Application layers must never reference `Microsoft.Extensions.DependencyInjection`, `Microsoft.Extensions.Hosting`, or any DI container. They are container-agnostic.
+- **Background services** (types inheriting `BackgroundService` or implementing `IHostedService`) belong in the **Infrastructure** layer. They interact with the hosting framework, manage DI scope lifetimes via `IServiceScopeFactory`, and drive OS-level timers — all infrastructure concerns. The application logic they trigger (e.g. syncing a collection) must be extracted into an Application service and injected as a dependency.
 - Prefer `AddScoped` for services that involve a unit of work (e.g. repositories). Use `AddSingleton` only for genuinely stateless or thread-safe services.

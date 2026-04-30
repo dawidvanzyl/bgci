@@ -13,6 +13,7 @@ BoardGame Collection Insights lets you:
 - **Manage your collection** — view all your games as a card grid, edit any details, or remove games
 - **Filter** — search and filter your collection by name, category, or mechanic
 - **Sync with BGG** — BGG is the source of truth for your owned games. The app syncs your collection on startup and every 6 hours. Adding or removing a game in the UI writes back to BGG automatically.
+- **BGG availability detection** — the app continuously monitors BGG reachability. If BGG is unavailable, BGG features are automatically disabled and a status banner is shown. Your collection continues to load from the local cache. When BGG comes back online, all features are restored automatically without a page refresh.
 
 ---
 
@@ -246,6 +247,17 @@ Note the double underscore `__` — this is the ASP.NET Core convention for nest
 ## BGG Integration
 
 Game data is fetched from the [BoardGameGeek XML API2](https://boardgamegeek.com/wiki/page/BGG_XML_API2). This is the official BGG API — no HTML scraping is involved. BGG is the source of truth for your owned game collection.
+
+### Availability Detection
+
+The app monitors BGG reachability at runtime using a dedicated lightweight background service:
+
+- Probes BGG immediately on startup, before serving the first request
+- Polls every **2 minutes** while BGG is unavailable (fast recovery detection)
+- Polls every **15 minutes** while BGG is available (low overhead)
+- When BGG becomes unavailable: BGG search is disabled, the sync button is disabled, "View on BGG" badge links are deactivated, and a status banner is shown
+- When BGG is restored: all features re-enable automatically without a page refresh, and an immediate sync is triggered to catch up any changes missed while BGG was down
+- The collection always loads from the local SQLite cache regardless of BGG availability
 
 ### Collection Writes — bgg-writer
 

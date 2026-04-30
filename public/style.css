@@ -346,6 +346,22 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 	text-decoration: underline;
 }
 
+/* ── BGG Badge — disabled state (unavailable) ─────────────── */
+.bgg-badge--disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+/* ── BGG Status Banner ────────────────────────────────────── */
+.bgg-status-banner {
+	background: #2a2410;
+	border-bottom: 1px solid #5a4a1a;
+	color: #c8a840;
+	font-size: 13px;
+	padding: 10px 24px;
+	text-align: center;
+}
+
 /* ── Button loading state ─────────────────────────────────── */
 .btn:disabled { opacity: 0.65; cursor: not-allowed; }
 @keyframes spin { to { transform: rotate(360deg); } }

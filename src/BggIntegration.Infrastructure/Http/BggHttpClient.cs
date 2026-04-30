@@ -1,5 +1,6 @@
 using BggIntegration.Domain.Interfaces;
 using BggIntegration.Domain.Models;
+using BggIntegration.Infrastructure.Constants;
 using Polly;
 using Polly.Retry;
 using System.Net;
@@ -37,21 +38,21 @@ public class BggHttpClient : IBggClient
 
 	public async Task<IReadOnlyList<BggSearchResult>> SearchAsync(string query, CancellationToken cancellationToken = default)
 	{
-		var url = $"search?query={Uri.EscapeDataString(query)}&type=boardgame";
+		var url = string.Format(BggApiEndpoints.Search, Uri.EscapeDataString(query));
 		var xml = await FetchXmlAsync(url, cancellationToken);
 		return BggXmlParser.ParseSearchResults(xml);
 	}
 
 	public async Task<BggGameDetails?> GetGameDetailsAsync(int bggId, CancellationToken cancellationToken = default)
 	{
-		var url = $"thing?id={bggId}&stats=1";
+		var url = string.Format(BggApiEndpoints.GameDetail, bggId);
 		var xml = await FetchXmlAsync(url, cancellationToken);
 		return BggXmlParser.ParseGameDetails(xml, bggId);
 	}
 
 	public async Task<IReadOnlyList<BggCollectionItem>> GetCollectionAsync(string username, CancellationToken cancellationToken = default)
 	{
-		var url = $"collection?username={Uri.EscapeDataString(username)}&own=1&excludesubtype=boardgameexpansion";
+		var url = string.Format(BggApiEndpoints.Collection, Uri.EscapeDataString(username));
 		var xml = await FetchXmlAsync(url, cancellationToken);
 		return BggXmlParser.ParseCollection(xml);
 	}
@@ -59,7 +60,7 @@ public class BggHttpClient : IBggClient
 	private async Task<XDocument> FetchXmlAsync(string url, CancellationToken cancellationToken)
 	{
 		using var response = await _bggPollingPipeline.ExecuteAsync(
-			async ct => await _http.GetAsync($"{ _http.BaseAddress}/{url}", ct),
+			async ct => await _http.GetAsync(url, ct),
 			cancellationToken);
 
 		if (response.StatusCode == HttpStatusCode.Accepted)
