@@ -367,7 +367,10 @@ textarea { resize: vertical; }
   width: 100%;
   max-width: 620px;
   max-height: 90vh;
-  overflow-y: auto;
+  min-height: min(90vh, 640px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow);
 }
 .modal-sm { max-width: 380px; padding: 28px; }
@@ -383,7 +386,7 @@ textarea { resize: vertical; }
 .modal-header h2 { font-size: 1.1rem; }
 
 /* ── Form ─────────────────────────────────────────────────── */
-#game-form { padding: 20px 24px 24px; }
+#game-form { padding: 20px 24px 24px; flex: 1; overflow-y: auto; }
 
 .form-grid {
   display: grid;
@@ -657,12 +660,12 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 
 /* ── Expansions tab content ───────────────────────────────── */
 #expansions-tab-content {
-  padding: 16px 0 4px;
+  padding: 20px 24px 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  flex: 1;
   overflow-y: auto;
-  max-height: 60vh;
 }
 .exp-section { display: flex; flex-direction: column; gap: 10px; }
 .exp-section-title {
@@ -718,5 +721,5 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 }
 .exp-search-wrap { position: relative; }
 .exp-search-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 200; }
-.exp-divider { border: none; border-top: 1px solid var(--border-color); margin: 8px 0; }
+.exp-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .btn-sm { font-size: 12px; padding: 4px 10px; }
