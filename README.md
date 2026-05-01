@@ -44,7 +44,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 
 | Layer | Technology |
 |---|---|
-| Frontend | Vanilla JS, HTML, CSS |
+| Frontend | Vanilla JS ES modules, HTML, CSS — bundled by Vite |
 | API | ASP.NET Core Web API (.NET 10) |
 | BGG Write Layer | Node.js + Playwright (Chromium + stealth) |
 | CQRS | MediatR |
@@ -64,8 +64,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 ### To run without Docker (development)
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Node.js 20+](https://nodejs.org/) — required to run `bgg-writer` locally
-- A static file server or browser capable of opening local HTML files
+- [Node.js 20+](https://nodejs.org/) — required for both the Vite frontend dev server and `bgg-writer`
 
 ---
 
@@ -137,7 +136,7 @@ docker compose down -v
 
 ### Building from source (for developers)
 
-Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) and Docker Desktop. Node.js is not required locally — Docker builds the `bgg-writer` image automatically.
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) and Docker Desktop. Node.js is not required locally — Docker builds both the `bgg-writer` and frontend images automatically.
 
 **Start the application:**
 
@@ -168,17 +167,17 @@ The API starts on `http://localhost:5074` by default. In development mode it use
 
 ### Frontend
 
-The frontend is plain static files — no build step required. Open `public/index.html` directly in your browser, or serve it with any static file server:
+The frontend is built with [Vite](https://vite.dev/). Run the Vite dev server alongside the API — it proxies all `/api` requests to the .NET backend automatically, so no additional configuration is needed.
 
 ```bash
-# Python (if installed)
-python -m http.server 3000 --directory public
-
-# Node.js (if installed)
-npx serve public
+cd frontend
+npm install   # first time only
+npm run dev
 ```
 
-The frontend automatically detects when it is running on a local dev server (any `localhost` port other than 80/443) and points API calls directly at `http://localhost:5074/api`. No configuration needed.
+The app is available at `http://localhost:5173`.
+
+> **Note:** `public/config.js` is no longer used for local development. The Vite dev server's built-in proxy handles API routing. The `config.js` mechanism is still supported if needed — create `frontend/public/config.js` (gitignored) with `window.API_OVERRIDE = 'http://localhost:5074/api'`.
 
 ### bgg-writer
 
