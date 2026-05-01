@@ -33,5 +33,10 @@ deploy/.env
 *.env.local
 appsettings.Development.json
 
-# Local API config
+# Local API config (now lives in frontend/public/)
 public/config.js
+frontend/public/config.js
+
+# Frontend build artefacts
+frontend/node_modules/
+frontend/dist/
