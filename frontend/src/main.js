@@ -1,4 +1,4 @@
-import { DEFAULT_SORT, VIEW_MODES, sortCriteria, setSortCriteria, setCurrentViewMode, currentViewMode } from './state.js';
+import { DEFAULT_SORT, VIEW_MODES, sortCriteria, setSortCriteria, setCurrentViewMode, currentViewMode, allGames } from './state.js';
 import { loadConfig, loadGames } from './api.js';
 import { setButtonLoading, clearButtonLoading, showSyncError } from './helpers.js';
 import { applyBggAvailability } from './bgg.js';
@@ -65,7 +65,9 @@ function bindEvents(config) {
 			showBggLoading();
 			try {
 				const data = await searchBgg(q);
-				renderBggResults(data, {
+				const allGameBggIds = new Set(allGames.filter(g => g.bggId).map(g => g.bggId));
+				const filtered = data.filter(r => !allGameBggIds.has(r.bggId));
+				renderBggResults(filtered, {
 					onSelect: result => selectBggGame(result, {
 						onOpenModal: (id, readOnly, preview) => openModal(id, readOnly, preview, { onRefresh: () => loadGames(refreshGames) }),
 					}),
