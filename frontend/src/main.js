@@ -88,6 +88,7 @@ function bindEvents(config) {
 
 	document.getElementById('btn-confirm-cancel').addEventListener('click', () => {
 		document.getElementById('confirm-overlay').classList.add('hidden');
+		setDeleteTargetId(null);
 	});
 
 	document.getElementById('btn-confirm-delete').addEventListener('click', () =>
@@ -121,7 +122,6 @@ function bindEvents(config) {
 	document.getElementById('btn-sort-add').addEventListener('click', e => {
 		e.stopPropagation();
 		toggleSortDropdown(() => {
-			renderSortBar();
 			refreshGames();
 		});
 	});

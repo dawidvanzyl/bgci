@@ -103,7 +103,7 @@ export function renderBggResults(results, { onSelect } = {}) {
 		results.forEach(r => {
 			const li = document.createElement('li');
 			li.innerHTML = `${esc(r.name)}<span class="year">${r.year ?? ''}</span>`;
-			li.addEventListener('click', () => onSelect ? onSelect(r) : selectBggGame(r));
+			li.addEventListener('click', () => onSelect && onSelect(r));
 			bggResults.appendChild(li);
 		});
 	}
