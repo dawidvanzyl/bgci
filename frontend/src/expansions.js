@@ -90,11 +90,22 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 		searchLabel.textContent = 'Search BGG:';
 		searchWrap.appendChild(searchLabel);
 
+		const searchRow = document.createElement('div');
+		searchRow.className = 'exp-search-row';
+
 		const searchInput = document.createElement('input');
 		searchInput.type = 'text';
 		searchInput.placeholder = 'Search BGG for an expansion\u2026';
 		searchInput.className = 'exp-search-input';
-		searchWrap.appendChild(searchInput);
+		searchRow.appendChild(searchInput);
+
+		const searchStatus = document.createElement('span');
+		searchStatus.className = 'exp-search-status';
+		searchStatus.hidden = true;
+		searchStatus.innerHTML = '<svg class="btn-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" /></svg>Adding\u2026';
+		searchRow.appendChild(searchStatus);
+
+		searchWrap.appendChild(searchRow);
 
 		const searchResults = document.createElement('ul');
 		searchResults.className = 'dropdown exp-search-results';
@@ -129,12 +140,16 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 			if (!li) return;
 			const bggId = parseInt(li.dataset.bggId);
 			searchResults.hidden = true;
-			searchInput.value = '';
+			searchInput.value = li.textContent.trim();
+			searchInput.disabled = true;
+			searchStatus.hidden = false;
 			try {
 				await saveExpansionFromBgg(bggId, game.id);
 				if (onRefresh) await onRefresh();
 				await renderExpansionsTab(game, { onRefresh });
 			} catch (err) {
+				searchInput.disabled = false;
+				searchStatus.hidden = true;
 				alert(err.message);
 			}
 		});
