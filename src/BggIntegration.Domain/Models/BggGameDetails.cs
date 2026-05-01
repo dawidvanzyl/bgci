@@ -12,5 +12,6 @@ public record BggGameDetails(
     string? ThumbnailUrl,
     string? ImageUrl,
     List<string> Categories,
-    List<string> Mechanics
+    List<string> Mechanics,
+    IReadOnlyList<int> ParentBggIds  // bggIds of base games this item is an expansion of (inbound links)
 );

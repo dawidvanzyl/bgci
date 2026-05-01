@@ -33,7 +33,10 @@ public class AddGameManuallyCommandHandler : IRequestHandler<AddGameManuallyComm
                 ? new Uri(request.CoverImageUrl)
                 : null,
             categories: request.Categories,
-            mechanics: request.Mechanics
+            mechanics: request.Mechanics,
+            parentGameId: request.ParentGameId.HasValue
+                ? GameId.From(request.ParentGameId.Value)
+                : null
         );
 
         await _repository.AddAsync(game, cancellationToken);

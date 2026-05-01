@@ -358,6 +358,7 @@ textarea { resize: vertical; }
   padding: 20px;
 }
 .modal-overlay.hidden { display: none; }
+.hidden { display: none !important; }
 
 .modal {
   background: var(--surface);
@@ -621,3 +622,101 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
   align-items: center;
 }
 .game-card-meta .bgg-badge .bgg-badge-logo { height: 16px; }
+
+/* ── Expansion count badge ────────────────────────────────── */
+.badge-expansions {
+  background: rgba(79, 124, 255, 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(79, 124, 255, 0.35);
+}
+
+/* ── Modal tabs ───────────────────────────────────────────── */
+.modal-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin: 0 -28px;
+  padding: 0 28px;
+  gap: 0;
+}
+.modal-tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 10px 16px;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.modal-tab-btn:hover { color: var(--text); }
+.modal-tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Expansions tab content ───────────────────────────────── */
+#expansions-tab-content {
+  padding: 16px 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+.exp-section { display: flex; flex-direction: column; gap: 10px; }
+.exp-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.exp-empty { font-size: 13px; color: var(--text-muted); }
+.exp-owned-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.exp-owned-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+}
+.exp-owned-name { font-size: 14px; }
+.exp-year { color: var(--text-muted); font-size: 12px; }
+.exp-label { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; display: block; }
+.exp-known-wrap, .exp-search-wrap, .exp-manual-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.exp-known-row, .exp-manual-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.exp-known-select {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 14px;
+}
+.exp-known-select:disabled { opacity: 0.5; }
+.exp-search-input, .exp-manual-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 14px;
+}
+.exp-search-wrap { position: relative; }
+.exp-search-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 200; }
+.exp-divider { border: none; border-top: 1px solid var(--border-color); margin: 8px 0; }
+.btn-sm { font-size: 12px; padding: 4px 10px; }

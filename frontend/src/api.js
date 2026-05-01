@@ -55,3 +55,30 @@ export async function fetchBggPreview(bggId) {
 	if (!res.ok) return null;
 	return res.json();
 }
+
+export async function fetchBggExpansions(bggId) {
+	const res = await fetch(`${API}/bgg/games/${bggId}/expansions`);
+	if (!res.ok) return [];
+	return res.json();
+}
+
+export async function saveExpansion(payload, parentGameId) {
+	const res = await fetch(`${API}/games`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ ...payload, parentGameId }),
+	});
+	if (!res.ok) throw new Error(await res.text());
+}
+
+export async function saveExpansionFromBgg(bggId, parentGameId) {
+	const previewRes = await fetch(`${API}/bgg/game/${bggId}/preview`);
+	if (!previewRes.ok) throw new Error('Failed to fetch BGG data for expansion.');
+	const preview = await previewRes.json();
+	const res = await fetch(`${API}/games/from-bgg`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ ...preview, parentGameId }),
+	});
+	if (!res.ok) throw new Error(await res.text());
+}

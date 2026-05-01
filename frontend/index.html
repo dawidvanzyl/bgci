@@ -64,6 +64,10 @@
         <h2 id="modal-title">Add Game</h2>
         <button id="modal-close" class="btn-icon">&times;</button>
       </div>
+      <div id="modal-tabs" class="modal-tabs hidden">
+        <button class="modal-tab-btn active" data-tab="details">Details</button>
+        <button class="modal-tab-btn" data-tab="expansions">Expansions</button>
+      </div>
       <form id="game-form" novalidate>
         <input type="hidden" id="form-id" />
         <input type="hidden" id="form-bgg-id" />
@@ -120,6 +124,7 @@
           <button type="submit" id="btn-save" class="btn btn-primary">Save</button>
         </div>
       </form>
+      <div id="expansions-tab-content" class="hidden"></div>
     </div>
   </div>
 

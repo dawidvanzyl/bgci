@@ -19,8 +19,10 @@ public class CollectedGame
     public Uri? CoverImageUrl { get; private set; }
     public IReadOnlyList<string> Categories => _categories.AsReadOnly();
     public IReadOnlyList<string> Mechanics => _mechanics.AsReadOnly();
-    public BggGameId? BggId { get; private set; }
+	public BggGameId? BggId { get; private set; }
 	public long? BggCollId { get; private set; }
+	public GameId? ParentGameId { get; private set; }
+	public int ExpansionCount { get; private set; }
     public DateTime AddedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -44,7 +46,8 @@ public class CollectedGame
         IEnumerable<string>? categories = null,
         IEnumerable<string>? mechanics = null,
         BggGameId? bggId = null,
-        long? bggCollId = null)
+        long? bggCollId = null,
+        GameId? parentGameId = null)
     {
         var game = new CollectedGame
         {
@@ -58,6 +61,7 @@ public class CollectedGame
             CoverImageUrl = coverImageUrl,
             BggId = bggId,
             BggCollId = bggCollId,
+            ParentGameId = parentGameId,
             AddedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -113,6 +117,9 @@ public class CollectedGame
 
 	public void ClearDomainEvents() => _domainEvents.Clear();
 
+	// Called by the repository after reconstitution to populate the computed count.
+	public void SetExpansionCount(int count) => ExpansionCount = count;
+
 	// Factory method for reconstituting from persistence (bypasses domain logic)
     public static CollectedGame Reconstitute(
         GameId id,
@@ -127,6 +134,7 @@ public class CollectedGame
         IEnumerable<string> mechanics,
         BggGameId? bggId,
         long? bggCollId,
+        GameId? parentGameId,
         DateTime addedAt,
         DateTime updatedAt)
     {
@@ -142,6 +150,7 @@ public class CollectedGame
             CoverImageUrl = coverImageUrl,
             BggId = bggId,
             BggCollId = bggCollId,
+            ParentGameId = parentGameId,
             AddedAt = addedAt,
             UpdatedAt = updatedAt
         };

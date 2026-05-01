@@ -15,6 +15,8 @@ internal class GameRow
 	public string? Mechanics { get; set; }
 	public int? BggId { get; set; }
 	public long? BggCollId { get; set; }
+	public string? ParentGameId { get; set; }
+	public int ExpansionCount { get; set; }
 	public DateTime AddedAt { get; set; }
 	public DateTime UpdatedAt { get; set; }
 }

@@ -20,11 +20,11 @@ function getFilter() {
 	return filterInput.value.trim().toLowerCase();
 }
 
-function refreshGames() {
+	function refreshGames() {
 	renderGames(getFilter(), {
-		onEdit:   id => openModal(id, false),
+		onEdit:   id => openModal(id, false, null, { onRefresh: () => loadGames(refreshGames) }),
 		onDelete: game => confirmDelete(game),
-		onInfo:   id => openModal(id, true),
+		onInfo:   id => openModal(id, true, null, { onRefresh: () => loadGames(refreshGames) }),
 	});
 }
 
@@ -67,7 +67,7 @@ function bindEvents(config) {
 				const data = await searchBgg(q);
 				renderBggResults(data, {
 					onSelect: result => selectBggGame(result, {
-						onOpenModal: (id, readOnly, preview) => openModal(id, readOnly, preview),
+						onOpenModal: (id, readOnly, preview) => openModal(id, readOnly, preview, { onRefresh: () => loadGames(refreshGames) }),
 					}),
 				});
 			} catch {

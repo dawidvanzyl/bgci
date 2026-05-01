@@ -72,6 +72,15 @@ public static class BggXmlParser
 			.Where(v => !string.IsNullOrEmpty(v))
 			.ToList();
 
+		// Inbound boardgameexpansion links identify base games this item is an expansion of
+		var parentBggIds = item.Elements("link")
+			.Where(l => l.Attribute("type")?.Value == "boardgameexpansion"
+			         && l.Attribute("inbound")?.Value == "true")
+			.Select(l => int.TryParse(l.Attribute("id")?.Value, out var pid) ? pid : 0)
+			.Where(pid => pid > 0)
+			.ToList()
+			.AsReadOnly();
+
 		return new BggGameDetails(
 			BggId: bggId,
 			Name: name,
@@ -84,8 +93,35 @@ public static class BggXmlParser
 			ThumbnailUrl: string.IsNullOrEmpty(thumbnail) ? null : thumbnail,
 			ImageUrl: string.IsNullOrEmpty(image) ? null : image,
 			Categories: categories,
-			Mechanics: mechanics
+			Mechanics: mechanics,
+			ParentBggIds: parentBggIds
 		);
+	}
+
+	/// <summary>
+	/// Parses known expansions for a base game from a <c>thing</c> XML response.
+	/// Returns non-inbound <c>boardgameexpansion</c> link elements (child expansions, not parent games).
+	/// </summary>
+	public static IReadOnlyList<BggSearchResult> ParseExpansionLinks(XDocument doc)
+	{
+		var item = doc.Descendants("item").FirstOrDefault();
+		if (item is null)
+		{
+			return Array.Empty<BggSearchResult>();
+		}
+
+		return item.Elements("link")
+			.Where(l => l.Attribute("type")?.Value == "boardgameexpansion"
+			         && l.Attribute("inbound") is null)
+			.Select(l =>
+			{
+				var id   = int.TryParse(l.Attribute("id")?.Value, out var eid) ? eid : 0;
+				var name = l.Attribute("value")?.Value ?? string.Empty;
+				return new BggSearchResult(id, name, null, null);
+			})
+			.Where(r => r.BggId > 0 && !string.IsNullOrEmpty(r.Name))
+			.ToList()
+			.AsReadOnly();
 	}
 
 	public static IReadOnlyList<BggCollectionItem> ParseCollection(XDocument doc)

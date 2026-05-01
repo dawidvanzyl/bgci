@@ -21,6 +21,8 @@ public static class CollectedGameMappings
 			BggId: game.BggId?.Value,
 			AddedAt: game.AddedAt,
 			UpdatedAt: game.UpdatedAt,
-			IsBggSourced: game.IsBggSourced
+			IsBggSourced: game.IsBggSourced,
+			ParentGameId: game.ParentGameId?.Value,
+			ExpansionCount: game.ExpansionCount
 		);
 }

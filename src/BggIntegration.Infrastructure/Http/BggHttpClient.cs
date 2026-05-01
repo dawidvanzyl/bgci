@@ -57,6 +57,20 @@ public class BggHttpClient : IBggClient
 		return BggXmlParser.ParseCollection(xml);
 	}
 
+	public async Task<IReadOnlyList<BggCollectionItem>> GetExpansionCollectionAsync(string username, CancellationToken cancellationToken = default)
+	{
+		var url = string.Format(BggApiEndpoints.ExpansionCollection, Uri.EscapeDataString(username));
+		var xml = await FetchXmlAsync(url, cancellationToken);
+		return BggXmlParser.ParseCollection(xml);
+	}
+
+	public async Task<IReadOnlyList<BggSearchResult>> GetExpansionsForGameAsync(int bggId, CancellationToken cancellationToken = default)
+	{
+		var url = string.Format(BggApiEndpoints.GameDetail, bggId);
+		var xml = await FetchXmlAsync(url, cancellationToken);
+		return BggXmlParser.ParseExpansionLinks(xml);
+	}
+
 	private async Task<XDocument> FetchXmlAsync(string url, CancellationToken cancellationToken)
 	{
 		using var response = await _bggPollingPipeline.ExecuteAsync(

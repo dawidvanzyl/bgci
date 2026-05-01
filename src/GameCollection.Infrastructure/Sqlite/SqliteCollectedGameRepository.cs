@@ -36,6 +36,8 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
 				mechanics,
 				bgg_id            AS BggId,
 				bgg_coll_id       AS BggCollId,
+				parent_game_id    AS ParentGameId,
+				0                 AS ExpansionCount,
 				added_at          AS AddedAt,
 				updated_at        AS UpdatedAt
 			from collected_games
@@ -50,23 +52,25 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
         using var conn = CreateConnection();
         var rows = await conn.QueryAsync<GameRow>("""
 			select
-				id,
-				name,
-				year,
-				description,
-				min_players       AS MinPlayers,
-				max_players       AS MaxPlayers,
-				play_time_minutes AS PlayTimeMinutes,
-				bgg_rating        AS BggRating,
-				cover_image_url   AS CoverImageUrl,
-				categories,
-				mechanics,
-				bgg_id            AS BggId,
-				bgg_coll_id       AS BggCollId,
-				added_at          AS AddedAt,
-				updated_at        AS UpdatedAt
-			from collected_games
-			order by added_at desc
+				g.id,
+				g.name,
+				g.year,
+				g.description,
+				g.min_players       AS MinPlayers,
+				g.max_players       AS MaxPlayers,
+				g.play_time_minutes AS PlayTimeMinutes,
+				g.bgg_rating        AS BggRating,
+				g.cover_image_url   AS CoverImageUrl,
+				g.categories,
+				g.mechanics,
+				g.bgg_id            AS BggId,
+				g.bgg_coll_id       AS BggCollId,
+				g.parent_game_id    AS ParentGameId,
+				(select count(*) from collected_games e where e.parent_game_id = g.id) AS ExpansionCount,
+				g.added_at          AS AddedAt,
+				g.updated_at        AS UpdatedAt
+			from collected_games g
+			order by g.added_at desc
 			""");
 
         return rows
@@ -93,6 +97,7 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
 				mechanics,
 				bgg_id,
 				bgg_coll_id,
+				parent_game_id,
 				added_at,
 				updated_at
 			)
@@ -110,6 +115,7 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
 				@Mechanics,
 				@BggId,
 				@BggCollId,
+				@ParentGameId,
 				@AddedAt,
 				@UpdatedAt
 			)
@@ -133,6 +139,7 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
 				mechanics = @Mechanics,
 				bgg_id = @BggId,
 				bgg_coll_id = @BggCollId,
+				parent_game_id = @ParentGameId,
 				updated_at = @UpdatedAt
 			where id = @Id
 			""", MapToRow(game));
@@ -162,6 +169,7 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
         Mechanics = string.Join("|", game.Mechanics),
         BggId = game.BggId?.Value,
         game.BggCollId,
+        ParentGameId = game.ParentGameId?.Value.ToString(),
         game.AddedAt,
         game.UpdatedAt
     };
@@ -176,7 +184,7 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
             ? Array.Empty<string>()
             : row.Mechanics.Split('|', StringSplitOptions.RemoveEmptyEntries);
 
-        return CollectedGame.Reconstitute(
+        var game = CollectedGame.Reconstitute(
             id: GameId.From(Guid.Parse(row.Id)),
             name: new GameName(row.Name),
             year: row.Year,
@@ -199,8 +207,14 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
                 ? BggGameId.From(row.BggId.Value)
                 : null,
             bggCollId: row.BggCollId,
+            parentGameId: row.ParentGameId is not null
+                ? GameId.From(Guid.Parse(row.ParentGameId))
+                : null,
             addedAt: row.AddedAt,
             updatedAt: row.UpdatedAt
         );
+
+		game.SetExpansionCount(row.ExpansionCount);
+        return game;
     }
 }

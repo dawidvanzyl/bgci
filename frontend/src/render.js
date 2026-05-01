@@ -11,13 +11,16 @@ const emptyState = document.getElementById('empty-state');
 // onDelete(game)   — called when Remove button is clicked on any card
 // onInfo(gameId)   — called when Info button is clicked on a BGG-sourced game
 export function renderGames(filter = '', { onEdit, onDelete, onInfo } = {}) {
+	// Exclude expansions (child games) from the main grid
+	const topLevel = allGames.filter(g => !g.parentGameId);
+
 	const filtered = filter
-		? allGames.filter(g =>
+		? topLevel.filter(g =>
 			g.name.toLowerCase().includes(filter) ||
 			(g.categories || []).some(c => c.toLowerCase().includes(filter)) ||
 			(g.mechanics  || []).some(m => m.toLowerCase().includes(filter))
 		)
-		: allGames;
+		: topLevel;
 
 	const sorted = sortGames(filtered);
 
@@ -51,6 +54,10 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 		? `<span class="badge">&#9201; ${game.playTimeMinutes} min</span>`
 		: '';
 
+	const expansionsBadge = game.expansionCount > 0
+		? `<span class="badge badge-expansions">+${game.expansionCount} exp.</span>`
+		: '';
+
 	const bggBadge = game.isBggSourced
 		? bggReachable
 			? `<a class="bgg-badge" href="https://boardgamegeek.com/boardgame/${game.bggId}" target="_blank" rel="noopener" title="View on BoardGameGeek"><img src="/bgg-logo.svg" alt="BGG" class="bgg-badge-logo" /></a>`
@@ -68,14 +75,14 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 		card.innerHTML = `
 			<div class="game-card-body">
 				<div class="game-card-title">${esc(game.name)}${game.year ? ` <span class="game-card-year">(${game.year})</span>` : ''}</div>
-				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}</div>
-			</div>
-			<div class="game-card-actions">
-				${infoOrEdit}
-				${deleteBtn}
-			</div>
-		`;
-	} else if (currentViewMode === 'details') {
+			<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}${expansionsBadge}</div>
+		</div>
+		<div class="game-card-actions">
+			${infoOrEdit}
+			${deleteBtn}
+		</div>
+	`;
+} else if (currentViewMode === 'details') {
 		const thumbHtml = game.coverImageUrl
 			? `<img class="game-card-thumb" src="${esc(game.coverImageUrl)}" alt="${esc(game.name)}" loading="lazy" />`
 			: `<div class="game-card-thumb-placeholder">&#127921;</div>`;
@@ -89,7 +96,7 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 			<div class="game-card-body">
 				<div class="game-card-title">${esc(game.name)}</div>
 				${game.year ? `<div class="game-card-year">${game.year}</div>` : ''}
-				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}</div>
+				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}${expansionsBadge}</div>
 				${game.description ? `<div class="game-description">${esc(game.description)}</div>` : ''}
 				${allTags ? `<div class="game-card-categories">${allTags}</div>` : ''}
 			</div>
@@ -120,7 +127,7 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 			${coverHtml}
 			<div class="game-card-body">
 				<div class="game-card-title">${esc(game.name)}</div>
-				<div class="game-card-meta">${bggBadge}${ratingBadgeSmall}${playersBadgeSmall}</div>
+				<div class="game-card-meta">${bggBadge}${ratingBadgeSmall}${playersBadgeSmall}${expansionsBadge}</div>
 			</div>
 			<div class="game-card-actions">
 				${infoOrEditSmall}
@@ -138,7 +145,7 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 			<div class="game-card-body">
 				<div class="game-card-title">${esc(game.name)}</div>
 				${game.year ? `<div class="game-card-year">${game.year}</div>` : ''}
-				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}</div>
+				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}${expansionsBadge}</div>
 			</div>
 			<div class="game-card-actions">
 				${infoOrEdit}
@@ -160,7 +167,7 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 			<div class="game-card-body">
 				<div class="game-card-title">${esc(game.name)}</div>
 				${game.year ? `<div class="game-card-year">${game.year}</div>` : ''}
-				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}</div>
+				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}${expansionsBadge}</div>
 				${tags ? `<div class="game-card-categories">${tags}</div>` : ''}
 			</div>
 			<div class="game-card-actions">
