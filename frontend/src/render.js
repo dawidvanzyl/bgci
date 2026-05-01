@@ -181,7 +181,7 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 				<div class="game-card-title">${esc(game.name)}</div>
 				${game.year ? `<div class="game-card-year">${game.year}</div>` : ''}
 				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}</div>
-				${tags ? `<div class="game-card-categories">${tags}</div>` : ''}
+				<div class="game-card-categories">${tags}</div>
 			</div>
 			<div class="game-card-actions">
 				${infoOrEdit}

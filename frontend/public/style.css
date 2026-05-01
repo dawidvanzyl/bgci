@@ -634,6 +634,19 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 }
 .game-card-meta .bgg-badge .bgg-badge-logo { height: 16px; }
 
+/* ── Meta row alignment for tile views ───────────────────── */
+.game-card--large .game-card-meta,
+.game-card--medium .game-card-meta,
+.game-card--small .game-card-meta {
+  margin-top: auto;
+}
+.game-card--large .game-card-categories {
+  overflow: hidden;
+  height: calc(18px * 2 + 4px);
+  flex-shrink: 0;
+  align-content: flex-start;
+}
+
 /* ── Expansion count badge ────────────────────────────────── */
 .badge-expansions {
   background: rgba(79, 124, 255, 0.15);
