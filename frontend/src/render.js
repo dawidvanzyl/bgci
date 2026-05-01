@@ -55,7 +55,11 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 		: '';
 
 	const expansionsBadge = game.expansionCount > 0
-		? `<span class="badge badge-expansions">+${game.expansionCount} exp.</span>`
+		? `<span class="badge badge-expansions">+${game.expansionCount} expansion${game.expansionCount === 1 ? '' : 's'}</span>`
+		: '';
+
+	const expansionsBadgeOverlay = game.expansionCount > 0
+		? `<span class="badge badge-expansions badge-expansions--overlay">+${game.expansionCount} expansion${game.expansionCount === 1 ? '' : 's'}</span>`
 		: '';
 
 	const bggBadge = game.isBggSourced
@@ -124,10 +128,13 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 
 		card.className = 'game-card game-card--small';
 		card.innerHTML = `
-			${coverHtml}
+			<div class="game-card-cover-wrap">
+				${coverHtml}
+				${expansionsBadgeOverlay}
+			</div>
 			<div class="game-card-body">
 				<div class="game-card-title">${esc(game.name)}</div>
-				<div class="game-card-meta">${bggBadge}${ratingBadgeSmall}${playersBadgeSmall}${expansionsBadge}</div>
+				<div class="game-card-meta">${bggBadge}${ratingBadgeSmall}${playersBadgeSmall}</div>
 			</div>
 			<div class="game-card-actions">
 				${infoOrEditSmall}
@@ -141,11 +148,14 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 
 		card.className = 'game-card game-card--medium';
 		card.innerHTML = `
-			${coverHtml}
+			<div class="game-card-cover-wrap">
+				${coverHtml}
+				${expansionsBadgeOverlay}
+			</div>
 			<div class="game-card-body">
 				<div class="game-card-title">${esc(game.name)}</div>
 				${game.year ? `<div class="game-card-year">${game.year}</div>` : ''}
-				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}${expansionsBadge}</div>
+				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}</div>
 			</div>
 			<div class="game-card-actions">
 				${infoOrEdit}
@@ -163,11 +173,14 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 
 		card.className = 'game-card game-card--large';
 		card.innerHTML = `
-			${coverHtml}
+			<div class="game-card-cover-wrap">
+				${coverHtml}
+				${expansionsBadgeOverlay}
+			</div>
 			<div class="game-card-body">
 				<div class="game-card-title">${esc(game.name)}</div>
 				${game.year ? `<div class="game-card-year">${game.year}</div>` : ''}
-				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}${expansionsBadge}</div>
+				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}</div>
 				${tags ? `<div class="game-card-categories">${tags}</div>` : ''}
 			</div>
 			<div class="game-card-actions">

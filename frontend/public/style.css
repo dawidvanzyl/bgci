@@ -271,8 +271,16 @@ textarea { resize: vertical; }
 }
 .game-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
 
-.game-card-cover {
+.game-card-cover-wrap {
+  position: relative;
+}
+.game-card-cover-wrap .game-card-cover,
+.game-card-cover-wrap .game-card-cover-placeholder {
+  display: block;
   width: 100%;
+}
+
+.game-card-cover {  width: 100%;
   aspect-ratio: 3/4;
   object-fit: cover;
   background: var(--surface2);
@@ -631,6 +639,15 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
   background: rgba(79, 124, 255, 0.15);
   color: var(--accent);
   border: 1px solid rgba(79, 124, 255, 0.35);
+}
+.badge-expansions--overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  backdrop-filter: none;
 }
 
 /* ── Modal tabs ───────────────────────────────────────────── */
