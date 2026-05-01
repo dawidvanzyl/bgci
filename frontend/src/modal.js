@@ -5,6 +5,7 @@ import { renderExpansionsTab } from './expansions.js';
 
 // ── DOM refs ───────────────────────────────────────────────
 const modalOverlay      = document.getElementById('modal-overlay');
+const modalEl           = modalOverlay.querySelector('.modal');
 const modalTitle        = document.getElementById('modal-title');
 const gameForm          = document.getElementById('game-form');
 const confirmOverlay    = document.getElementById('confirm-overlay');
@@ -151,11 +152,15 @@ export function openModal(gameId = null, readOnly = false, bggPreview = null, { 
 	}
 
 	modalOverlay.classList.remove('hidden');
+	requestAnimationFrame(() => {
+		modalEl.style.minHeight = modalEl.offsetHeight + 'px';
+	});
 	document.getElementById('form-name').focus();
 }
 
 export function closeModal() {
 	modalOverlay.classList.add('hidden');
+	modalEl.style.minHeight = '';
 
 	// Reset readonly state so re-opening in edit mode works correctly
 	gameForm.querySelectorAll('input, textarea').forEach(el => el.removeAttribute('readonly'));
