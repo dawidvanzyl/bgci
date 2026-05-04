@@ -15,5 +15,6 @@ public record AddGameFromBggCommand(
     List<string>? Mechanics,
     int BggId,
     long? BggCollId = null,
-    bool SkipBggWrite = false
+    bool SkipBggWrite = false,
+    Guid? ParentGameId = null
 ) : IRequest<Guid>;

@@ -42,5 +42,10 @@ public class DatabaseMigrator
         {
             await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN bgg_coll_id INTEGER;");
         }
+
+        if (!columns.Contains("parent_game_id"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN parent_game_id TEXT;");
+        }
     }
 }

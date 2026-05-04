@@ -78,4 +78,18 @@ public class BggController : ControllerBase
 		var command = details.ToAddGameCommand();
         return Ok(command);
     }
+
+    [HttpGet("game/{bggId:int}/expansions")]
+    public async Task<ActionResult<IReadOnlyList<BggSearchResult>>> GetExpansions(
+        int bggId,
+        CancellationToken cancellationToken)
+    {
+        if (!_bggAvailability.IsAvailable)
+		{
+			return StatusCode(503, _bggUnavailableMessage);
+		}
+
+		var results = await _mediator.Send(new GetBggExpansionsQuery(bggId), cancellationToken);
+        return Ok(results);
+    }
 }

@@ -1,13 +1,45 @@
 import { allGames, deleteTargetId, setDeleteTargetId } from './state.js';
 import { setButtonLoading, clearButtonLoading, showInlineError, intOrNull, floatOrNull } from './helpers.js';
 import { saveGame, saveGameFromBgg, deleteGame } from './api.js';
+import { renderExpansionsTab } from './expansions.js';
 
 // ── DOM refs ───────────────────────────────────────────────
-const modalOverlay  = document.getElementById('modal-overlay');
-const modalTitle    = document.getElementById('modal-title');
-const gameForm      = document.getElementById('game-form');
-const confirmOverlay = document.getElementById('confirm-overlay');
-const confirmMessage = document.getElementById('confirm-message');
+const modalOverlay      = document.getElementById('modal-overlay');
+const modalEl           = modalOverlay.querySelector('.modal');
+const modalTitle        = document.getElementById('modal-title');
+const gameForm          = document.getElementById('game-form');
+const confirmOverlay    = document.getElementById('confirm-overlay');
+const confirmMessage    = document.getElementById('confirm-message');
+const modalTabs         = document.getElementById('modal-tabs');
+const expansionsContent = document.getElementById('expansions-tab-content');
+
+// Current game for the expansions tab
+let _currentGame = null;
+let _tabRefresh  = null;
+
+// ── Tab switching ──────────────────────────────────────────
+function activateTab(tab) {
+	modalTabs.querySelectorAll('.modal-tab-btn').forEach(btn => {
+		btn.classList.toggle('active', btn.dataset.tab === tab);
+	});
+	if (tab === 'details') {
+		gameForm.classList.remove('hidden');
+		expansionsContent.classList.add('hidden');
+	} else {
+		gameForm.classList.add('hidden');
+		expansionsContent.classList.remove('hidden');
+		if (_currentGame) {
+			renderExpansionsTab(_currentGame, { onRefresh: _tabRefresh });
+		}
+	}
+}
+
+// Bind tab buttons via delegation (safe to call at module load time)
+modalTabs.addEventListener('click', e => {
+	const btn = e.target.closest('.modal-tab-btn');
+	if (!btn) return;
+	activateTab(btn.dataset.tab);
+});
 
 // ── Cover Image Preview ────────────────────────────────────
 export function updateCoverPreview(url) {
@@ -35,11 +67,23 @@ export function updateCoverPreview(url) {
 // gameId     = string UUID when opening an existing game (edit or info)
 // readOnly   = true → info view for BGG-sourced games
 // bggPreview = object when opening from BGG search result (new add)
-export function openModal(gameId = null, readOnly = false, bggPreview = null) {
+// onRefresh  = callback to reload games after an expansion is added/removed
+export function openModal(gameId = null, readOnly = false, bggPreview = null, { onRefresh } = {}) {
 	gameForm.reset();
 	document.getElementById('form-id').value = '';
 	document.getElementById('form-bgg-id').value = '';
 	updateCoverPreview('');
+
+	// Reset tab state — clear stale expansion content and default to Details
+	_currentGame = null;
+	_tabRefresh  = onRefresh ?? null;
+	expansionsContent.innerHTML = '';
+	expansionsContent.classList.add('hidden');
+	gameForm.classList.remove('hidden');
+	modalTabs.classList.add('hidden');
+	modalTabs.querySelectorAll('.modal-tab-btn').forEach(btn => {
+		btn.classList.toggle('active', btn.dataset.tab === 'details');
+	});
 
 	const saveBtn = document.getElementById('btn-save');
 	const bggLink = document.getElementById('modal-bgg-link');
@@ -55,6 +99,13 @@ export function openModal(gameId = null, readOnly = false, bggPreview = null) {
 		// Edit or Info — look up game from allGames
 		const game = allGames.find(g => g.id === gameId);
 		if (!game) return;
+
+		_currentGame = game;
+
+		// Show Expansions tab only for top-level games (not for expansions themselves)
+		if (!game.parentGameId) {
+			modalTabs.classList.remove('hidden');
+		}
 
 		document.getElementById('form-id').value          = game.id;
 		document.getElementById('form-bgg-id').value      = game.bggId ?? '';
@@ -101,11 +152,15 @@ export function openModal(gameId = null, readOnly = false, bggPreview = null) {
 	}
 
 	modalOverlay.classList.remove('hidden');
+	requestAnimationFrame(() => {
+		modalEl.style.minHeight = modalEl.offsetHeight + 'px';
+	});
 	document.getElementById('form-name').focus();
 }
 
 export function closeModal() {
 	modalOverlay.classList.add('hidden');
+	modalEl.style.minHeight = '';
 
 	// Reset readonly state so re-opening in edit mode works correctly
 	gameForm.querySelectorAll('input, textarea').forEach(el => el.removeAttribute('readonly'));
@@ -115,6 +170,17 @@ export function closeModal() {
 	const bggLink = document.getElementById('modal-bgg-link');
 	bggLink.style.display = 'none';
 	bggLink.href = '#';
+
+	// Reset tab state and clear stale content
+	_currentGame = null;
+	_tabRefresh  = null;
+	expansionsContent.innerHTML = '';
+	expansionsContent.classList.add('hidden');
+	gameForm.classList.remove('hidden');
+	modalTabs.classList.add('hidden');
+	modalTabs.querySelectorAll('.modal-tab-btn').forEach(btn => {
+		btn.classList.toggle('active', btn.dataset.tab === 'details');
+	});
 }
 
 // onSaved() — callback invoked after a successful save so main.js can refresh the game list

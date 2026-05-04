@@ -9,4 +9,8 @@ public interface IBggClient
 	Task<BggGameDetails?> GetGameDetailsAsync(int bggId, CancellationToken cancellationToken = default);
 
 	Task<IReadOnlyList<BggCollectionItem>> GetCollectionAsync(string username, CancellationToken cancellationToken = default);
+
+	Task<IReadOnlyList<BggCollectionItem>> GetExpansionCollectionAsync(string username, CancellationToken cancellationToken = default);
+
+	Task<IReadOnlyList<BggSearchResult>> GetExpansionsForGameAsync(int bggId, CancellationToken cancellationToken = default);
 }

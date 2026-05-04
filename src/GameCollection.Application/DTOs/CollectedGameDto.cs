@@ -15,5 +15,7 @@ public record CollectedGameDto(
 	int? BggId,
 	DateTime AddedAt,
 	DateTime UpdatedAt,
-	bool IsBggSourced
+	bool IsBggSourced,
+	Guid? ParentGameId,
+	int ExpansionCount
 );

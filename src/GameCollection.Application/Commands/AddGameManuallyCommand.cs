@@ -12,5 +12,6 @@ public record AddGameManuallyCommand(
     decimal? BggRating,
     string? CoverImageUrl,
     List<string>? Categories,
-    List<string>? Mechanics
+    List<string>? Mechanics,
+    Guid? ParentGameId = null
 ) : IRequest<Guid>;
