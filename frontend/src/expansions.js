@@ -208,13 +208,73 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 		const list = document.createElement('ul');
 		list.className = 'exp-owned-list';
 		owned.forEach(exp => {
+			const ratingBadge = exp.bggRating
+				? `<span class="badge badge-rating">&#9733; ${Number(exp.bggRating).toFixed(1)}</span>`
+				: '';
+
+			const detailContent = (() => {
+				const bggLinkHtml = exp.bggId && bggReachable
+					? `<a class="btn btn-secondary btn-sm exp-bgg-link" href="https://boardgamegeek.com/boardgame/${exp.bggId}" target="_blank" rel="noopener">&#128279; View on BGG</a>`
+					: '';
+
+				const rightContent = exp.description || bggLinkHtml
+					? `<div class="exp-detail-right">
+							${exp.description ? `<textarea class="exp-detail-desc" readonly rows="4">${esc(exp.description)}</textarea>` : ''}
+							${bggLinkHtml}
+						</div>`
+					: '';
+
+				const parts = [];
+				if (exp.coverImageUrl) {
+					parts.push(`<img class="exp-detail-img" src="${esc(exp.coverImageUrl)}" alt="${esc(exp.name)}" loading="lazy">`);
+				}
+				if (rightContent) {
+					parts.push(rightContent);
+				}
+				if (parts.length === 0) {
+					parts.push(`<p class="exp-empty">No additional details available.</p>`);
+				}
+				return parts.join('');
+			})();
+
 			const li = document.createElement('li');
 			li.className = 'exp-owned-item';
 			li.innerHTML = `
-				<span class="exp-owned-name">${esc(exp.name)}${exp.year ? ` <span class="exp-year">(${exp.year})</span>` : ''}</span>
-				<button class="btn btn-danger btn-sm" data-id="${exp.id}">Remove</button>
+				<div class="exp-owned-summary">
+					<span class="exp-owned-name">
+						${esc(exp.name)}
+						${exp.year ? `<span class="exp-year">(${exp.year})</span>` : ''}
+						${ratingBadge}
+					</span>
+					<div class="exp-owned-actions">
+						<button class="btn btn-danger btn-sm exp-remove-btn">Remove</button>
+						<button class="btn btn-secondary btn-sm exp-toggle-btn" aria-label="Toggle details">&#9660;</button>
+					</div>
+				</div>
+				<div class="exp-owned-detail hidden">
+					${detailContent}
+				</div>
 			`;
-			li.querySelector('button').addEventListener('click', async (e) => {
+
+			// Toggle accordion
+			li.addEventListener('click', e => {
+				if (e.target.closest('.exp-remove-btn')) return;
+				const isOpen = li.classList.contains('is-expanded');
+				// Close all open items first
+				list.querySelectorAll('.exp-owned-item.is-expanded').forEach(other => {
+					other.classList.remove('is-expanded');
+					other.querySelector('.exp-owned-detail').classList.add('hidden');
+				});
+				// Open this item unless it was already open
+				if (!isOpen) {
+					li.classList.add('is-expanded');
+					li.querySelector('.exp-owned-detail').classList.remove('hidden');
+				}
+			});
+
+			// Remove button — stop propagation so toggle doesn't fire
+			li.querySelector('.exp-remove-btn').addEventListener('click', async (e) => {
+				e.stopPropagation();
 				const btn = e.currentTarget;
 				setButtonLoading(btn, 'Removing\u2026');
 				try {
@@ -227,6 +287,7 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 					clearButtonLoading(btn);
 				}
 			});
+
 			list.appendChild(li);
 		});
 		ownedSection.appendChild(list);

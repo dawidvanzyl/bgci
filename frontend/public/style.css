@@ -709,16 +709,80 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .exp-owned-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
 .exp-owned-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
+.exp-owned-item:hover { border-color: var(--accent); }
+.exp-owned-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 8px 12px;
 }
-.exp-owned-name { font-size: 14px; }
+.exp-owned-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+}
 .exp-year { color: var(--text-muted); font-size: 12px; }
+.exp-owned-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.exp-toggle-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px 7px;
+  font-size: 11px;
+  line-height: 1;
+  transition: transform .2s, color .15s;
+}
+.exp-toggle-btn:hover { color: var(--text); }
+.exp-owned-item.is-expanded .exp-toggle-btn { transform: rotate(180deg); }
+.exp-owned-detail {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 0 12px 12px;
+  border-top: 1px solid var(--border);
+}
+.exp-owned-detail.hidden { display: none; }
+.exp-detail-img {
+  width: 80px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  object-fit: cover;
+  aspect-ratio: 3/4;
+}
+.exp-detail-right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.exp-detail-desc {
+  flex: 1;
+  resize: none;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.exp-bgg-link { align-self: flex-start; text-decoration: none; }
 .exp-label { font-size: 13px; color: var(--text-muted); margin-bottom: 4px; display: block; }
 .exp-known-wrap, .exp-search-wrap, .exp-manual-wrap {
   display: flex;
