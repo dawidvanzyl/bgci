@@ -79,7 +79,7 @@ public class BggController : ControllerBase
         return Ok(command);
     }
 
-    [HttpGet("games/{bggId:int}/expansions")]
+    [HttpGet("game/{bggId:int}/expansions")]
     public async Task<ActionResult<IReadOnlyList<BggSearchResult>>> GetExpansions(
         int bggId,
         CancellationToken cancellationToken)

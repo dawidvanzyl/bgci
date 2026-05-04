@@ -124,18 +124,24 @@ public class BggSyncService
 						continue;
 					}
 
-					// Resolve parent: first matching parent bggId that exists locally
-					Guid? parentGameId = null;
-					foreach (var parentBggId in details.ParentBggIds)
+				// Resolve parent: first matching parent bggId that exists locally
+				Guid? parentGameId = null;
+				foreach (var parentBggId in details.ParentBggIds)
+				{
+					if (refreshedByBggId.TryGetValue(parentBggId, out var parentGame))
 					{
-						if (refreshedByBggId.TryGetValue(parentBggId, out var parentGame))
-						{
-							parentGameId = parentGame.Id;
-							break;
-						}
+						parentGameId = parentGame.Id;
+						break;
 					}
+				}
 
-					var command = new AddGameFromBggCommand(
+				if (parentGameId is null)
+				{
+					_logger.LogWarning("BGG sync: expansion bggId {BggId} has no matching parent game in local collection — skipping.", bggId);
+					continue;
+				}
+
+				var command = new AddGameFromBggCommand(
 						Name: details.Name,
 						Year: details.Year,
 						Description: details.Description,

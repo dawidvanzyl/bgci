@@ -23,25 +23,25 @@ public partial class SqliteCollectedGameRepository : ICollectedGameRepository
         using var conn = CreateConnection();
         var row = await conn.QuerySingleOrDefaultAsync<GameRow>("""
 			select
-				id,
-				name,
-				year,
-				description,
-				min_players       AS MinPlayers,
-				max_players       AS MaxPlayers,
-				play_time_minutes AS PlayTimeMinutes,
-				bgg_rating        AS BggRating,
-				cover_image_url   AS CoverImageUrl,
-				categories,
-				mechanics,
-				bgg_id            AS BggId,
-				bgg_coll_id       AS BggCollId,
-				parent_game_id    AS ParentGameId,
-				0                 AS ExpansionCount,
-				added_at          AS AddedAt,
-				updated_at        AS UpdatedAt
-			from collected_games
-			where id = @Id
+				g.id,
+				g.name,
+				g.year,
+				g.description,
+				g.min_players       AS MinPlayers,
+				g.max_players       AS MaxPlayers,
+				g.play_time_minutes AS PlayTimeMinutes,
+				g.bgg_rating        AS BggRating,
+				g.cover_image_url   AS CoverImageUrl,
+				g.categories,
+				g.mechanics,
+				g.bgg_id            AS BggId,
+				g.bgg_coll_id       AS BggCollId,
+				g.parent_game_id    AS ParentGameId,
+				(select count(*) from collected_games e where e.parent_game_id = g.id) AS ExpansionCount,
+				g.added_at          AS AddedAt,
+				g.updated_at        AS UpdatedAt
+			from collected_games g
+			where g.id = @Id
 			""", new { Id = id.Value.ToString() });
 
         return row is null ? null : MapToDomain(row);

@@ -15,7 +15,7 @@ BoardGame Collection Insights lets you:
 - **Switch view modes** — choose from five display modes (large, medium, small, list, details) that persist across sessions
 - **Sort your collection** — multi-level sort by name, year, rating, player count, or play time; persists across sessions
 - **Sync with BGG** — BGG is the source of truth for your owned games. The app syncs your collection on startup and every 6 hours, including owned expansions. Adding or removing a game in the UI writes back to BGG automatically. A manual **↻ Sync BGG** button is available in the header when a BGG username is configured.
-- **Track extensions** — each game has an Extensions tab where you can add owned expansions (from a BGG known-expansions dropdown, a BGG search, or manually). Extension count badges appear on game cards. Expansions are hidden from the main grid and only shown within their parent game.
+- **Track expansions** — each game has an Expansions tab where you can add owned expansions (from a BGG known-expansions dropdown, a BGG search, or manually). Expansion count badges appear on game cards. Expansions are hidden from the main grid and only shown within their parent game.
 - **BGG availability detection** — the app continuously monitors BGG reachability. If BGG is unavailable, BGG features are automatically disabled and a status banner is shown. Your collection continues to load from the local cache. When BGG comes back online, all features are restored automatically without a page refresh.
 
 ---

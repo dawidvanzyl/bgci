@@ -57,8 +57,8 @@ export async function fetchBggPreview(bggId) {
 }
 
 export async function fetchBggExpansions(bggId) {
-	const res = await fetch(`${API}/bgg/games/${bggId}/expansions`);
-	if (!res.ok) return [];
+	const res = await fetch(`${API}/bgg/game/${bggId}/expansions`);
+	if (!res.ok) throw new Error(await res.text());
 	return res.json();
 }
 
