@@ -64,8 +64,9 @@
         <h2 id="modal-title">Add Game</h2>
         <button id="modal-close" class="btn-icon">&times;</button>
       </div>
+      <div id="modal-info-hero" class="hidden"></div>
       <div id="modal-tabs" class="modal-tabs hidden">
-        <button class="modal-tab-btn active" data-tab="details">Details</button>
+        <button class="modal-tab-btn active" data-tab="info">Info</button>
         <button class="modal-tab-btn" data-tab="expansions">Expansions</button>
       </div>
       <form id="game-form" novalidate>
@@ -97,6 +98,22 @@
             <label for="form-play-time">Play Time (min)</label>
             <input id="form-play-time" type="number" min="0" />
           </div>
+          <div class="form-group">
+            <label for="form-min-play-time">Min Play Time (min)</label>
+            <input id="form-min-play-time" type="number" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="form-max-play-time">Max Play Time (min)</label>
+            <input id="form-max-play-time" type="number" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="form-bgg-weight">BGG Weight (1–5)</label>
+            <input id="form-bgg-weight" type="number" min="1" max="5" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label for="form-min-age">Min Age</label>
+            <input id="form-min-age" type="number" min="0" />
+          </div>
           <div class="form-group full">
             <label for="form-cover">Cover Image URL</label>
             <div class="cover-preview-wrap">
@@ -113,6 +130,22 @@
             <input id="form-mechanics" type="text" />
           </div>
           <div class="form-group full">
+            <label for="form-designers">Designers <span class="hint">(comma-separated)</span></label>
+            <input id="form-designers" type="text" />
+          </div>
+          <div class="form-group full">
+            <label for="form-artists">Artists <span class="hint">(comma-separated)</span></label>
+            <input id="form-artists" type="text" />
+          </div>
+          <div class="form-group full">
+            <label for="form-publishers">Publishers <span class="hint">(comma-separated)</span></label>
+            <input id="form-publishers" type="text" />
+          </div>
+          <div class="form-group full">
+            <label for="form-subdomains">Subdomains <span class="hint">(comma-separated)</span></label>
+            <input id="form-subdomains" type="text" />
+          </div>
+          <div class="form-group full">
             <label for="form-description">Description</label>
             <textarea id="form-description" rows="4"></textarea>
           </div>
@@ -120,10 +153,10 @@
 
         <div class="form-actions">
           <button type="button" id="btn-cancel" class="btn btn-secondary">Cancel</button>
-          <a id="modal-bgg-link" class="btn btn-secondary" href="#" target="_blank" rel="noopener" style="display:none">&#128279; View on BGG</a>
           <button type="submit" id="btn-save" class="btn btn-primary">Save</button>
         </div>
       </form>
+      <div id="game-info-panel" class="hidden"></div>
       <div id="expansions-tab-content" class="hidden"></div>
     </div>
   </div>

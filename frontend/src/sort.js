@@ -10,8 +10,11 @@ export function sortGames(games) {
 		for (const { field, dir } of sortCriteria) {
 			const def = SORT_FIELDS.find(f => f.field === field);
 			if (!def) continue;  // skip unknown/stale fields
-			const av = a[field] ?? null;
-			const bv = b[field] ?? null;
+			// For array fields, sort by first element
+			let av = a[field] ?? null;
+			let bv = b[field] ?? null;
+			if (Array.isArray(av)) av = av.length > 0 ? av[0] : null;
+			if (Array.isArray(bv)) bv = bv.length > 0 ? bv[0] : null;
 			// nulls always last
 			if (av === null && bv === null) continue;
 			if (av === null) return 1;

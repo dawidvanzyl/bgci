@@ -392,6 +392,7 @@ textarea { resize: vertical; }
   padding: 20px 24px 0;
 }
 .modal-header h2 { font-size: 1.1rem; }
+#modal-close { margin-left: auto; }
 
 /* ── Form ─────────────────────────────────────────────────── */
 #game-form { padding: 20px 24px 24px; flex: 1; overflow-y: auto; }
@@ -537,28 +538,8 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 
 /* ── List-mode card ───────────────────────────────────────── */
 .game-card--list {
-  flex-direction: row;
-  align-items: center;
-  gap: 0;
+  flex-direction: column;
 }
-.game-card--list .game-card-body {
-  flex: 1;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-}
-.game-card--list .game-card-title { flex: 1; min-width: 120px; font-size: 0.95rem; }
-.game-card--list .game-card-title .game-card-year { display: inline; font-size: 12px; color: var(--text-muted); margin-left: 4px; }
-.game-card--list .game-card-categories { display: none; }
-.game-card--list .game-card-actions {
-  border-top: none;
-  border-left: 1px solid var(--border);
-  flex-shrink: 0;
-  padding: 10px 12px;
-}
-.game-card--list .game-card-actions .btn { flex: 0; padding: 8px 14px; font-size: 13px; white-space: nowrap; }
 
 /* ── Details-mode card ────────────────────────────────────── */
 .game-card--details {
@@ -625,14 +606,15 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .btn-icon-only.btn-info { font-family: Georgia, 'Times New Roman', serif; font-style: normal; }
 
 .badge-compact { padding: 2px 5px; }
-#modal-bgg-link { text-decoration: none; }
 
 /* ── BGG inline badge (in meta row) ──────────────────────── */
-.game-card-meta .bgg-badge {
+.game-card-meta .bgg-badge,
+.list-row-badges .bgg-badge {
   display: inline-flex;
   align-items: center;
 }
-.game-card-meta .bgg-badge .bgg-badge-logo { height: 16px; }
+.game-card-meta .bgg-badge .bgg-badge-logo,
+.list-row-badges .bgg-badge .bgg-badge-logo { height: 16px; }
 
 /* ── Meta row alignment for tile views ───────────────────── */
 .game-card--large .game-card-meta,
@@ -820,3 +802,309 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .exp-search-results { position: absolute; top: 100%; left: 0; right: 0; z-index: 200; }
 .exp-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 .btn-sm { font-size: 12px; padding: 4px 10px; }
+
+/* ── Difficulty badge ─────────────────────────────────────── */
+.badge-difficulty {
+  border-color: var(--diff-color, var(--border));
+  color: var(--diff-color, var(--text-muted));
+  background: transparent;
+}
+
+/* ── Age badge ────────────────────────────────────────────── */
+.badge-age {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+/* ── Publisher line on cards ──────────────────────────────── */
+.game-card-publisher {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.publisher-more {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* ── Expandable list row ──────────────────────────────────── */
+.list-row-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.list-row-left {
+  flex: 1;
+  min-width: 0;
+}
+.list-row-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.list-row-year {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.list-row-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  min-height: 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.list-row-sep {
+  flex: 1;
+  min-width: 8px;
+}
+.list-row-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.list-row-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  padding-left: 10px;
+  margin-left: 4px;
+}
+.list-action-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+.badge-divider {
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 0 2px;
+  align-self: center;
+}
+.game-card-subdomains {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.tag--subdomain {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.tag--sm {
+  font-size: 10px;
+  padding: 1px 6px;
+}
+/* ── Info modal hero (above tab bar) ──────────────────────── */
+#modal-info-hero {
+  padding: 16px 24px 14px;
+}
+.info-hero {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.info-hero-cover {
+  width: 72px;
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  object-fit: cover;
+  aspect-ratio: 3/4;
+  display: block;
+}
+.info-hero-cover--placeholder {
+  width: 72px;
+  aspect-ratio: 3/4;
+  background: var(--surface2);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  color: var(--border);
+}
+.info-hero-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.info-hero-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.info-hero-year {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.info-hero-rating {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+.info-hero-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+/* ── Info panel content (below tab bar) ───────────────────── */
+#game-info-panel {
+  padding: 16px 24px 20px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.info-description-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-height: 110px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.info-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.info-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.info-column-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+.info-column-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 140px;
+  overflow-y: auto;
+}
+.info-column-tags .tag {
+  align-self: flex-start;
+}
+.info-credits-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+.info-credits-label:first-child { margin-top: 0; }
+.credits-name {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.info-subdomains {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.info-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+/* ── sep-dot (subdomain · publisher separator) ────────────── */
+.sep-dot {
+  color: var(--text-muted);
+  margin: 0 2px;
+}
+
+/* ── List row expanded detail ─────────────────────────────── */
+.list-row-detail {
+  padding: 0 14px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: flex-start;
+}
+.list-detail-cover {
+  width: 56px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  object-fit: cover;
+  aspect-ratio: 3/4;
+}
+.list-detail-cover--placeholder {
+  width: 56px;
+  aspect-ratio: 3/4;
+  background: var(--surface2);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: var(--border);
+}
+.list-detail-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+}
+.list-detail-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ── Large card second meta row ───────────────────────────── */
+.game-card-meta--secondary {
+  margin-top: 2px;
+}
+
+/* ── Subdomain tag ────────────────────────────────────────── */
+.tag-subdomain {
+  background: rgba(79, 124, 255, 0.12);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--accent);
+}

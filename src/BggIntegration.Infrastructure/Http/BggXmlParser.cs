@@ -54,8 +54,21 @@ public static class BggXmlParser
 		var playTimeStr = item.Element("playingtime")?.Attribute("value")?.Value;
 		var playTime = int.TryParse(playTimeStr, out var pt) && pt > 0 ? pt : (int?)null;
 
-		var ratingStr = item.Element("statistics")?.Element("ratings")?.Element("average")?.Attribute("value")?.Value;
+		var minPlayTimeStr = item.Element("minplaytime")?.Attribute("value")?.Value;
+		var minPlayTime = int.TryParse(minPlayTimeStr, out var minPt) && minPt > 0 ? minPt : (int?)null;
+
+		var maxPlayTimeStr = item.Element("maxplaytime")?.Attribute("value")?.Value;
+		var maxPlayTime = int.TryParse(maxPlayTimeStr, out var maxPt) && maxPt > 0 ? maxPt : (int?)null;
+
+		var minAgeStr = item.Element("minage")?.Attribute("value")?.Value;
+		var minAge = int.TryParse(minAgeStr, out var ma) && ma > 0 ? ma : (int?)null;
+
+		var ratings = item.Element("statistics")?.Element("ratings");
+		var ratingStr = ratings?.Element("average")?.Attribute("value")?.Value;
 		decimal? rating = decimal.TryParse(ratingStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var r) && r > 0 ? r : null;
+
+		var weightStr = ratings?.Element("averageweight")?.Attribute("value")?.Value;
+		decimal? weight = decimal.TryParse(weightStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var w) && w > 0 ? w : null;
 
 		var thumbnail = item.Element("thumbnail")?.Value?.Trim();
 		var image = item.Element("image")?.Value?.Trim();
@@ -68,6 +81,30 @@ public static class BggXmlParser
 
 		var mechanics = item.Elements("link")
 			.Where(l => l.Attribute("type")?.Value == "boardgamemechanic")
+			.Select(l => l.Attribute("value")?.Value ?? string.Empty)
+			.Where(v => !string.IsNullOrEmpty(v))
+			.ToList();
+
+		var designers = item.Elements("link")
+			.Where(l => l.Attribute("type")?.Value == "boardgamedesigner")
+			.Select(l => l.Attribute("value")?.Value ?? string.Empty)
+			.Where(v => !string.IsNullOrEmpty(v))
+			.ToList();
+
+		var artists = item.Elements("link")
+			.Where(l => l.Attribute("type")?.Value == "boardgameartist")
+			.Select(l => l.Attribute("value")?.Value ?? string.Empty)
+			.Where(v => !string.IsNullOrEmpty(v))
+			.ToList();
+
+		var publishers = item.Elements("link")
+			.Where(l => l.Attribute("type")?.Value == "boardgamepublisher")
+			.Select(l => l.Attribute("value")?.Value ?? string.Empty)
+			.Where(v => !string.IsNullOrEmpty(v))
+			.ToList();
+
+		var subdomains = item.Elements("link")
+			.Where(l => l.Attribute("type")?.Value == "boardgamesubdomain")
 			.Select(l => l.Attribute("value")?.Value ?? string.Empty)
 			.Where(v => !string.IsNullOrEmpty(v))
 			.ToList();
@@ -89,11 +126,19 @@ public static class BggXmlParser
 			MinPlayers: minPlayers,
 			MaxPlayers: maxPlayers,
 			PlayTimeMinutes: playTime,
+			MinPlayTimeMinutes: minPlayTime,
+			MaxPlayTimeMinutes: maxPlayTime,
 			AverageRating: rating,
+			AverageWeight: weight,
+			MinAge: minAge,
 			ThumbnailUrl: string.IsNullOrEmpty(thumbnail) ? null : thumbnail,
 			ImageUrl: string.IsNullOrEmpty(image) ? null : image,
 			Categories: categories,
 			Mechanics: mechanics,
+			Designers: designers,
+			Artists: artists,
+			Publishers: publishers,
+			Subdomains: subdomains,
 			ParentBggIds: parentBggIds
 		);
 	}

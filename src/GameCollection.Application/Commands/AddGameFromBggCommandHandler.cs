@@ -35,14 +35,24 @@ public class AddGameFromBggCommandHandler : IRequestHandler<AddGameFromBggComman
 			playTime: request.PlayTimeMinutes.HasValue
 				? new PlayTime(request.PlayTimeMinutes.Value)
 				: null,
+			minPlayTimeMinutes: request.MinPlayTimeMinutes,
+			maxPlayTimeMinutes: request.MaxPlayTimeMinutes,
 			bggRating: request.BggRating.HasValue
 				? new BggRating(request.BggRating.Value)
 				: null,
+			bggWeight: request.BggWeight.HasValue
+				? new BggWeight(request.BggWeight.Value)
+				: null,
+			minAge: request.MinAge,
 			coverImageUrl: request.CoverImageUrl is not null
 				? new Uri(request.CoverImageUrl)
 				: null,
 			categories: request.Categories,
 			mechanics: request.Mechanics,
+			designers: request.Designers,
+			artists: request.Artists,
+			publishers: request.Publishers,
+			subdomains: request.Subdomains,
 			bggId: BggGameId.From(request.BggId),
 			bggCollId: resolvedCollId,
 			parentGameId: request.ParentGameId.HasValue

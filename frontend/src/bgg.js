@@ -1,6 +1,6 @@
 import {
 	bggReachable, bggConfigured, bggPollInterval,
-	setBggReachable, setBggConfigured, setBggPollInterval,
+	setBggReachable, setBggConfigured, setBggSearchEnabled, setBggCollectionEnabled, setBggPollInterval,
 } from './state.js';
 import { loadConfig } from './api.js';
 import { fetchBggPreview } from './api.js';
@@ -15,6 +15,8 @@ export function applyBggAvailability(config, { onRenderGames } = {}) {
 	const wasReachable = bggReachable;
 	setBggReachable(config.bggReachable ?? false);
 	setBggConfigured(config.bggConfigured ?? false);
+	setBggSearchEnabled(config.bggSearchEnabled ?? false);
+	setBggCollectionEnabled(config.bggCollectionEnabled ?? false);
 
 	initBggSearch(config);
 	applyBggBanner(bggReachable);

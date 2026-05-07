@@ -86,10 +86,18 @@ public class BggSyncService
 					MinPlayers: details.MinPlayers,
 					MaxPlayers: details.MaxPlayers,
 					PlayTimeMinutes: details.PlayTimeMinutes,
+					MinPlayTimeMinutes: details.MinPlayTimeMinutes,
+					MaxPlayTimeMinutes: details.MaxPlayTimeMinutes,
 					BggRating: details.AverageRating,
+					BggWeight: details.AverageWeight,
+					MinAge: details.MinAge,
 					CoverImageUrl: details.ImageUrl ?? details.ThumbnailUrl,
 					Categories: details.Categories.ToList(),
 					Mechanics: details.Mechanics.ToList(),
+					Designers: details.Designers.ToList(),
+					Artists: details.Artists.ToList(),
+					Publishers: details.Publishers.ToList(),
+					Subdomains: details.Subdomains.ToList(),
 					BggId: details.BggId,
 					BggCollId: bggCollectionById[bggId].CollId,
 					SkipBggWrite: true
@@ -141,22 +149,30 @@ public class BggSyncService
 					continue;
 				}
 
-				var command = new AddGameFromBggCommand(
-						Name: details.Name,
-						Year: details.Year,
-						Description: details.Description,
-						MinPlayers: details.MinPlayers,
-						MaxPlayers: details.MaxPlayers,
-						PlayTimeMinutes: details.PlayTimeMinutes,
-						BggRating: details.AverageRating,
-						CoverImageUrl: details.ImageUrl ?? details.ThumbnailUrl,
-						Categories: details.Categories.ToList(),
-						Mechanics: details.Mechanics.ToList(),
-						BggId: details.BggId,
-						BggCollId: bggExpansionCollectionById[bggId].CollId,
-						SkipBggWrite: true,
-						ParentGameId: parentGameId
-					);
+			var command = new AddGameFromBggCommand(
+					Name: details.Name,
+					Year: details.Year,
+					Description: details.Description,
+					MinPlayers: details.MinPlayers,
+					MaxPlayers: details.MaxPlayers,
+					PlayTimeMinutes: details.PlayTimeMinutes,
+					MinPlayTimeMinutes: details.MinPlayTimeMinutes,
+					MaxPlayTimeMinutes: details.MaxPlayTimeMinutes,
+					BggRating: details.AverageRating,
+					BggWeight: details.AverageWeight,
+					MinAge: details.MinAge,
+					CoverImageUrl: details.ImageUrl ?? details.ThumbnailUrl,
+					Categories: details.Categories.ToList(),
+					Mechanics: details.Mechanics.ToList(),
+					Designers: details.Designers.ToList(),
+					Artists: details.Artists.ToList(),
+					Publishers: details.Publishers.ToList(),
+					Subdomains: details.Subdomains.ToList(),
+					BggId: details.BggId,
+					BggCollId: bggExpansionCollectionById[bggId].CollId,
+					SkipBggWrite: true,
+					ParentGameId: parentGameId
+				);
 
 					await _mediator.Send(command, cancellationToken);
 					added++;
