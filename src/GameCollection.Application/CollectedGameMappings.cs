@@ -19,6 +19,8 @@ public static class CollectedGameMappings
 			BggRating: game.BggRating?.Value,
 			BggWeight: game.BggWeight?.Value,
 			MinAge: game.MinAge,
+			BestPlayerCountMin: game.BestPlayerCountMin,
+			BestPlayerCountMax: game.BestPlayerCountMax,
 			CoverImageUrl: game.CoverImageUrl?.ToString(),
 			Categories: game.Categories.ToList(),
 			Mechanics: game.Mechanics.ToList(),

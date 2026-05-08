@@ -87,5 +87,16 @@ public class DatabaseMigrator
         {
             await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN subdomains TEXT;");
         }
+
+        if (!columns.Contains("best_player_count_min"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN best_player_count_min INTEGER;");
+        }
+
+        if (!columns.Contains("best_player_count_max"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN best_player_count_max INTEGER;");
+        }
+
     }
 }

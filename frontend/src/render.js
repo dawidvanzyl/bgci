@@ -31,6 +31,16 @@ function ageBadge(minAge) {
 	return `<span class="badge badge-age">${minAge}+</span>`;
 }
 
+function recommendedPlayersBadge(bestMin, bestMax) {
+	if (!bestMin) return '';
+	const range = !bestMax
+		? `${bestMin}p`
+		: bestMax >= 99
+			? `${bestMin}+`
+			: `${bestMin}\u2013${bestMax}p`;
+	return `<span class="badge badge-best-players">&#9733; Best ${range}</span>`;
+}
+
 function playTimeBadge(minPlayTime, maxPlayTime, playTimeMinutes) {
 	if (minPlayTime && maxPlayTime && minPlayTime !== maxPlayTime) {
 		return `<span class="badge">&#9201; ${minPlayTime}\u2013${maxPlayTime} min</span>`;
@@ -107,6 +117,7 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 	const timeBadge = playTimeBadge(game.minPlayTimeMinutes, game.maxPlayTimeMinutes, game.playTimeMinutes);
 	const diffBadge = difficultyBadge(game.bggWeight);
 	const aBadge    = ageBadge(game.minAge);
+	const bestPlayers = recommendedPlayersBadge(game.bestPlayerCountMin, game.bestPlayerCountMax);
 
 	const expansionsBadge = game.expansionCount > 0
 		? `<span class="badge badge-expansions">+${game.expansionCount} expansion${game.expansionCount === 1 ? '' : 's'}</span>`
@@ -167,7 +178,7 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 					<div class="list-row-sub">${subLine}</div>
 				</div>
 				<div class="list-row-sep">&nbsp;</div>
-				<div class="list-row-badges">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}${aBadge}${diffBadge}${expansionsBadge}</div>
+				<div class="list-row-badges">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}${aBadge}${diffBadge}${bestPlayers}${expansionsBadge}</div>
 				<div class="list-row-actions">
 					${actionBtn}
 					${delBtn}
@@ -219,10 +230,9 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 		card.innerHTML = `
 			${thumbHtml}
 			<div class="game-card-body">
-				<div class="game-card-title">${esc(game.name)}</div>
-				${game.year ? `<div class="game-card-year">${game.year}</div>` : ''}
+				<div class="game-card-title">${esc(game.name)}${game.year ? ` <span class="game-card-year">(${game.year})</span>` : ''}</div>
 			${subdomainPublisherLine(game.subdomains, game.publishers)}
-			<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}${aBadge}${diffBadge}${expansionsBadge}</div>
+			<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}${aBadge}${diffBadge}${bestPlayers}${expansionsBadge}</div>
 			${(game.subdomains || []).length ? `<div class="game-card-subdomains">${(game.subdomains || []).map(s => `<span class="tag tag--subdomain">${esc(s)}</span>`).join('')}</div>` : ''}
 				${game.description ? `<div class="game-description">${esc(game.description)}</div>` : ''}
 				${allTags ? `<div class="game-card-categories">${allTags}</div>` : ''}
@@ -250,7 +260,6 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 		const playersBadgeSmall = game.minPlayers
 			? `<span class="badge badge-players badge-compact">${game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}\u2013${game.maxPlayers}`}</span>`
 			: '';
-
 		card.className = 'game-card game-card--small';
 		card.innerHTML = `
 			<div class="game-card-cover-wrap">
@@ -280,8 +289,8 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 				${expansionsBadgeOverlay}
 			</div>
 			<div class="game-card-body">
-				<div class="game-card-title">${esc(game.name)}</div>
-				${game.year ? `<div class="game-card-year">${game.year}</div>` : ''}
+				<div class="game-card-title">${esc(game.name)}${game.year ? ` <span class="game-card-year">(${game.year})</span>` : ''}</div>
+				
 				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}</div>
 			</div>
 			<div class="game-card-actions">
@@ -299,8 +308,8 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 		const tags = [...(game.categories || []).slice(0, 3), ...(game.mechanics || []).slice(0, 2)]
 			.map(t => `<span class="tag">${esc(t)}</span>`).join('');
 
-		const secondMeta = diffBadge || aBadge
-			? `<div class="game-card-meta game-card-meta--secondary">${diffBadge}${aBadge}</div>`
+		const secondMeta = diffBadge || aBadge || bestPlayers
+			? `<div class="game-card-meta game-card-meta--secondary">${diffBadge}${aBadge}${bestPlayers}</div>`
 			: '';
 
 		card.className = 'game-card game-card--large';
@@ -310,8 +319,8 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 				${expansionsBadgeOverlay}
 			</div>
 			<div class="game-card-body">
-				<div class="game-card-title">${esc(game.name)}</div>
-				${game.year ? `<div class="game-card-year">${game.year}</div>` : ''}
+				<div class="game-card-title">${esc(game.name)}${game.year ? ` <span class="game-card-year">(${game.year})</span>` : ''}</div>
+				
 				<div class="game-card-meta">${bggBadge}${ratingBadge}${playersBadge}${timeBadge}</div>
 				${secondMeta}
 				<div class="game-card-categories">${tags}</div>

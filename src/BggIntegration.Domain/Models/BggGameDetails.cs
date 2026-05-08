@@ -13,6 +13,8 @@ public record BggGameDetails(
     decimal? AverageRating,
     decimal? AverageWeight,
     int? MinAge,
+    int? BestPlayerCountMin,
+    int? BestPlayerCountMax,
     string? ThumbnailUrl,
     string? ImageUrl,
     List<string> Categories,

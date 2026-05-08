@@ -37,6 +37,8 @@ public class UpdateGameCommandHandler : IRequestHandler<UpdateGameCommand>
                 ? new BggWeight(request.BggWeight.Value)
                 : null,
             minAge: request.MinAge,
+            bestPlayerCountMin: request.BestPlayerCountMin,
+            bestPlayerCountMax: request.BestPlayerCountMax,
             coverImageUrl: request.CoverImageUrl is not null
                 ? new Uri(request.CoverImageUrl)
                 : null,

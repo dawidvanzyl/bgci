@@ -109,6 +109,49 @@ public static class BggXmlParser
 			.Where(v => !string.IsNullOrEmpty(v))
 			.ToList();
 
+		// Derive best player count from the suggested_numplayers community poll
+		var poll = item.Elements("poll")
+			.FirstOrDefault(p => p.Attribute("name")?.Value == "suggested_numplayers");
+
+		int? bestPlayerCountMin = null;
+		int? bestPlayerCountMax = null;
+
+		if (poll is not null &&
+		    int.TryParse(poll.Attribute("totalvotes")?.Value, out var totalVotes) && totalVotes >= 10)
+		{
+			var entries = poll.Elements("results")
+				.Select(r =>
+				{
+					var raw    = r.Attribute("numplayers")?.Value ?? "";
+					var isPlus = raw.EndsWith("+");
+					var numStr = isPlus ? raw.TrimEnd('+') : raw;
+					if (!int.TryParse(numStr, out var count) || count <= 0) return null;
+					var bestVotes = int.TryParse(
+						r.Elements("result")
+						 .FirstOrDefault(x => x.Attribute("value")?.Value == "Best")
+						 ?.Attribute("numvotes")?.Value,
+						out var b) ? b : 0;
+					return new { Count = count, IsPlus = isPlus, Best = bestVotes };
+				})
+				.Where(x => x != null)
+				.ToList();
+
+			if (entries.Count > 0)
+			{
+				var topBest = entries.Max(x => x!.Best);
+				if (topBest > 0)
+				{
+					var winners   = entries.Where(x => x!.Best == topBest).ToList();
+					var minWinner = winners.OrderBy(x => x!.Count).First()!;
+					var maxWinner = winners.OrderByDescending(x => x!.Count).First()!;
+					bestPlayerCountMin = minWinner.Count;
+					bestPlayerCountMax = (winners.Count > 1 || maxWinner.IsPlus)
+						? (maxWinner.IsPlus ? 99 : maxWinner.Count)
+						: (int?)null;
+				}
+			}
+		}
+
 		// Inbound boardgameexpansion links identify base games this item is an expansion of
 		var parentBggIds = item.Elements("link")
 			.Where(l => l.Attribute("type")?.Value == "boardgameexpansion"
@@ -131,6 +174,8 @@ public static class BggXmlParser
 			AverageRating: rating,
 			AverageWeight: weight,
 			MinAge: minAge,
+			BestPlayerCountMin: bestPlayerCountMin,
+			BestPlayerCountMax: bestPlayerCountMax,
 			ThumbnailUrl: string.IsNullOrEmpty(thumbnail) ? null : thumbnail,
 			ImageUrl: string.IsNullOrEmpty(image) ? null : image,
 			Categories: categories,

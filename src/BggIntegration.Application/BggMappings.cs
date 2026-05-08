@@ -21,6 +21,8 @@ public static class BggMappings
             BggRating: details.AverageRating,
             BggWeight: details.AverageWeight,
             MinAge: details.MinAge,
+            BestPlayerCountMin: details.BestPlayerCountMin,
+            BestPlayerCountMax: details.BestPlayerCountMax,
             CoverImageUrl: details.ImageUrl ?? details.ThumbnailUrl,
             Categories: details.Categories,
             Mechanics: details.Mechanics,

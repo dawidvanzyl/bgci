@@ -71,6 +71,8 @@ public class GamesController : ControllerBase
             request.BggRating,
             request.BggWeight,
             request.MinAge,
+            request.BestPlayerCountMin,
+            request.BestPlayerCountMax,
             request.CoverImageUrl,
             request.Categories,
             request.Mechanics,

@@ -87,6 +87,16 @@ function diffBadgeHtml(w) {
 	return `<span class="badge badge-difficulty" style="--diff-color:${level.color}">${level.label}</span>`;
 }
 
+function recommendedPlayersBadgeHtml(bestMin, bestMax) {
+	if (!bestMin) return '';
+	const range = !bestMax
+		? `${bestMin}p`
+		: bestMax >= 99
+			? `${bestMin}+`
+			: `${bestMin}\u2013${bestMax}p`;
+	return `<span class="badge badge-best-players">&#9733; Best ${range}</span>`;
+}
+
 // Hero block shown above the tab bar (cover + title + badges)
 function buildInfoHero(game) {
 	const coverHtml = game.coverImageUrl
@@ -109,6 +119,7 @@ function buildInfoHero(game) {
 	const timeBadge       = timePart           ? `<span class="badge">${timePart}</span>` : '';
 	const diffBadge       = diffBadgeHtml(game.bggWeight);
 	const ageBadge        = game.minAge        ? `<span class="badge badge-age">${game.minAge}+</span>` : '';
+	const bestPlayersBadge = recommendedPlayersBadgeHtml(game.bestPlayerCountMin, game.bestPlayerCountMax);
 	const expansionsBadge = game.expansionCount > 0
 		? `<span class="badge badge-expansions">+${game.expansionCount} expansion${game.expansionCount === 1 ? '' : 's'}</span>`
 		: '';
@@ -119,7 +130,7 @@ function buildInfoHero(game) {
 			<div class="info-hero-body">
 				<div class="info-hero-title">${esc(game.name)}${game.year ? ` <span class="info-hero-year">(${game.year})</span>` : ''}${game.bggRating ? ` <span class="info-hero-rating">&#9733; ${Number(game.bggRating).toFixed(1)}</span>` : ''}</div>
 				<div class="info-hero-badges">
-					${playersBadge}${timeBadge}${ageBadge}${diffBadge}${expansionsBadge}
+					${playersBadge}${timeBadge}${ageBadge}${diffBadge}${bestPlayersBadge}${expansionsBadge}
 				</div>
 			</div>
 		</div>
@@ -257,6 +268,8 @@ export function openModal(gameId = null, readOnly = false, bggPreview = null, { 
 			document.getElementById('form-min-age').value         = game.minAge ?? '';
 			document.getElementById('form-min-players').value     = game.minPlayers ?? '';
 			document.getElementById('form-max-players').value     = game.maxPlayers ?? '';
+			document.getElementById('form-best-player-count-min').value = game.bestPlayerCountMin ?? '';
+			document.getElementById('form-best-player-count-max').value = game.bestPlayerCountMax ?? '';
 			document.getElementById('form-play-time').value       = game.playTimeMinutes ?? '';
 			document.getElementById('form-min-play-time').value   = game.minPlayTimeMinutes ?? '';
 			document.getElementById('form-max-play-time').value   = game.maxPlayTimeMinutes ?? '';
@@ -280,6 +293,8 @@ export function openModal(gameId = null, readOnly = false, bggPreview = null, { 
 		document.getElementById('form-min-age').value         = bggPreview.minAge ?? '';
 		document.getElementById('form-min-players').value     = bggPreview.minPlayers ?? '';
 		document.getElementById('form-max-players').value     = bggPreview.maxPlayers ?? '';
+		document.getElementById('form-best-player-count-min').value = bggPreview.bestPlayerCountMin ?? '';
+		document.getElementById('form-best-player-count-max').value = bggPreview.bestPlayerCountMax ?? '';
 		document.getElementById('form-play-time').value       = bggPreview.playTimeMinutes ?? '';
 		document.getElementById('form-min-play-time').value   = bggPreview.minPlayTimeMinutes ?? '';
 		document.getElementById('form-max-play-time').value   = bggPreview.maxPlayTimeMinutes ?? '';
@@ -358,6 +373,8 @@ export async function handleFormSubmit(e, { onSaved } = {}) {
 		artists:             splitTags(document.getElementById('form-artists').value),
 		publishers:          splitTags(document.getElementById('form-publishers').value),
 		subdomains:          splitTags(document.getElementById('form-subdomains').value),
+		bestPlayerCountMin:  intOrNull('form-best-player-count-min'),
+		bestPlayerCountMax:  intOrNull('form-best-player-count-max'),
 	};
 
 	const saveBtn = document.getElementById('btn-save');

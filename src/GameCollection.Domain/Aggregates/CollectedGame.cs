@@ -24,6 +24,8 @@ public class CollectedGame
     public BggRating? BggRating { get; private set; }
     public BggWeight? BggWeight { get; private set; }
     public int? MinAge { get; private set; }
+    public int? BestPlayerCountMin { get; private set; }
+    public int? BestPlayerCountMax { get; private set; }
     public Uri? CoverImageUrl { get; private set; }
     public IReadOnlyList<string> Categories => _categories.AsReadOnly();
     public IReadOnlyList<string> Mechanics => _mechanics.AsReadOnly();
@@ -58,6 +60,8 @@ public class CollectedGame
         BggRating? bggRating = null,
         BggWeight? bggWeight = null,
         int? minAge = null,
+        int? bestPlayerCountMin = null,
+        int? bestPlayerCountMax = null,
         Uri? coverImageUrl = null,
         IEnumerable<string>? categories = null,
         IEnumerable<string>? mechanics = null,
@@ -82,6 +86,8 @@ public class CollectedGame
             BggRating = bggRating,
             BggWeight = bggWeight,
             MinAge = minAge,
+            BestPlayerCountMin = bestPlayerCountMin,
+            BestPlayerCountMax = bestPlayerCountMax,
             CoverImageUrl = coverImageUrl,
             BggId = bggId,
             BggCollId = bggCollId,
@@ -112,6 +118,8 @@ public class CollectedGame
         BggRating? bggRating,
         BggWeight? bggWeight,
         int? minAge,
+        int? bestPlayerCountMin,
+        int? bestPlayerCountMax,
         Uri? coverImageUrl,
         IEnumerable<string>? categories,
         IEnumerable<string>? mechanics,
@@ -130,6 +138,8 @@ public class CollectedGame
         BggRating = bggRating;
         BggWeight = bggWeight;
         MinAge = minAge;
+        BestPlayerCountMin = bestPlayerCountMin;
+        BestPlayerCountMax = bestPlayerCountMax;
         CoverImageUrl = coverImageUrl;
         UpdatedAt = DateTime.UtcNow;
 
@@ -172,6 +182,8 @@ public class CollectedGame
         BggRating? bggRating,
         BggWeight? bggWeight,
         int? minAge,
+        int? bestPlayerCountMin,
+        int? bestPlayerCountMax,
         Uri? coverImageUrl,
         IEnumerable<string> categories,
         IEnumerable<string> mechanics,
@@ -198,6 +210,8 @@ public class CollectedGame
             BggRating = bggRating,
             BggWeight = bggWeight,
             MinAge = minAge,
+            BestPlayerCountMin = bestPlayerCountMin,
+            BestPlayerCountMax = bestPlayerCountMax,
             CoverImageUrl = coverImageUrl,
             BggId = bggId,
             BggCollId = bggCollId,

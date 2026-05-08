@@ -15,6 +15,8 @@ public record UpdateGameCommand(
     decimal? BggRating,
     decimal? BggWeight,
     int? MinAge,
+    int? BestPlayerCountMin,
+    int? BestPlayerCountMax,
     string? CoverImageUrl,
     List<string>? Categories,
     List<string>? Mechanics,

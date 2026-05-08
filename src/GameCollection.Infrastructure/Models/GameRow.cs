@@ -14,6 +14,8 @@ internal class GameRow
 	public decimal? BggRating { get; set; }
 	public decimal? BggWeight { get; set; }
 	public int? MinAge { get; set; }
+	public int? BestPlayerCountMin { get; set; }
+	public int? BestPlayerCountMax { get; set; }
 	public string? CoverImageUrl { get; set; }
 	public string? Categories { get; set; }
 	public string? Mechanics { get; set; }
