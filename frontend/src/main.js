@@ -7,7 +7,7 @@ import { renderSortBar, saveSort, toggleSortDropdown, hideSortDropdown, SORT_FIE
 import { openModal, closeModal, handleFormSubmit, updateCoverPreview, confirmDelete, handleConfirmDelete } from './modal.js';
 import { hideBggResults, showBggLoading, renderBggResults, selectBggGame } from './bgg.js';
 import { searchBgg } from './api.js';
-import { bggReachable, bggConfigured, setBggSearchTimer, bggSearchTimer, coverPreviewTimer, setCoverPreviewTimer } from './state.js';
+import { bggReachable, bggConfigured, bggCollectionEnabled, setBggSearchTimer, bggSearchTimer, coverPreviewTimer, setCoverPreviewTimer } from './state.js';
 import { API } from './api.js';
 
 // ── DOM refs ───────────────────────────────────────────────
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 		if (badge) badge.textContent = (config.version === 'dev' || config.version === 'latest') ? config.version : `v${config.version}`;
 	}
 	applyBggAvailability(config, { onRenderGames: refreshGames });
-	if (config.bggSyncEnabled) {
+	if (bggCollectionEnabled) {
 		document.getElementById('btn-sync-bgg').style.display = '';
 	}
 	await loadGames(refreshGames);

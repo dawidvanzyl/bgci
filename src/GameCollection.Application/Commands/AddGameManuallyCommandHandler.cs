@@ -26,14 +26,26 @@ public class AddGameManuallyCommandHandler : IRequestHandler<AddGameManuallyComm
             playTime: request.PlayTimeMinutes.HasValue
                 ? new PlayTime(request.PlayTimeMinutes.Value)
                 : null,
+            minPlayTimeMinutes: request.MinPlayTimeMinutes,
+            maxPlayTimeMinutes: request.MaxPlayTimeMinutes,
             bggRating: request.BggRating.HasValue
                 ? new BggRating(request.BggRating.Value)
                 : null,
+            bggWeight: request.BggWeight.HasValue
+                ? new BggWeight(request.BggWeight.Value)
+                : null,
+            minAge: request.MinAge,
+            bestPlayerCountMin: request.BestPlayerCountMin,
+            bestPlayerCountMax: request.BestPlayerCountMax,
             coverImageUrl: request.CoverImageUrl is not null
                 ? new Uri(request.CoverImageUrl)
                 : null,
             categories: request.Categories,
             mechanics: request.Mechanics,
+            designers: request.Designers,
+            artists: request.Artists,
+            publishers: request.Publishers,
+            subdomains: request.Subdomains,
             parentGameId: request.ParentGameId.HasValue
                 ? GameId.From(request.ParentGameId.Value)
                 : null

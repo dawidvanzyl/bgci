@@ -47,5 +47,56 @@ public class DatabaseMigrator
         {
             await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN parent_game_id TEXT;");
         }
+
+        if (!columns.Contains("bgg_weight"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN bgg_weight REAL;");
+        }
+
+        if (!columns.Contains("min_age"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN min_age INTEGER;");
+        }
+
+        if (!columns.Contains("min_play_time"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN min_play_time INTEGER;");
+        }
+
+        if (!columns.Contains("max_play_time"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN max_play_time INTEGER;");
+        }
+
+        if (!columns.Contains("designers"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN designers TEXT;");
+        }
+
+        if (!columns.Contains("artists"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN artists TEXT;");
+        }
+
+        if (!columns.Contains("publishers"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN publishers TEXT;");
+        }
+
+        if (!columns.Contains("subdomains"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN subdomains TEXT;");
+        }
+
+        if (!columns.Contains("best_player_count_min"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN best_player_count_min INTEGER;");
+        }
+
+        if (!columns.Contains("best_player_count_max"))
+        {
+            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN best_player_count_max INTEGER;");
+        }
+
     }
 }

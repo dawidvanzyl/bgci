@@ -66,10 +66,20 @@ public class GamesController : ControllerBase
             request.MinPlayers,
             request.MaxPlayers,
             request.PlayTimeMinutes,
+            request.MinPlayTimeMinutes,
+            request.MaxPlayTimeMinutes,
             request.BggRating,
+            request.BggWeight,
+            request.MinAge,
+            request.BestPlayerCountMin,
+            request.BestPlayerCountMax,
             request.CoverImageUrl,
             request.Categories,
-            request.Mechanics
+            request.Mechanics,
+            request.Designers,
+            request.Artists,
+            request.Publishers,
+            request.Subdomains
         );
 
         try

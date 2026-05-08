@@ -16,10 +16,20 @@ public static class BggMappings
             MinPlayers: details.MinPlayers,
             MaxPlayers: details.MaxPlayers,
             PlayTimeMinutes: details.PlayTimeMinutes,
+            MinPlayTimeMinutes: details.MinPlayTimeMinutes,
+            MaxPlayTimeMinutes: details.MaxPlayTimeMinutes,
             BggRating: details.AverageRating,
+            BggWeight: details.AverageWeight,
+            MinAge: details.MinAge,
+            BestPlayerCountMin: details.BestPlayerCountMin,
+            BestPlayerCountMax: details.BestPlayerCountMax,
             CoverImageUrl: details.ImageUrl ?? details.ThumbnailUrl,
             Categories: details.Categories,
             Mechanics: details.Mechanics,
+            Designers: details.Designers,
+            Artists: details.Artists,
+            Publishers: details.Publishers,
+            Subdomains: details.Subdomains,
             BggId: details.BggId
         );
 }
