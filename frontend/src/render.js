@@ -14,9 +14,9 @@ let _expandedListDetail = null;
 
 const DIFFICULTY_LEVELS = [
 	{ max: 1.5, label: 'Apprentice',  color: '#9e9e9e' },
-	{ max: 2.5, label: 'Journeyman',  color: '#4caf50' },
-	{ max: 3.5, label: 'Adept',       color: '#2196f3' },
-	{ max: 4.5, label: 'Expert',      color: '#9c27b0' },
+	{ max: 2.4, label: 'Journeyman',  color: '#4caf50' },
+	{ max: 3.4, label: 'Adept',       color: '#2196f3' },
+	{ max: 4.2, label: 'Expert',      color: '#9c27b0' },
 	{ max: 5.0, label: 'Grandmaster', color: '#ff9800' },
 ];
 
@@ -202,19 +202,33 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 		const header  = card.querySelector('.list-row-header');
 		const detail  = card.querySelector('.list-row-detail');
 		const actions = card.querySelector('.list-row-actions');
-		header.addEventListener('click', e => {
+		header.setAttribute('role', 'button');
+		header.setAttribute('tabindex', '0');
+		header.setAttribute('aria-expanded', 'false');
+
+		const toggleExpanded = e => {
 			if (actions.contains(e.target)) return;
 			const isExpanded = card.classList.contains('is-expanded');
 			// Collapse the previously expanded card
 			if (_expandedListCard && _expandedListCard !== card) {
 				_expandedListCard.classList.remove('is-expanded');
 				_expandedListDetail.classList.add('hidden');
+				const prevHeader = _expandedListCard.querySelector('.list-row-header');
+				if (prevHeader) prevHeader.setAttribute('aria-expanded', 'false');
 			}
 			// Toggle this card
 			card.classList.toggle('is-expanded', !isExpanded);
 			detail.classList.toggle('hidden', isExpanded);
+			header.setAttribute('aria-expanded', String(!isExpanded));
 			_expandedListCard   = !isExpanded ? card   : null;
 			_expandedListDetail = !isExpanded ? detail : null;
+		};
+
+		header.addEventListener('click', toggleExpanded);
+		header.addEventListener('keydown', e => {
+			if (e.key !== 'Enter' && e.key !== ' ') return;
+			e.preventDefault();
+			toggleExpanded(e);
 		});
 
 	// ── Details view ─────────────────────────────────────────

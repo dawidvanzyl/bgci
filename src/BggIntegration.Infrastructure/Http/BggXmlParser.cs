@@ -68,7 +68,10 @@ public static class BggXmlParser
 		decimal? rating = decimal.TryParse(ratingStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var r) && r > 0 ? r : null;
 
 		var weightStr = ratings?.Element("averageweight")?.Attribute("value")?.Value;
-		decimal? weight = decimal.TryParse(weightStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var w) && w > 0 ? w : null;
+		decimal? weight = decimal.TryParse(weightStr, NumberStyles.Any, CultureInfo.InvariantCulture, out var w)
+			&& w >= 1.0m && w <= 5.0m
+			? w
+			: null;
 
 		var thumbnail = item.Element("thumbnail")?.Value?.Trim();
 		var image = item.Element("image")?.Value?.Trim();

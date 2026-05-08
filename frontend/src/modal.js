@@ -1,8 +1,7 @@
 import { allGames, deleteTargetId, setDeleteTargetId } from './state.js';
-import { setButtonLoading, clearButtonLoading, showInlineError, intOrNull, floatOrNull } from './helpers.js';
+import { setButtonLoading, clearButtonLoading, showInlineError, intOrNull, floatOrNull, esc } from './helpers.js';
 import { saveGame, saveGameFromBgg, deleteGame } from './api.js';
 import { renderExpansionsTab } from './expansions.js';
-import { esc } from './helpers.js';
 
 // ── DOM refs ───────────────────────────────────────────────
 const modalOverlay      = document.getElementById('modal-overlay');
@@ -75,9 +74,9 @@ export function updateCoverPreview(url) {
 // ── Info panel helpers ─────────────────────────────────────
 const DIFFICULTY_LEVELS = [
 	{ max: 1.5, label: 'Apprentice',  color: '#9e9e9e' },
-	{ max: 2.5, label: 'Journeyman',  color: '#4caf50' },
-	{ max: 3.5, label: 'Adept',       color: '#2196f3' },
-	{ max: 4.5, label: 'Expert',      color: '#9c27b0' },
+	{ max: 2.4, label: 'Journeyman',  color: '#4caf50' },
+	{ max: 3.4, label: 'Adept',       color: '#2196f3' },
+	{ max: 4.2, label: 'Expert',      color: '#9c27b0' },
 	{ max: 5.0, label: 'Grandmaster', color: '#ff9800' },
 ];
 
