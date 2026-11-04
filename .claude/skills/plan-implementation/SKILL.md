@@ -83,7 +83,8 @@ rules the negative cases come from), `## API / Interface Contract`,
 `## Page Architecture` (frontend only), `## Test Specifications` (the authoritative IT
 codes), `## Acceptance Criteria (G/W/T)` (the UC codes), `## Out of Scope`, `## Notes`
 (the owner's answers, once there are any), and any **Design reference:** bullet — the
-named `.design/` file is authoritative for what the screen does. A tech-debt issue has
+named `.design/` file is authoritative for what the screen does. `N/A — {reason}` means no
+mockup governs, so plan against the existing UI and keep its behaviour. A tech-debt issue has
 no `## Domain & Data` or `## Page Architecture`; read its `## Motivation & Risk`
 instead. Treat any section the issue's template lacks as absent, not as a gap.
 

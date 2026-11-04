@@ -51,7 +51,8 @@ it exists at this point in the milestone sequence.
 - **Design reference:** for frontend stories, the mockup(s) this screen is built to, and a
   line on what each shows. The source doesn't matter — whatever tool produced it — only that
   the design exists and is cited. It is authoritative: where it and this brief disagree, the
-  mockup governs and the difference is in scope. Omit for stories with no UI.
+  mockup governs and the difference is in scope. Write `N/A — no visible change` for a frontend story
+  that changes no screen (for example a refactor). Omit for stories with no frontend layer.
 
 ---
 

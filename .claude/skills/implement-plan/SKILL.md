@@ -196,7 +196,7 @@ nothing.
   never a single project — cross-cutting tests live in other projects. This is the one place the
   gauntlet runs in the automated flow. Also run its *Comment labels* check and fix
   every hit before reporting done.
-- **Mockup fidelity.** For a story with a Design reference, record a property table
+- **Mockup fidelity.** For a story with a Design reference other than `N/A`, record a property table
   in `implement-{attempt}.md` built from the rendered mockup's `getComputedStyle`
   against the shipped component's — never from the mockup's source values.
 - **Run the story's IT specs locally until every one passes**, when QA wrote them
