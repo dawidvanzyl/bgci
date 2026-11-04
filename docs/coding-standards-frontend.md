@@ -46,8 +46,9 @@ frontend/
 - Use `const` by default. Use `let` only when the binding changes. Never use `var`.
 - Look up DOM elements once at module top, as the existing modules do. Do not repeat
   `document.getElementById` inside hot paths.
-- Build user-supplied text into the DOM with `textContent`. Never assign untrusted text
-  (game names, BGG data, URLs) to `innerHTML`.
+- Set user-supplied text with `textContent`. When markup is built as an `innerHTML`
+  template, wrap every untrusted value (game names, BGG data, URLs) in `esc()` from
+  `helpers.js`.
 - Handle every `fetch` failure. Show the user a message through the existing error
   helpers. Never leave a rejected promise unhandled.
 
@@ -55,9 +56,6 @@ frontend/
 code, or file a tech-debt issue.
 
 - `main.js` calls `fetch` for `POST /sync/bgg`. It belongs in `api.js`.
-- Several modules (`render.js`, `modal.js`, `bgg.js`, `expansions.js`, `sort.js`) build
-  markup with `innerHTML` template strings. There is no HTML-escape helper, so game names
-  and BGG text reach the DOM unescaped.
 
 ## 3. Testability
 
@@ -82,3 +80,24 @@ New logic is split so it can be unit tested without a browser.
 - `public/config.js` is local and untracked. Every key it reads is listed in
   `config.js.example`.
 - Never put secrets in the frontend.
+
+## 6. Tooling
+
+Run these from `frontend/`:
+
+| Script | Purpose |
+|---|---|
+| `npm run lint` | ESLint (`eslint.config.js`) |
+| `npm run format:check` / `npm run format` | Prettier (`.prettierrc`), JavaScript files only |
+| `npm run test` | vitest, files in `tests/**/*.test.js` |
+| `npm run build` | Vite production build |
+
+Prettier covers `src/`, `tests/` and root `*.js` files. It does not format `index.html` or `style.css`.
+
+## 7. Test Pattern
+
+- Tests live in `frontend/tests/`, one `<module>.test.js` per module under `src/`.
+- Build test data with a factory from `tests/factories/` (for example `createGame`). State only the fields that matter to the behaviour under test. Do not copy object literals between tests.
+- Modules keep shared state in `state.js`. A test that changes it resets it in `beforeEach`.
+- Tests run in Node. They import only modules that do not touch the DOM at load time. Keep new logic in such modules (see §3).
+- Tag a test with its code in the test name: `{issue_number}UC{n}`.
