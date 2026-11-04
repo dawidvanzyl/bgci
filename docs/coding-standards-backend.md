@@ -65,7 +65,7 @@ public record GameName
 ### Repository Interfaces
 
 - Repository interfaces are defined in the `Domain` layer. They describe what the domain needs, in domain language.
-- Implementations live in `Infrastructure`. The domain has no knowledge of Dapper, SQLite, or any persistence concern.
+- Implementations live in `Infrastructure`. The domain has no knowledge of Dapper, PostgreSQL, or any persistence concern.
 - Repository methods accept `CancellationToken` and are always async.
 
 ---
@@ -185,11 +185,12 @@ public CollectedGame? GetById(GameId id)
 public static class DependencyInjection
 {
     public static IServiceCollection AddGameCollectionInfrastructure(
-        this IServiceCollection services, string connectionString)
+        this IServiceCollection services, IConfiguration configuration)
     {
+        var connectionString = BuildConnectionString(configuration);
         services.AddScoped<ICollectedGameRepository>(
-            _ => new SqliteCollectedGameRepository(connectionString));
-        services.AddSingleton(new DatabaseMigrator(connectionString));
+            _ => new PostgresCollectedGameRepository(connectionString));
+        services.AddSingleton(new DatabaseMigrationRunner(connectionString, MigrationScripts.LoadEmbedded()));
         return services;
     }
 }
@@ -277,4 +278,5 @@ public sealed class DeleteGameCommandHandlerTests : IClassFixture<GameCollection
 - **Seed scripts:** a seed script must be safe to run again (`ON CONFLICT DO NOTHING` or `WHERE NOT EXISTS`). The runner applies it on every run and records one journal entry per application.
 - **Failure:** each script runs in its own transaction. A failed script leaves no journal record, stops the run, and raises `DatabaseMigrationException` that names the script.
 - **Locking:** the runner takes no lock. Run one API instance at a time.
+- **Data access:** a repository calls the stored functions with Dapper as `CommandType.StoredProcedure`, and lists cross the boundary as `text[]`. `PostgresClientSettings.Apply()` must run first in the process (the API start and the Infrastructure test assembly).
 - **Tests:** the `GameCollection.Infrastructure.Tests` project runs against a PostgreSQL that Testcontainers starts in Docker. `dotnet test` needs Docker running.
