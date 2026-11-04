@@ -1,16 +1,22 @@
+# Production stack, from the published images. Run it with its own env file:
+#   cp .env.prod.example .env.prod
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+# Each release attaches this file as docker-compose.yml and .env.prod.example as .env.example,
+# so end users run a plain `docker compose up -d` with a `.env` file.
+name: bgci
+
 services:
 
   bgci-api:
     image: ghcr.io/dawidvanzyl/bgci-api:latest
     container_name: bgci-api
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - Database__Path=/data/bgci.db
-      - Bgg__BearerToken=${BGG_BEARER_TOKEN}
-      - Bgg__Username=${BGG_USERNAME}
+      - Bgg__BearerToken=${BGG_BEARER_TOKEN:-}
+      - Bgg__Username=${BGG_USERNAME:-}
       - BggWriter__BaseUrl=http://bgg-writer:3001
     depends_on:
       - bgg-writer
@@ -24,7 +30,7 @@ services:
     container_name: bgg-writer
     restart: unless-stopped
     environment:
-      - BGG_PASSWORD=${BGG_PASSWORD}
+      - BGG_PASSWORD=${BGG_PASSWORD:-}
       - PORT=3001
     networks:
       - bgci-net
