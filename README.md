@@ -179,7 +179,7 @@ The `dev` profile of the root `docker-compose.yml` starts only a PostgreSQL serv
 docker compose --profile dev up -d
 ```
 
-- It listens on host port `DEV_DB_PORT` (default 5433). The database name, user and password are the `DB_*` values in `.env.example` (all `bgci` by default).
+- It listens on host port `DEV_DB_PORT` (default 5433), on the loopback address 127.0.0.1 only, so other machines on your network cannot reach it. The database name, user and password are the `DB_*` values in `.env.example` (all `bgci` by default).
 - Its data stays in the `bgci-dev-data` volume until you run `docker compose --profile dev down -v`.
 - It is separate from the QA database, so it can run at the same time as the `qa` profile.
 

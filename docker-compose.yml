@@ -36,7 +36,7 @@ services:
     <<: *postgres
     profiles: [dev]
     ports:
-      - "${DEV_DB_PORT:-5433}:5432"
+      - "127.0.0.1:${DEV_DB_PORT:-5433}:5432"
     volumes:
       - bgci-dev-data:/var/lib/postgresql/data
 
