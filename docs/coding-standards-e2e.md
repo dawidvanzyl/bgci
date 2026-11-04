@@ -38,8 +38,8 @@ cd e2e && npm ci && npx playwright install chromium && npm run test:e2e
 docker compose --profile qa down -v
 ```
 
-- The stack is the `qa` profile of the root `docker-compose.yml`. It has no volumes, so every `up`
-  starts with an empty SQLite database. Production is `docker-compose.prod.yml`.
+- The stack is the `qa` profile of the root `docker-compose.yml`. It runs a PostgreSQL service with no
+  volume, so every `up` starts with an empty database. Production is `docker-compose.prod.yml`.
 - Ports: web `QA_WEB_PORT` (default 3000), mock BGG `QA_MOCK_PORT` (default 4010).
 - To run one story's tests, filter by its code: `npx playwright test --grep "@{IT_CODE}"`.
   Run the whole suite in CI, not locally.

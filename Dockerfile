@@ -15,9 +15,6 @@ ENV APP_VERSION=$DISPLAY_VERSION
 
 COPY --from=build /app/publish .
 
-# Data directory for SQLite
-RUN mkdir -p /data
-
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 
