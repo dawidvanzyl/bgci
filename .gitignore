@@ -47,6 +47,10 @@ e2e/node_modules/
 e2e/playwright-report/
 e2e/test-results/
 
+# Design mockups are local scratch. Only the README is tracked.
+.design/*
+!.design/README.md
+
 # Claude Code local files
 .claude/worktrees/
 .claude/settings.local.json
