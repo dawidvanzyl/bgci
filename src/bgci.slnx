@@ -10,6 +10,7 @@
   <Project Path="GameCollection.Application/GameCollection.Application.csproj" />
   <Project Path="GameCollection.Domain.Tests/GameCollection.Domain.Tests.csproj" />
   <Project Path="GameCollection.Domain/GameCollection.Domain.csproj" />
+  <Project Path="GameCollection.Infrastructure.Tests/GameCollection.Infrastructure.Tests.csproj" />
   <Project Path="GameCollection.Infrastructure/GameCollection.Infrastructure.csproj" />
   <Project Path="GameCollection.Testing/GameCollection.Testing.csproj" />
   <Project Path="Shared.Testing/Shared.Testing.csproj" />

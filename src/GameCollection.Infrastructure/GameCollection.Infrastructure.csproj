@@ -6,9 +6,14 @@
 
 	<ItemGroup>
 		<PackageReference Include="Dapper" Version="2.1.72" />
+		<PackageReference Include="dbup-postgresql" Version="6.1.5" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.4" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.4" />
 		<PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Postgres\Scripts\**\*.sql" />
 	</ItemGroup>
 
 	<PropertyGroup>

@@ -66,6 +66,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - [Node.js 20+](https://nodejs.org/) — required for both the Vite frontend dev server and `bgg-writer`
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — `dotnet test` needs it running, because the database tests start PostgreSQL through Testcontainers
 
 ---
 
