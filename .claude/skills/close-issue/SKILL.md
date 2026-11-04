@@ -80,9 +80,22 @@ the code names: a false green, which is worse than an obvious gap.
 1. **Does the spec exist?** Check with `grep -rn "@CODE" e2e/features --include="*.spec.ts"`.
    A green pipeline can't tell you this, because a code with no spec runs nothing and
    breaks nothing. If there's no match, it's ❌ FAIL.
-2. **Does it pass?** Prefer CI. `gh pr checks {pr_number}`: if the `E2E` job passed on the
-   merge commit (confirm the SHA; a tick on a superseded commit proves nothing), every
-   code whose spec exists is ✅ PASS. Otherwise verify locally:
+2. **Does it pass?** Prefer CI on the **merge commit**. `gh pr checks` lists the checks of the PR
+   head, which is not the merge commit, so look the run up by SHA:
+
+   ```bash
+   gh pr view {pr_number} --json mergeCommit,baseRefName --jq '.mergeCommit.oid, .baseRefName'
+   ```
+
+   - Base `master`: CI runs inside `Publish Docker Images`, which calls it before it publishes. Run
+     `gh run list --workflow "Publish Docker Images" --commit {sha} --json databaseId,status`,
+     then read the job named `CI / E2E` with
+     `gh run view {run_id} --json jobs --jq '.jobs[] | select(.name == "CI / E2E") | .conclusion'`.
+   - Base `milestone/*`: CI runs on the push. Use `--workflow CI` and the job named `E2E`.
+
+   If that job concluded `success` on the merge SHA, every code whose spec exists is ✅ PASS. Do not
+   accept a run for any other SHA. If the job is still running, has no run yet, or failed, verify
+   locally instead (a failed job is not a reason to skip the check, so read its log):
    - Bring the stack up with
      `curl --silent --fail http://localhost:3000/api/config || docker compose --profile qa up --build -d`.
      The suite's global setup waits until the API is ready.
