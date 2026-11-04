@@ -8,9 +8,9 @@ namespace GameCollection.Infrastructure.Tests.Postgres.Migrations;
 
 public sealed class DatabaseMigrationRunnerTests
 {
-	private const string _schemajournal = "migration_schema_journal";
-	private const string _functionjournal = "migration_function_journal";
-	private const string _seedjournal = "migration_seed_journal";
+	private const string _schemaJournal = "migration_schema_journal";
+	private const string _functionJournal = "migration_function_journal";
+	private const string _seedJournal = "migration_seed_journal";
 
 	private static readonly MigrationScripts _embedded = MigrationScripts.LoadEmbedded();
 
@@ -31,7 +31,7 @@ public sealed class DatabaseMigrationRunnerTests
 
 		var expected = _embedded.Schema.Select(script => script.Name).Order(StringComparer.Ordinal).ToList();
 		expected.First().ShouldBe("0001_create_collected_games.sql");
-		(await database.JournalAsync(_schemajournal)).ShouldBe(expected);
+		(await database.JournalAsync(_schemaJournal)).ShouldBe(expected);
 	}
 
 	[Fact]
@@ -51,7 +51,7 @@ public sealed class DatabaseMigrationRunnerTests
 
 		await RunAsync(database, scripts);
 
-		(await database.JournalAsync(_schemajournal)).ShouldBe(
+		(await database.JournalAsync(_schemaJournal)).ShouldBe(
 			["0001_create_collected_games.sql", "0002_create_order_probe.sql", "0003_alter_order_probe.sql"]);
 	}
 
@@ -133,11 +133,11 @@ public sealed class DatabaseMigrationRunnerTests
 		await RunAsync(database, _embedded);
 		await database.InsertGamesAsync();
 		var snapshot = await database.SnapshotGamesAsync();
-		var journal = await database.JournalAsync(_schemajournal);
+		var journal = await database.JournalAsync(_schemaJournal);
 
 		await RunAsync(database, _embedded);
 
-		(await database.JournalAsync(_schemajournal)).ShouldBe(journal);
+		(await database.JournalAsync(_schemaJournal)).ShouldBe(journal);
 		(await database.SnapshotGamesAsync()).ShouldBe(snapshot);
 	}
 
@@ -149,12 +149,12 @@ public sealed class DatabaseMigrationRunnerTests
 
 		await RunAsync(database, _embedded with { Functions = [ProbeAnswer(1)] });
 
-		(await database.JournalCountAsync(_functionjournal, "probe_answer.sql")).ShouldBe(1);
+		(await database.JournalCountAsync(_functionJournal, "probe_answer.sql")).ShouldBe(1);
 
 		await RunAsync(database, _embedded with { Functions = [ProbeAnswer(2)] });
 
 		(await database.QueryScalarAsync<int>("select probe_answer()")).ShouldBe(2);
-		(await database.JournalCountAsync(_functionjournal, "probe_answer.sql")).ShouldBe(2);
+		(await database.JournalCountAsync(_functionJournal, "probe_answer.sql")).ShouldBe(2);
 	}
 
 	[Fact]
@@ -202,11 +202,11 @@ public sealed class DatabaseMigrationRunnerTests
 		exception.ScriptName.ShouldBe("0002_create_failure_probe.sql");
 		exception.Message.ShouldContain("0002_create_failure_probe.sql");
 		exception.InnerException.ShouldBeOfType<PostgresException>().SqlState.ShouldBe("22012");
-		(await database.JournalAsync(_schemajournal)).ShouldBe(["0001_create_collected_games.sql"]);
+		(await database.JournalAsync(_schemaJournal)).ShouldBe(["0001_create_collected_games.sql"]);
 		(await database.TableExistsAsync("failure_probe")).ShouldBeFalse();
 		(await database.TableExistsAsync("after_failure")).ShouldBeFalse();
 		(await database.FunctionExistsAsync("probe_answer")).ShouldBeFalse();
-		(await database.JournalAsync(_functionjournal)).ShouldBeEmpty();
+		(await database.JournalAsync(_functionJournal)).ShouldBeEmpty();
 	}
 
 	[Fact]
@@ -228,8 +228,8 @@ public sealed class DatabaseMigrationRunnerTests
 		var exception = await Should.ThrowAsync<DatabaseMigrationException>(() => RunAsync(database, scripts));
 
 		exception.ScriptName.ShouldBe("probe_broken.sql");
-		(await database.JournalCountAsync(_functionjournal, "probe_broken.sql")).ShouldBe(0);
-		(await database.JournalCountAsync(_seedjournal, "probe_seed.sql")).ShouldBe(0);
+		(await database.JournalCountAsync(_functionJournal, "probe_broken.sql")).ShouldBe(0);
+		(await database.JournalCountAsync(_seedJournal, "probe_seed.sql")).ShouldBe(0);
 	}
 
 	[Fact]
@@ -245,12 +245,12 @@ public sealed class DatabaseMigrationRunnerTests
 
 		await RunAsync(database, scripts);
 
-		(await database.JournalCountAsync(_seedjournal, "seed_probe_alpha.sql")).ShouldBe(1);
+		(await database.JournalCountAsync(_seedJournal, "seed_probe_alpha.sql")).ShouldBe(1);
 
 		await RunAsync(database, scripts);
 
 		(await database.CountAsync("seed_probe")).ShouldBe(1);
-		(await database.JournalCountAsync(_seedjournal, "seed_probe_alpha.sql")).ShouldBe(2);
+		(await database.JournalCountAsync(_seedJournal, "seed_probe_alpha.sql")).ShouldBe(2);
 	}
 
 	[Fact]
@@ -282,7 +282,7 @@ public sealed class DatabaseMigrationRunnerTests
 		await RunAsync(database, newer);
 
 		(await database.ColumnsAsync("collected_games")).ShouldContain(column => column.Name == "shelf_location");
-		(await database.JournalAsync(_schemajournal)).Last().ShouldBe("0002_add_shelf_location.sql");
+		(await database.JournalAsync(_schemaJournal)).Last().ShouldBe("0002_add_shelf_location.sql");
 		(await database.SnapshotGamesAsync("shelf_location")).ShouldBe(snapshot);
 	}
 
