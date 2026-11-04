@@ -2,11 +2,13 @@ import type { Locator, Page } from '@playwright/test';
 
 export class CollectionPage {
 	readonly emptyState: Locator;
+	readonly syncButton: Locator;
 	private readonly bggSearchInput: Locator;
 	private readonly saveButton: Locator;
 
 	constructor(private readonly page: Page) {
 		this.emptyState = page.locator('#empty-state');
+		this.syncButton = page.locator('#btn-sync-bgg');
 		this.bggSearchInput = page.locator('#bgg-search-input');
 		this.saveButton = page.locator('#btn-save');
 	}
@@ -31,6 +33,10 @@ export class CollectionPage {
 		await this.bggSearchInput.fill(query);
 		await this.page.locator('#bgg-search-results li', { hasText: resultName }).click();
 		await this.saveButton.click();
+	}
+
+	async clickSyncBgg(): Promise<void> {
+		await this.syncButton.click();
 	}
 
 	async remove(name: string): Promise<void> {
