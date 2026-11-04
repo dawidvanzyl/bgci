@@ -10,7 +10,7 @@ These are guidelines, not rigid rules. The goal is consistency and clarity. When
 
 - One type per file. The file name must match the type name exactly (e.g. `CollectedGame.cs` contains `class CollectedGame`).
 - Folder structure within a project mirrors the namespace structure.
-- Each bounded context (BC) is a self-contained set of projects: `Domain`, `Application` and `Infrastructure`. The shared `Api` project is the composition root. Current BCs: `GameCollection`, `BggIntegration`, `KickstarterTracking` and `KickstarterIntegration` (no `Application` project yet).
+- Each bounded context (BC) is a self-contained set of projects: `Domain`, `Application` and `Infrastructure`. The shared `Api` project is the composition root. Current BCs: `GameCollection` and `BggIntegration`.
 
 ```
 src/
@@ -20,8 +20,7 @@ src/
 ├── GameCollection.Infrastructure/    # Repository implementations, DB migrations
 ├── BggIntegration.Domain/            # BGG models, IBggClient, IBggTranslator (ACL)
 ├── BggIntegration.Application/       # BGG query handlers
-├── BggIntegration.Infrastructure/    # HTTP client, XML parser
-└── KickstarterTracking.* and KickstarterIntegration.*   # Same layout
+└── BggIntegration.Infrastructure/    # HTTP client, XML parser
 ```
 
 - **No cross-BC project references** except through the Anti-Corruption Layer. `BggIntegration` may reference `GameCollection.Application` only to produce `AddGameFromBggCommand` via `IBggTranslator`. It must never reference `GameCollection.Domain` directly.
@@ -201,3 +200,58 @@ public static class DependencyInjection
 - Domain and Application layers must never reference `Microsoft.Extensions.DependencyInjection`, `Microsoft.Extensions.Hosting`, or any DI container. They are container-agnostic.
 - **Background services** (types inheriting `BackgroundService` or implementing `IHostedService`) belong in the **Infrastructure** layer. They interact with the hosting framework, manage DI scope lifetimes via `IServiceScopeFactory`, and drive OS-level timers — all infrastructure concerns. The application logic they trigger (e.g. syncing a collection) must be extracted into an Application service and injected as a dependency.
 - Prefer `AddScoped` for services that involve a unit of work (e.g. repositories). Use `AddSingleton` only for genuinely stateless or thread-safe services.
+
+---
+
+## 7. Testing
+
+### 7.1 Project layout
+
+| Project | Purpose |
+|---|---|
+| `<Project>.Tests` | Runs tests for one production project, for example `GameCollection.Domain.Tests`. Tests mirror the folder structure of the project they cover. |
+| `<Context>.Testing` | Test-support library for one bounded context (`GameCollection.Testing`, `BggIntegration.Testing`). Holds the fixture, the context and the factories. It contains no tests. |
+| `Shared.Testing` | Test helpers shared by every context, for example the handler-registration check. It contains no tests. |
+
+- `src/Directory.Build.props` gives every `*.Tests` and `*.Testing` project its target framework, nullable and warnings-as-errors settings. `*.Tests` projects also get xUnit v3, Shouldly, Moq and the test SDK. A test project's `.csproj` lists only its `ProjectReference` items. Do not repeat package references.
+- Stack: xUnit v3, Shouldly for assertions, Moq for fakes.
+
+### 7.2 The test pattern
+
+Every test of an Application handler or service follows this shape. It keeps tests dependent on abstractions, not on constructors.
+
+1. The test class implements `IClassFixture<…TestFixture>`.
+2. Its constructor calls `fixture.CreateContext()`. Every test gets fresh mocks.
+3. The system under test comes from `context.ServiceProvider.GetRequiredService<T>()`. A test never calls `new` on a handler.
+4. A test configures only the mocks it needs, through `context.Repositories.…Mock` and `context.Services.…Mock`.
+5. Test data comes from a factory in `<Context>.Testing/Factories`. A test states only the values that matter to its behaviour.
+
+```csharp
+public sealed class DeleteGameCommandHandlerTests : IClassFixture<GameCollectionTestFixture>
+{
+	private readonly GameCollectionTestContext _context;
+	private readonly DeleteGameCommandHandler _handler;
+
+	public DeleteGameCommandHandlerTests(GameCollectionTestFixture fixture)
+	{
+		_context = fixture.CreateContext();
+		_handler = _context.ServiceProvider.GetRequiredService<DeleteGameCommandHandler>();
+	}
+}
+```
+
+### 7.3 Adding to the support library
+
+- **New handler:** register it in the context's `…TestFixture.RegisterHandlers`. The `HandlerRegistrationTests` of that context fails until you do.
+- **New repository, client or service abstraction:** add its `Mock<T>` to the matching group in the `…TestContext`, and register it in the fixture.
+- **New entity or command:** add a factory with sensible defaults and optional parameters. Do not copy full constructor calls between tests.
+- **Repeated setup:** when a second test repeats the same mock setup, move it into a helper on the context, for example `Repositories.HasStored(game)`. Do not copy setup between tests.
+- Domain tests may call `Create(...)` directly when the factory method is itself under test.
+
+### 7.4 Test rules
+
+- Test Domain and Application layers without a database. Fake repositories and other abstractions.
+- Test names read `Method_Condition` or `Method_Condition_Result`. One behaviour per test.
+- Assert the outcome, then verify only the interactions that matter. Do not verify every call.
+- Tag a test with its acceptance criterion code: `[Trait("AC", "{issue_number}UC{n}")]` (see `coding-standards.md` §5). Tests written before this convention carry no code.
+- Run all checks as listed in `.claude/shared/automated-checks.md`.

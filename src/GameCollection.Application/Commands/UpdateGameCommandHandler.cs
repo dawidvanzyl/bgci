@@ -6,50 +6,50 @@ namespace GameCollection.Application.Commands;
 
 public class UpdateGameCommandHandler : IRequestHandler<UpdateGameCommand>
 {
-    private readonly ICollectedGameRepository _repository;
+	private readonly ICollectedGameRepository _repository;
 
-    public UpdateGameCommandHandler(ICollectedGameRepository repository)
-    {
-        _repository = repository;
-    }
+	public UpdateGameCommandHandler(ICollectedGameRepository repository)
+	{
+		_repository = repository;
+	}
 
-    public async Task Handle(UpdateGameCommand request, CancellationToken cancellationToken)
-    {
-        var game = await _repository.GetByIdAsync(GameId.From(request.Id), cancellationToken)
-            ?? throw new KeyNotFoundException($"Game with ID {request.Id} not found.");
+	public async Task Handle(UpdateGameCommand request, CancellationToken cancellationToken)
+	{
+		var game = await _repository.GetByIdAsync(GameId.From(request.Id), cancellationToken)
+			?? throw new KeyNotFoundException($"Game with ID {request.Id} not found.");
 
-        game.UpdateDetails(
-            name: new GameName(request.Name),
-            year: request.Year,
-            description: request.Description,
-            playerCount: request.MinPlayers.HasValue && request.MaxPlayers.HasValue
-                ? new PlayerCount(request.MinPlayers.Value, request.MaxPlayers.Value)
-                : null,
-            playTime: request.PlayTimeMinutes.HasValue
-                ? new PlayTime(request.PlayTimeMinutes.Value)
-                : null,
-            minPlayTimeMinutes: request.MinPlayTimeMinutes,
-            maxPlayTimeMinutes: request.MaxPlayTimeMinutes,
-            bggRating: request.BggRating.HasValue
-                ? new BggRating(request.BggRating.Value)
-                : null,
-            bggWeight: request.BggWeight.HasValue
-                ? new BggWeight(request.BggWeight.Value)
-                : null,
-            minAge: request.MinAge,
-            bestPlayerCountMin: request.BestPlayerCountMin,
-            bestPlayerCountMax: request.BestPlayerCountMax,
-            coverImageUrl: request.CoverImageUrl is not null
-                ? new Uri(request.CoverImageUrl)
-                : null,
-            categories: request.Categories,
-            mechanics: request.Mechanics,
-            designers: request.Designers,
-            artists: request.Artists,
-            publishers: request.Publishers,
-            subdomains: request.Subdomains
-        );
+		game.UpdateDetails(
+			name: new GameName(request.Name),
+			year: request.Year,
+			description: request.Description,
+			playerCount: request.MinPlayers.HasValue && request.MaxPlayers.HasValue
+				? new PlayerCount(request.MinPlayers.Value, request.MaxPlayers.Value)
+				: null,
+			playTime: request.PlayTimeMinutes.HasValue
+				? new PlayTime(request.PlayTimeMinutes.Value)
+				: null,
+			minPlayTimeMinutes: request.MinPlayTimeMinutes,
+			maxPlayTimeMinutes: request.MaxPlayTimeMinutes,
+			bggRating: request.BggRating.HasValue
+				? new BggRating(request.BggRating.Value)
+				: null,
+			bggWeight: request.BggWeight.HasValue
+				? new BggWeight(request.BggWeight.Value)
+				: null,
+			minAge: request.MinAge,
+			bestPlayerCountMin: request.BestPlayerCountMin,
+			bestPlayerCountMax: request.BestPlayerCountMax,
+			coverImageUrl: request.CoverImageUrl is not null
+				? new Uri(request.CoverImageUrl)
+				: null,
+			categories: request.Categories,
+			mechanics: request.Mechanics,
+			designers: request.Designers,
+			artists: request.Artists,
+			publishers: request.Publishers,
+			subdomains: request.Subdomains
+		);
 
-        await _repository.UpdateAsync(game, cancellationToken);
-    }
+		await _repository.UpdateAsync(game, cancellationToken);
+	}
 }

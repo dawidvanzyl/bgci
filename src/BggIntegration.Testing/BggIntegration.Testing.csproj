@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<ItemGroup>
+		<ProjectReference Include="..\BggIntegration.Application\BggIntegration.Application.csproj" />
+		<ProjectReference Include="..\BggIntegration.Domain\BggIntegration.Domain.csproj" />
+	</ItemGroup>
+</Project>

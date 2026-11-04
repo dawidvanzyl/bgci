@@ -60,11 +60,11 @@ public class BggSyncService
 		var localBggGamesByBggId = localBggGames.ToDictionary(g => g.BggId!.Value);
 
 		// 3. Compute diffs
-		var toAddBase      = bggCollectionById.Keys.Except(localBggGamesByBggId.Keys).ToList();
+		var toAddBase = bggCollectionById.Keys.Except(localBggGamesByBggId.Keys).ToList();
 		var toAddExpansion = bggExpansionCollectionById.Keys.Except(localBggGamesByBggId.Keys).ToList();
-		var toDelete       = localBggGamesByBggId.Keys.Except(allBggIds).ToList();
+		var toDelete = localBggGamesByBggId.Keys.Except(allBggIds).ToList();
 
-		var added   = 0;
+		var added = 0;
 		var deleted = 0;
 
 		// 4. Add base games in BGG but not in SQLite
@@ -134,49 +134,49 @@ public class BggSyncService
 						continue;
 					}
 
-				// Resolve parent: first matching parent bggId that exists locally
-				Guid? parentGameId = null;
-				foreach (var parentBggId in details.ParentBggIds)
-				{
-					if (refreshedByBggId.TryGetValue(parentBggId, out var parentGame))
+					// Resolve parent: first matching parent bggId that exists locally
+					Guid? parentGameId = null;
+					foreach (var parentBggId in details.ParentBggIds)
 					{
-						parentGameId = parentGame.Id;
-						break;
+						if (refreshedByBggId.TryGetValue(parentBggId, out var parentGame))
+						{
+							parentGameId = parentGame.Id;
+							break;
+						}
 					}
-				}
 
-				if (parentGameId is null)
-				{
-					_logger.LogWarning("BGG sync: expansion bggId {BggId} has no matching parent game in local collection — skipping.", bggId);
-					continue;
-				}
+					if (parentGameId is null)
+					{
+						_logger.LogWarning("BGG sync: expansion bggId {BggId} has no matching parent game in local collection — skipping.", bggId);
+						continue;
+					}
 
-			var command = new AddGameFromBggCommand(
-					Name: details.Name,
-					Year: details.Year,
-					Description: details.Description,
-					MinPlayers: details.MinPlayers,
-					MaxPlayers: details.MaxPlayers,
-					PlayTimeMinutes: details.PlayTimeMinutes,
-					MinPlayTimeMinutes: details.MinPlayTimeMinutes,
-					MaxPlayTimeMinutes: details.MaxPlayTimeMinutes,
-					BggRating: details.AverageRating,
-					BggWeight: details.AverageWeight,
-					MinAge: details.MinAge,
-					BestPlayerCountMin: details.BestPlayerCountMin,
-					BestPlayerCountMax: details.BestPlayerCountMax,
-					CoverImageUrl: details.ImageUrl ?? details.ThumbnailUrl,
-					Categories: details.Categories.ToList(),
-					Mechanics: details.Mechanics.ToList(),
-					Designers: details.Designers.ToList(),
-					Artists: details.Artists.ToList(),
-					Publishers: details.Publishers.ToList(),
-					Subdomains: details.Subdomains.ToList(),
-					BggId: details.BggId,
-					BggCollId: bggExpansionCollectionById[bggId].CollId,
-					SkipBggWrite: true,
-					ParentGameId: parentGameId
-				);
+					var command = new AddGameFromBggCommand(
+							Name: details.Name,
+							Year: details.Year,
+							Description: details.Description,
+							MinPlayers: details.MinPlayers,
+							MaxPlayers: details.MaxPlayers,
+							PlayTimeMinutes: details.PlayTimeMinutes,
+							MinPlayTimeMinutes: details.MinPlayTimeMinutes,
+							MaxPlayTimeMinutes: details.MaxPlayTimeMinutes,
+							BggRating: details.AverageRating,
+							BggWeight: details.AverageWeight,
+							MinAge: details.MinAge,
+							BestPlayerCountMin: details.BestPlayerCountMin,
+							BestPlayerCountMax: details.BestPlayerCountMax,
+							CoverImageUrl: details.ImageUrl ?? details.ThumbnailUrl,
+							Categories: details.Categories.ToList(),
+							Mechanics: details.Mechanics.ToList(),
+							Designers: details.Designers.ToList(),
+							Artists: details.Artists.ToList(),
+							Publishers: details.Publishers.ToList(),
+							Subdomains: details.Subdomains.ToList(),
+							BggId: details.BggId,
+							BggCollId: bggExpansionCollectionById[bggId].CollId,
+							SkipBggWrite: true,
+							ParentGameId: parentGameId
+						);
 
 					await _mediator.Send(command, cancellationToken);
 					added++;

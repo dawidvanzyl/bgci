@@ -4,17 +4,17 @@ namespace GameCollection.Infrastructure.Sqlite;
 
 public class DatabaseMigrator
 {
-    private readonly string _connectionString;
+	private readonly string _connectionString;
 
-    public DatabaseMigrator(string connectionString)
-    {
-        _connectionString = connectionString;
-    }
+	public DatabaseMigrator(string connectionString)
+	{
+		_connectionString = connectionString;
+	}
 
-    public async Task MigrateAsync()
-    {
-        using var conn = new SqliteConnection(_connectionString);
-        await conn.ExecuteAsync("""
+	public async Task MigrateAsync()
+	{
+		using var conn = new SqliteConnection(_connectionString);
+		await conn.ExecuteAsync("""
             CREATE TABLE IF NOT EXISTS collected_games (
                 id                TEXT PRIMARY KEY NOT NULL,
                 name              TEXT NOT NULL,
@@ -34,69 +34,68 @@ public class DatabaseMigrator
             );
             """);
 
-        // Add bgg_coll_id to databases created before this migration was introduced.
-        // SQLite does not support ADD COLUMN IF NOT EXISTS; check via PRAGMA first.
-        var columns = await conn.QueryAsync<string>("SELECT name FROM pragma_table_info('collected_games')");
+		// Add bgg_coll_id to databases created before this migration was introduced.
+		// SQLite does not support ADD COLUMN IF NOT EXISTS; check via PRAGMA first.
+		var columns = await conn.QueryAsync<string>("SELECT name FROM pragma_table_info('collected_games')");
 
-        if (!columns.Contains("bgg_coll_id"))
-        {
-            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN bgg_coll_id INTEGER;");
-        }
+		if (!columns.Contains("bgg_coll_id"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN bgg_coll_id INTEGER;");
+		}
 
-        if (!columns.Contains("parent_game_id"))
-        {
-            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN parent_game_id TEXT;");
-        }
+		if (!columns.Contains("parent_game_id"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN parent_game_id TEXT;");
+		}
 
-        if (!columns.Contains("bgg_weight"))
-        {
-            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN bgg_weight REAL;");
-        }
+		if (!columns.Contains("bgg_weight"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN bgg_weight REAL;");
+		}
 
-        if (!columns.Contains("min_age"))
-        {
-            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN min_age INTEGER;");
-        }
+		if (!columns.Contains("min_age"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN min_age INTEGER;");
+		}
 
-        if (!columns.Contains("min_play_time"))
-        {
-            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN min_play_time INTEGER;");
-        }
+		if (!columns.Contains("min_play_time"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN min_play_time INTEGER;");
+		}
 
-        if (!columns.Contains("max_play_time"))
-        {
-            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN max_play_time INTEGER;");
-        }
+		if (!columns.Contains("max_play_time"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN max_play_time INTEGER;");
+		}
 
-        if (!columns.Contains("designers"))
-        {
-            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN designers TEXT;");
-        }
+		if (!columns.Contains("designers"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN designers TEXT;");
+		}
 
-        if (!columns.Contains("artists"))
-        {
-            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN artists TEXT;");
-        }
+		if (!columns.Contains("artists"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN artists TEXT;");
+		}
 
-        if (!columns.Contains("publishers"))
-        {
-            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN publishers TEXT;");
-        }
+		if (!columns.Contains("publishers"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN publishers TEXT;");
+		}
 
-        if (!columns.Contains("subdomains"))
-        {
-            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN subdomains TEXT;");
-        }
+		if (!columns.Contains("subdomains"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN subdomains TEXT;");
+		}
 
-        if (!columns.Contains("best_player_count_min"))
-        {
-            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN best_player_count_min INTEGER;");
-        }
+		if (!columns.Contains("best_player_count_min"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN best_player_count_min INTEGER;");
+		}
 
-        if (!columns.Contains("best_player_count_max"))
-        {
-            await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN best_player_count_max INTEGER;");
-        }
-
-    }
+		if (!columns.Contains("best_player_count_max"))
+		{
+			await conn.ExecuteAsync("ALTER TABLE collected_games ADD COLUMN best_player_count_max INTEGER;");
+		}
+	}
 }

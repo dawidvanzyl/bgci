@@ -1,6 +1,6 @@
+using BggIntegration.Domain.Models;
 using System.Globalization;
 using System.Xml.Linq;
-using BggIntegration.Domain.Models;
 
 namespace BggIntegration.Infrastructure.Http;
 
@@ -120,15 +120,16 @@ public static class BggXmlParser
 		int? bestPlayerCountMax = null;
 
 		if (poll is not null &&
-		    int.TryParse(poll.Attribute("totalvotes")?.Value, out var totalVotes) && totalVotes >= 10)
+			int.TryParse(poll.Attribute("totalvotes")?.Value, out var totalVotes) && totalVotes >= 10)
 		{
 			var entries = poll.Elements("results")
 				.Select(r =>
 				{
-					var raw    = r.Attribute("numplayers")?.Value ?? "";
+					var raw = r.Attribute("numplayers")?.Value ?? "";
 					var isPlus = raw.EndsWith("+");
 					var numStr = isPlus ? raw.TrimEnd('+') : raw;
-					if (!int.TryParse(numStr, out var count) || count <= 0) return null;
+					if (!int.TryParse(numStr, out var count) || count <= 0)
+						return null;
 					var bestVotes = int.TryParse(
 						r.Elements("result")
 						 .FirstOrDefault(x => x.Attribute("value")?.Value == "Best")
@@ -144,7 +145,7 @@ public static class BggXmlParser
 				var topBest = entries.Max(x => x!.Best);
 				if (topBest > 0)
 				{
-					var winners   = entries.Where(x => x!.Best == topBest).ToList();
+					var winners = entries.Where(x => x!.Best == topBest).ToList();
 					var minWinner = winners.OrderBy(x => x!.Count).First()!;
 					var maxWinner = winners.OrderByDescending(x => x!.Count).First()!;
 					bestPlayerCountMin = minWinner.Count;
@@ -158,7 +159,7 @@ public static class BggXmlParser
 		// Inbound boardgameexpansion links identify base games this item is an expansion of
 		var parentBggIds = item.Elements("link")
 			.Where(l => l.Attribute("type")?.Value == "boardgameexpansion"
-			         && l.Attribute("inbound")?.Value == "true")
+					 && l.Attribute("inbound")?.Value == "true")
 			.Select(l => int.TryParse(l.Attribute("id")?.Value, out var pid) ? pid : 0)
 			.Where(pid => pid > 0)
 			.ToList()
@@ -198,17 +199,14 @@ public static class BggXmlParser
 	public static IReadOnlyList<BggSearchResult> ParseExpansionLinks(XDocument doc)
 	{
 		var item = doc.Descendants("item").FirstOrDefault();
-		if (item is null)
-		{
-			return Array.Empty<BggSearchResult>();
-		}
-
-		return item.Elements("link")
+		return item is null
+			? Array.Empty<BggSearchResult>()
+			: item.Elements("link")
 			.Where(l => l.Attribute("type")?.Value == "boardgameexpansion"
-			         && l.Attribute("inbound") is null)
+					 && l.Attribute("inbound") is null)
 			.Select(l =>
 			{
-				var id   = int.TryParse(l.Attribute("id")?.Value, out var eid) ? eid : 0;
+				var id = int.TryParse(l.Attribute("id")?.Value, out var eid) ? eid : 0;
 				var name = l.Attribute("value")?.Value ?? string.Empty;
 				return new BggSearchResult(id, name, null, null);
 			})

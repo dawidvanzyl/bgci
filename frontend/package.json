@@ -5,9 +5,19 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "format": "prettier --write \"{src,tests}/**/*.js\" \"*.js\"",
+    "format:check": "prettier --check \"{src,tests}/**/*.js\" \"*.js\"",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "vite": "^8.1.6"
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "vite": "^8.1.6",
+    "vitest": "^5.1.0"
   }
 }

@@ -1,5 +1,6 @@
 // ── Loading / error helpers ────────────────────────────────
-const SPINNER_SVG = '<svg class="btn-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" /></svg>';
+const SPINNER_SVG =
+	'<svg class="btn-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" /></svg>';
 
 export function setButtonLoading(btn, label) {
 	btn.disabled = true;
@@ -36,7 +37,11 @@ export function showSyncError(message) {
 
 // ── Value helpers ──────────────────────────────────────────
 export function esc(str) {
-	return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+	return String(str ?? '')
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;');
 }
 
 export function intOrNull(id) {

@@ -99,7 +99,7 @@ Rules:
 ### 6.5 Dropdowns and chips
 
 - Dropdowns (`.dropdown`) open under their trigger and close on selection or outside click.
-- Sort criteria show as chips (`sort-chip`). Each chip has a direction toggle.
+- Sort criteria show as chips (`sort-chip`). Each chip has a direction toggle and a remove control.
 
 ### 6.6 Status and empty states
 

@@ -11,92 +11,92 @@ namespace Api.Controllers;
 [Route("api/[controller]")]
 public class GamesController : ControllerBase
 {
-    private readonly IMediator _mediator;
+	private readonly IMediator _mediator;
 
-    public GamesController(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
+	public GamesController(IMediator mediator)
+	{
+		_mediator = mediator;
+	}
 
-    [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<CollectedGameDto>>> GetAll(CancellationToken cancellationToken)
-    {
-        var games = await _mediator.Send(new GetAllGamesQuery(), cancellationToken);
-        return Ok(games);
-    }
+	[HttpGet]
+	public async Task<ActionResult<IReadOnlyList<CollectedGameDto>>> GetAll(CancellationToken cancellationToken)
+	{
+		var games = await _mediator.Send(new GetAllGamesQuery(), cancellationToken);
+		return Ok(games);
+	}
 
-    [HttpGet("{id:guid}")]
-    public async Task<ActionResult<CollectedGameDto>> GetById(Guid id, CancellationToken cancellationToken)
-    {
-        var game = await _mediator.Send(new GetGameByIdQuery(id), cancellationToken);
-        return game is null
+	[HttpGet("{id:guid}")]
+	public async Task<ActionResult<CollectedGameDto>> GetById(Guid id, CancellationToken cancellationToken)
+	{
+		var game = await _mediator.Send(new GetGameByIdQuery(id), cancellationToken);
+		return game is null
 			? NotFound()
 			: Ok(game);
-    }
+	}
 
-    [HttpPost]
-    public async Task<ActionResult<Guid>> AddManually(
-        [FromBody] AddGameManuallyCommand command,
-        CancellationToken cancellationToken)
-    {
-        var id = await _mediator.Send(command, cancellationToken);
-        return CreatedAtAction(nameof(GetById), new { id }, id);
-    }
+	[HttpPost]
+	public async Task<ActionResult<Guid>> AddManually(
+		[FromBody] AddGameManuallyCommand command,
+		CancellationToken cancellationToken)
+	{
+		var id = await _mediator.Send(command, cancellationToken);
+		return CreatedAtAction(nameof(GetById), new { id }, id);
+	}
 
-    [HttpPost("from-bgg")]
-    public async Task<ActionResult<Guid>> AddFromBgg(
-        [FromBody] AddGameFromBggCommand command,
-        CancellationToken cancellationToken)
-    {
-        var id = await _mediator.Send(command, cancellationToken);
-        return CreatedAtAction(nameof(GetById), new { id }, id);
-    }
+	[HttpPost("from-bgg")]
+	public async Task<ActionResult<Guid>> AddFromBgg(
+		[FromBody] AddGameFromBggCommand command,
+		CancellationToken cancellationToken)
+	{
+		var id = await _mediator.Send(command, cancellationToken);
+		return CreatedAtAction(nameof(GetById), new { id }, id);
+	}
 
-    [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(
-        Guid id,
-        [FromBody] UpdateGameRequest request,
-        CancellationToken cancellationToken)
-    {
-        var command = new UpdateGameCommand(
-            id,
-            request.Name,
-            request.Year,
-            request.Description,
-            request.MinPlayers,
-            request.MaxPlayers,
-            request.PlayTimeMinutes,
-            request.MinPlayTimeMinutes,
-            request.MaxPlayTimeMinutes,
-            request.BggRating,
-            request.BggWeight,
-            request.MinAge,
-            request.BestPlayerCountMin,
-            request.BestPlayerCountMax,
-            request.CoverImageUrl,
-            request.Categories,
-            request.Mechanics,
-            request.Designers,
-            request.Artists,
-            request.Publishers,
-            request.Subdomains
-        );
+	[HttpPut("{id:guid}")]
+	public async Task<IActionResult> Update(
+		Guid id,
+		[FromBody] UpdateGameRequest request,
+		CancellationToken cancellationToken)
+	{
+		var command = new UpdateGameCommand(
+			id,
+			request.Name,
+			request.Year,
+			request.Description,
+			request.MinPlayers,
+			request.MaxPlayers,
+			request.PlayTimeMinutes,
+			request.MinPlayTimeMinutes,
+			request.MaxPlayTimeMinutes,
+			request.BggRating,
+			request.BggWeight,
+			request.MinAge,
+			request.BestPlayerCountMin,
+			request.BestPlayerCountMax,
+			request.CoverImageUrl,
+			request.Categories,
+			request.Mechanics,
+			request.Designers,
+			request.Artists,
+			request.Publishers,
+			request.Subdomains
+		);
 
-        try
-        {
-            await _mediator.Send(command, cancellationToken);
-            return NoContent();
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-    }
+		try
+		{
+			await _mediator.Send(command, cancellationToken);
+			return NoContent();
+		}
+		catch (KeyNotFoundException)
+		{
+			return NotFound();
+		}
+	}
 
-    [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
-    {
-        await _mediator.Send(new DeleteGameCommand(id), cancellationToken);
-        return NoContent();
-    }
+	[HttpDelete("{id:guid}")]
+	public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+	{
+		await _mediator.Send(new DeleteGameCommand(id), cancellationToken);
+		return NoContent();
+	}
 }
