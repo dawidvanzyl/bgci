@@ -105,6 +105,8 @@ Standards**.
 - Frontend (`coding-standards-frontend.md`) governs the Vite and ES-module frontend and
   its tests.
 - bgg-writer (`coding-standards-bgg-writer.md`) governs the Node.js Playwright sidecar.
+- End-to-end (`coding-standards-e2e.md`) governs the Playwright suite, the QA stack and the
+  mock BGG server.
 - Design (`design-standards.md`) governs visual style, components and wording.
 
 On any conflict, Shared wins and the stack document is updated to conform. A stack

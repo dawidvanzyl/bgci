@@ -1,0 +1,50 @@
+# Development and QA stacks, built from source. Production is docker-compose.prod.yml.
+#
+# The qa profile is the stack the Playwright suite runs against. It has no volumes, so every
+# `up` starts with an empty database, and it replaces BoardGameGeek and the bgg-writer sidecar
+# with e2e/mock-bgg:
+#   docker compose --profile qa up --build -d
+#   docker compose --profile qa down -v
+name: bgci-qa
+
+services:
+  mock-bgg:
+    build: ./e2e/mock-bgg
+    profiles: [qa]
+    environment:
+      PUBLIC_BASE_URL: http://localhost:${QA_MOCK_PORT:-4010}
+    ports:
+      - "${QA_MOCK_PORT:-4010}:4010"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4010/health"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  # The service name is bgci-api because nginx.conf proxies /api/ to http://bgci-api:8080.
+  bgci-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: [qa]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Database__Path: /data/bgci.db
+      Bgg__BaseUrl: http://mock-bgg:4010/xmlapi2/
+      Bgg__BearerToken: qa-token
+      Bgg__Username: qa-user
+      BggWriter__BaseUrl: http://mock-bgg:4010
+      APP_VERSION: qa
+    depends_on:
+      mock-bgg:
+        condition: service_healthy
+
+  bgci-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    profiles: [qa]
+    ports:
+      - "${QA_WEB_PORT:-3000}:80"
+    depends_on:
+      - bgci-api

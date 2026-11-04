@@ -228,4 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	}
 	await loadGames(refreshGames);
 	bindEvents(config);
+
+	// Signals that the UI is wired. The end-to-end tests wait for it before they interact.
+	document.body.dataset.ready = 'true';
 });

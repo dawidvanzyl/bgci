@@ -1,14 +1,15 @@
 name: CI
 
 on:
+  # master is covered by publish.yml, which calls this workflow before it publishes.
   push:
     branches:
-      - master
       - milestone/**
   pull_request:
     branches:
       - master
       - milestone/**
+  workflow_call:
 
 permissions:
   contents: read
@@ -100,3 +101,61 @@ jobs:
           node --check src/index.js
           node --check src/bggWriter.js
         working-directory: node/bgg-writer
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: e2e
+
+      - name: Lint
+        run: npm run lint
+        working-directory: e2e
+
+      - name: Format check
+        run: npm run format:check
+        working-directory: e2e
+
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: e2e
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: e2e
+
+      - name: Start QA stack
+        run: docker compose --profile qa up --build -d
+
+      - name: Run E2E specs
+        run: npm run test:e2e
+        working-directory: e2e
+
+      - name: QA stack logs
+        if: failure()
+        run: docker compose --profile qa logs
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          retention-days: 7
+
+      - name: Stop QA stack
+        if: always()
+        run: docker compose --profile qa down -v

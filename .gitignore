@@ -29,7 +29,8 @@ data/
 Thumbs.db
 
 # Environment / secrets
-deploy/.env
+.env
+.env.prod
 *.env.local
 appsettings.Development.json
 
@@ -40,3 +41,8 @@ frontend/public/config.js
 # Frontend build artefacts
 frontend/node_modules/
 frontend/dist/
+
+# End-to-end test output
+e2e/node_modules/
+e2e/playwright-report/
+e2e/test-results/

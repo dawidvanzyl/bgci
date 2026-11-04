@@ -10,6 +10,7 @@ Run every check for the scopes in the diff:
 - anything under `src/` is **backend**
 - anything under `frontend/` is **frontend**
 - anything under `node/bgg-writer/` is **bgg-writer**
+- anything under `e2e/` is **e2e**
 
 Record pass or fail for each check. Do not install dependencies or tooling. If a command is
 unavailable, skip it and note that in the report.
@@ -57,6 +58,19 @@ Run these in `node/bgg-writer/`:
 npm run lint
 ```
 
+## E2E (static checks)
+
+Run these in `e2e/`. They do not need the QA stack:
+
+```bash
+npm run lint
+npm run format:check
+npm run typecheck
+```
+
+The specs themselves run against the QA stack. Run only the story's IT codes locally, one
+`--grep "@{IT_CODE}"` per code. CI runs the full suite.
+
 ## Comment labels
 
 Run on the diff's added lines only, case-sensitive, over `src`, `frontend/src`,
@@ -85,6 +99,9 @@ List the results under **Automated checks:**. Omit lines for checks that did not
 - frontend npm run build: {passed/failed}
 - frontend npm run test: {passed/failed}
 - bgg-writer npm run lint: {passed/failed}
+- e2e npm run lint: {passed/failed}
+- e2e npm run format:check: {passed/failed}
+- e2e npm run typecheck: {passed/failed}
 ```
 
 A failing check is a ❌ Blocker. Include the last ~50 lines of its output. Include none for

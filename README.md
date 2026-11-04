@@ -135,22 +135,24 @@ docker compose down -v
 
 ---
 
-### Building from source (for developers)
+### Running the QA stack (for developers)
 
-Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) and Docker Desktop. Node.js is not required locally — Docker builds both the `bgg-writer` and frontend images automatically.
-
-**Start the application:**
+Requires Docker Desktop. The `qa` profile of the root `docker-compose.yml` builds the API and the web server from source and replaces BoardGameGeek and the `bgg-writer` sidecar with a mock server (`e2e/mock-bgg`). The database starts empty on every run. It is the stack the Playwright suite runs against; see `docs/coding-standards-e2e.md`.
 
 ```bash
-docker compose up --build
+docker compose --profile qa up --build -d
 ```
 
-Find the assigned port with `docker compose ps`, then open `http://localhost:<port>` in your browser.
-
-**Stop the application:**
+Open `http://localhost:3000` (`QA_WEB_PORT` changes the port; copy `.env.example` to `.env` to set it).
 
 ```bash
-docker compose down
+docker compose --profile qa down -v
+```
+
+To run the production stack from the published images with your own BGG credentials, copy `.env.prod.example` to `.env.prod`, fill it in, and run:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 ```
 
 ---
