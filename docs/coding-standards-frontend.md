@@ -96,4 +96,10 @@ Prettier covers `src/`, `tests/` and root `*.js` files. It does not format `inde
 - Build test data with a factory from `tests/factories/` (for example `createGame`). State only the fields that matter to the behaviour under test. Do not copy object literals between tests.
 - Modules keep shared state in `state.js`. A test that changes it resets it in `beforeEach`.
 - Tests run in Node. They import only modules that do not touch the DOM at load time. Keep new logic in such modules (see §3).
-- Tag a test with its code in the test name: `{issue_number}UC{n}`.
+- Tag every UC test with its code: `it('does X', { tags: ['{issue_number}UC{n}'] }, () => …)`. The
+  tag is the bare code, and the test name describes the behaviour.
+- Register each new code in the `tags` array of `frontend/vitest.config.js`, with the code as the
+  name and the behaviour as the description. A test that uses an unregistered tag fails the run.
+  Add only the new lines to that file by hand.
+- Run one code with `npx vitest run --tags-filter="{issue_number}UC{n}"`. The filter matches the
+  whole tag, so `55UC1` never matches `55UC10`.

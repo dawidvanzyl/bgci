@@ -128,8 +128,9 @@ exception.
 - No suffixes or variants (`317UC-bug1`, `317UC3a`). A test added during rework takes the
   next free `{issue_number}UC{n}`.
 - Codes are opaque literal match strings to the test runners (`dotnet test --filter
-  "AC=CODE"`, vitest `--tags-filter="AC=CODE"`, `playwright test --grep "@CODE"`). The
-  format carries no meaning to tooling beyond the literal string.
+  "AC=CODE"`, vitest `--tags-filter="CODE"`, `playwright test --grep "@CODE"`). The
+  format carries no meaning to tooling beyond the literal string. The `AC=` prefix exists only
+  because xUnit traits are key-value pairs. A vitest tag and a Playwright tag are the bare code.
 
 ---
 
