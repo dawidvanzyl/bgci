@@ -45,6 +45,11 @@ export async function deleteGame(id, onDeleted) {
 	if (onDeleted) await onDeleted();
 }
 
+export async function syncBgg() {
+	const res = await fetch(`${API}/sync/bgg`, { method: 'POST' });
+	if (!res.ok) throw new Error(await res.text());
+}
+
 export async function searchBgg(q) {
 	const res = await fetch(`${API}/bgg/search?query=${encodeURIComponent(q)}`);
 	return res.json();

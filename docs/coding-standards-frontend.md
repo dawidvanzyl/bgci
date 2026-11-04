@@ -53,11 +53,6 @@ frontend/
 - Handle every `fetch` failure. Show the user a message through the existing error
   helpers. Never leave a rejected promise unhandled.
 
-**Known deviations in the current code.** Do not copy them. Fix them when touching the
-code, or file a tech-debt issue.
-
-- `main.js` calls `fetch` for `POST /sync/bgg`. It belongs in `api.js`.
-
 ## 3. Testability
 
 New logic is split so it can be unit tested without a browser.

@@ -7,7 +7,7 @@ import {
 	setDeleteTargetId,
 	allGames,
 } from './state.js';
-import { loadConfig, loadGames } from './api.js';
+import { loadConfig, loadGames, syncBgg } from './api.js';
 import { setButtonLoading, clearButtonLoading, showSyncError } from './helpers.js';
 import { applyBggAvailability } from './bgg.js';
 import { renderGames } from './render.js';
@@ -31,7 +31,6 @@ import {
 	coverPreviewTimer,
 	setCoverPreviewTimer,
 } from './state.js';
-import { API } from './api.js';
 
 // ── DOM refs ───────────────────────────────────────────────
 const filterInput = document.getElementById('filter-input');
@@ -140,8 +139,7 @@ function bindEvents(config) {
 	syncBtn.addEventListener('click', async () => {
 		setButtonLoading(syncBtn, 'Syncing\u2026');
 		try {
-			const res = await fetch(`${API}/sync/bgg`, { method: 'POST' });
-			if (!res.ok) throw new Error(await res.text());
+			await syncBgg();
 			await loadGames(refreshGames);
 		} catch (err) {
 			showSyncError(err.message || 'Sync failed.');
