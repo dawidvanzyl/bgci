@@ -57,10 +57,12 @@ tagged with this AC code").
 **Backend UC.** Find it with `grep -r '\[Trait("AC", "CODE")\]' src/ --include="*.cs"`,
 then run `dotnet test src/bgci.slnx --filter "AC=CODE" --no-build`.
 
-**Frontend UC.** From `frontend/`, run `npx vitest run --reporter=verbose -t "CODE(?!\d)"` once
-per code. Don't map a single full-suite run back to individual codes. The code is at the
-start of the test name (`it('292UC10 …')`), and `-t` matches the name as a pattern. The
-`(?!\d)` stops `292UC1` from matching `292UC10`.
+**Frontend UC.** From `frontend/`, run `npx vitest run --reporter=verbose --tags-filter="CODE"` once
+per code. Don't map a single full-suite run back to individual codes. The tag is the bare
+code (`{ tags: ['292UC10'] }`) and the filter matches the whole tag, so `292UC1` never matches
+`292UC10`. The `AC=` prefix exists only because xUnit traits are key-value pairs, so it matches
+nothing in vitest. A code whose tag is missing from `frontend/vitest.config.js` fails the run,
+which is ❌ FAIL.
 
 **Mis-tagged IT codes.** IT codes are proven by Playwright alone. Check that no unit
 test carries one:
