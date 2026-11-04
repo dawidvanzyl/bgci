@@ -18,9 +18,12 @@ Every issue kind has a required title prefix and label. The matching
 | Bug | `[Bug]` | `type: bug` | `sub-issue.md` (same shape, swap prefix and label) |
 | Tech debt | `[Tech Debt]` | `type: tech-debt` | `tech-debt-issue.md` |
 
-**Read the milestone number from the assigned GitHub milestone's own title**
+**Read the milestone version from the assigned GitHub milestone's own title**
 (`gh issue view {n} --json milestone`). Never parse it from the issue's title text. Epic
 and sub-issue titles never carry a milestone tag.
+
+A milestone title is a SemVer version without the `v`, for example `1.1.0` or
+`1.2.0-alpha`. It is also the release the milestone ships (§7).
 
 Issues created before this workflow keep their old labels and are not retroactively
 changed.
@@ -39,10 +42,9 @@ kept short-lived, and merged only through a PR.
   `bug/`, `type: tech-debt` → `tech-debt/`. The slug is kebab-case from the issue title,
   at most 5 words. The name never contains a milestone number. Example:
   `feature/55-sqlite-to-postgres-repository`.
-- **Milestone:** `milestone/m{milestone_number}`. This is the integration branch for
-  grouped work. It receives merges only from feature branches (Mode A).
-  `milestone_number` comes from the epic's assigned milestone title (§0). Example:
-  `milestone/m1`.
+- **Milestone:** `milestone/m{version}`. This is the integration branch for grouped work.
+  It receives merges only from feature branches (Mode A). `version` is the epic's assigned
+  milestone title (§0). Example: `milestone/m1.1.0`.
 
 ### 1.2 Workflow modes
 
@@ -97,7 +99,7 @@ Precedence: **Shared Standards** (highest) → **Backend / Frontend / bgg-writer
 Standards**.
 
 - Shared governs the branching model, commit structure, PR lifecycle, merge rules,
-  milestones and workflow modes.
+  milestones, workflow modes, versioning and releases.
 - Backend (`coding-standards-backend.md`) governs C#, ASP.NET Core, Dapper, MediatR,
   domain and application architecture, data access and backend tests.
 - Frontend (`coding-standards-frontend.md`) governs the Vite and ES-module frontend and
@@ -146,3 +148,26 @@ is the exception, written only when the code cannot say it.
   in the PR and the journal, not in the code.
 - The same applies to test names, suppression justifications and other strings that read
   as prose.
+
+---
+
+## 7. Versioning and Releases
+
+Closing a milestone cuts a release. Version tags drive `.github/workflows/publish.yml`, which
+builds and pushes the Docker images and creates the GitHub Release.
+
+- **Version:** SemVer. The milestone title is the version (§0), for example `1.1.0`.
+- **Tag:** `v{version}`, for example `v1.1.0`. A pre-release suffix is allowed
+  (`v1.2.0-alpha`), as in the existing tags. The tag must match `v*.*.*`.
+- **When:** after the milestone PR is merged into `master`, `close-milestone` tags the merge
+  commit on `master` and pushes the tag. Nothing else creates a release tag for milestone
+  work.
+- **No marker tags:** do not create `milestone/m*` tags. A branch and a tag with the same
+  name make git refs ambiguous, and the release tag already marks the milestone's end.
+- **Order:** a milestone version must be higher than the latest `v*` tag.
+- **Immutable:** never move, delete or re-push a published tag. To fix a bad release, ship the
+  next PATCH version.
+- **Mode B work** (§1.2) is not released automatically. The owner tags a PATCH release by
+  hand when wanted, with the same `v{version}` format.
+- A push to `master` publishes the `latest` images. A pushed `v*.*.*` tag publishes the
+  versioned images and the GitHub Release.
