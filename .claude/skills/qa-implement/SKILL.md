@@ -1,0 +1,267 @@
+---
+name: qa-implement
+description: >
+  Load this skill when the user says "qa implement", "qa-implement", or
+  "/qa-implement", or when the tech lead assigns E2E spec implementation for a
+  story. Implements Playwright specs against a story's frozen QA plan (plan-qa.md),
+  runs them, logs failures as bug sub-issues, and signs off testing. Never fixes
+  application code.
+license: MIT
+metadata:
+  audience: maintainers
+  workflow: github-issues
+---
+
+## Goal
+
+Turn a frozen QA plan into Playwright specs, run them against the story's branch, and
+report honestly what holds and what doesn't.
+
+You sign off **testing**: every IT code assigned to the story is proven by a passing
+spec. You don't decide the story is done. The tech lead makes that call from your
+sign-off together with the reviewer's and the approved plans. So never merge, approve the
+PR, or close the story issue.
+
+**The QA plan adjudicates.** You didn't write `qa_plan_file` and you never revise it.
+When a spec fails, the plan decides whose fault it is:
+- If the spec asserts what the plan says and the application does something else,
+  **the application is wrong**. Log a bug.
+- If the spec asserts something the plan didn't say, **your spec is wrong**. Fix it.
+
+This is the whole reason the plan is frozen first. Without it every failure is
+arguable, and the cheapest way to end an argument is to weaken an assertion. A suite
+that is green because it was adjusted to be green proves nothing. So never resolve a
+failure by deleting a test, skipping it, marking it `fixme`, or loosening an
+assertion until it can't fail.
+
+**You write only `e2e/` and `journal_dir`.** The path guard refuses `src/`,
+`frontend/` and `node/`, so don't route around it with a shell command. Never invent an IT code
+or a GitHub label.
+
+## Inputs
+
+- `issue_number`: required. In `interactive` mode, ask "What is the issue number to
+  test?" if it's missing.
+- `journal_dir`: required. The absolute path to the story's journal.
+- `qa_plan_file`: required. The frozen `plan-qa.md`.
+- `base_branch`: required in `subagent` mode. It is never inferred, because a
+  milestone story branches from the milestone branch and a standalone issue from
+  `master`.
+- `phase`: `specify` or `run` (default `run`). The tech lead runs `specify` first,
+  before any code exists; see *Specify phase* below.
+- `branch`: required for `specify` — the feature branch name to create.
+- `dev_plan_file`: required for `specify` — its `## Test hooks` table is the only
+  source of selectors for elements that don't exist yet.
+- `pr_number`: the story's open PR (`run` only).
+- `cycle`: defaults to `1`. Each `run` cycle runs every spec against the developer's
+  latest push.
+- `mode`: `interactive` (default) or `subagent`.
+
+## Specify phase
+
+Write the specs before the developer starts, so the developer builds against them and
+must turn them green before reporting done.
+
+1. `git fetch origin && git checkout -b {branch} origin/{base_branch}`.
+2. Create `{journal_dir}/qa-spec.md` with a `## Progress` heading.
+3. Read as in step 2 below, plus `dev_plan_file`'s `## Test hooks`. Before writing a
+   scenario, read the existing specs for the same feature folder and copy their flow
+   for sign-in, seeding order and navigation. Check against the code: (a) any page
+   that loads on open, so seed first; (b) any session cache, so seed before first load
+   or reload; (c) the route each action lands on; (d) displayed labels, not raw keys;
+   (e) every registry key used. Record each check in `qa-spec.md`.
+4. Write the specs as in step 4 below. For elements that don't exist yet, use exactly
+   the hooks in `## Test hooks`; for existing UI, reuse existing page objects. A
+   scenario that needs a hook the table lacks is a `NEEDS_RULING` — never guess one.
+5. Run the *Comment labels* check in `.claude/shared/automated-checks.md` over the
+   specs and fix every hit.
+   Also read every assertion for these defects. The base-build run in step 6 stops at
+   the first failing line and cannot reach them:
+   - `toHaveCount(0)` on an element a component always renders hidden: use
+     `toBeHidden()`.
+   - `not.toContainText` on text a component keeps in a hidden element: assert visible
+     content instead.
+   - A list assertion that is not scoped to the test's own unique token.
+   - An anchored regex on text that is not trimmed first.
+6. Type-check the specs (`cd e2e && npm run typecheck`), then dry-run each IT code once
+   against a fresh stack built from the base branch. Each spec must fail on its
+   feature assertion, not earlier: a timeout or error in seeding, fixtures, locators
+   or preconditions (strict-mode locator matches, unsatisfiable seed sizing, waits on
+   elements the seed never creates) is a spec defect — fix it before returning
+   `SPECIFIED`. Record each code's first-failing line in `qa-spec.md`. Commit the
+   specs per spec and push the branch. No bug is logged in this phase.
+
+Reply with `VERDICT: SPECIFIED`, `REPORT: {journal_dir}/qa-spec.md`, `BRANCH`, `SHA`
+and `IT_CODES: {n} specified`.
+
+In every later `run` cycle, **the specs you wrote here are frozen with the plan.** Fix
+a spec only where it contradicts `qa_plan_file` or a hook in `## Test hooks`. Never
+adapt a spec or page object to behaviour that deviates from either — that behaviour is
+a bug to log.
+
+## Procedure (`run` phase)
+
+### 1) Get the branch
+
+Run `git fetch origin` and then `gh pr checkout {pr_number}`. Confirm you're on the
+story's branch and it's current with origin. A stale checkout produces findings about
+code the developer already changed.
+
+Never create a named temp branch. If you must push a spec fix while the developer holds
+unpushed commits on the same branch, work in a detached temporary worktree cut from the
+remote branch head (`git worktree add --detach <path> origin/{branch}`). Push only your
+spec commit, then remove the worktree without `--force`. The developer fetches and
+rebases onto your commit.
+
+### 2) Read before writing
+
+- `qa_plan_file`: your specification.
+- The issue's `## Test Specifications`: the IT codes. Any code the plan doesn't
+  cover is already recorded under its `## Uncovered` table, and isn't yours to fill.
+- `e2e/fixtures/` and `e2e/pages/`: reuse what exists. `e2e/mock-bgg/` is yours too: add a
+  game to `games.mjs`, or a control endpoint to `server.mjs`, when a scenario needs BGG data
+  or behaviour the mock lacks. Keep it a faithful stand-in for BoardGameGeek.
+- A comparable spec under `e2e/features/`, for shape and grain.
+- Cycle 2 onward: your previous `qa-run-{n}.md` and the bugs you opened. Build on
+  them rather than re-deriving from scratch.
+
+### 3) Stand up a fresh stack
+
+Every invocation gets a new QA environment built from the branch under test, so no
+state from an earlier run or another branch leaks in:
+
+```bash
+docker compose --profile qa down -v
+docker compose --profile qa up --build -d
+```
+
+The stack has no volumes, so every `up` starts with an empty database. The suite's
+`global-setup.ts` waits until the API is up and sees the mock BGG, so the first run needs
+no manual wait. Then make one throwaway request through the page under test, and only
+then start the per-code runs: a cold stack times out the first run.
+
+### 4) Implement the specs
+
+Before writing any spec, create `{journal_dir}/qa-run-{cycle}.md` listing the IT codes
+under a `## Progress` heading. Append to it as specs land and results come in (see
+step 8 for what it must contain).
+
+**Commit each spec and page object to the story's branch as you finish it**, per
+`docs/coding-standards.md`. That includes failing specs. An uncommitted spec in a dead
+session is one nobody can run. Failing specs with open bugs are the honest state
+anyway: `gate: qa-complete` is absent and nothing merges, and the developer needs
+them to reproduce what you found.
+
+Write one `test.describe` per IT code, tagged with the code, and one `test` per plan
+scenario, named after it:
+
+```ts
+test.describe('Add game — user imports a game from a BGG search', { tag: ['@45IT1'] }, () => {
+```
+
+The tag is how `close-issue` and `close-milestone` find the proof. A spec with the
+wrong tag, or no tag, is invisible to both.
+
+- **Follow the existing conventions.** Extend the page objects in `e2e/pages/` and the
+  fixtures in `e2e/fixtures/` rather than inlining a parallel style.
+- **Selectors:** for elements the story adds, use the hooks in `dev_plan_file`'s
+  `## Test hooks`; otherwise prefer semantic, stable locators over structural ones.
+- **Honour the isolation.** The suite runs one worker against one shared database, and
+  the `cleanState` fixture empties the collection and resets the mock BGG before every
+  test. A spec creates what it needs and never relies on data from another spec. See
+  `e2e/features/collection/smoke.spec.ts`.
+- **A missing `data-testid` is a bug, not a licence.** If the app gives you no stable
+  way to assert something the plan requires, log it as a bug.
+
+### 5) Run
+
+Run one IT code at a time, so every failure is attributable:
+`cd e2e && npx playwright test --grep "@{IT_CODE}(?!\d)"`. Run every code, including ones
+that passed on an earlier cycle. A fix elsewhere in the branch can break a spec that
+was green before.
+
+### 6) Triage every failure
+
+Apply the adjudication rule, and record the decision and the reasoning, not just the
+outcome. On later cycles that reasoning is what stops the same failure being argued
+over again.
+
+- **Your spec is wrong**: fix it. No bug is warranted.
+- **The application is wrong**: log a bug (step 7).
+- **The plan can't be implemented as written**, because it depends on behaviour
+  outside the story or contradicts the sub-issue: **escalate to the tech lead**.
+
+### 7) Log bugs
+
+**One sub-issue per defect.** A single issue listing six failures can't be closed
+incrementally.
+
+Build the body from `.github/ISSUE_TEMPLATE/sub-issue.md` with a `[Bug]` title prefix.
+State:
+- the IT code and the scenario name
+- what the plan says must happen
+- what actually happened, including the failing assertion
+- how to reproduce it: the `--grep` command and any seeding
+
+```bash
+gh issue create --title "[Bug] ..." --label "type: bug" --body-file {path}
+```
+
+Add the story's own `layer:` and `context:` labels. If no existing label fits, say so
+rather than creating one.
+
+Link the bug to the story with GraphQL (the REST API returns 404 for sub-issues):
+
+```bash
+gh api graphql -f query='mutation {
+  addSubIssue(input: {issueId: "STORY_ID", subIssueId: "BUG_ID"}) {
+    issue { number } subIssue { number }
+  }
+}'
+```
+
+On a later cycle, **close a bug when the spec that found it passes**. Evidence closes
+it, not the developer's report.
+
+### 8) Tear down, sign off and report
+
+Run `docker compose --profile qa down -v` once the last run finishes, whatever the
+outcome.
+
+Sign off only when every assigned IT code has a passing spec **and** no bug you raised
+against the story is still open. Then:
+
+```bash
+gh pr edit {pr_number} --add-label "gate: qa-complete"
+```
+
+That label is your signature. The tech lead reads it at the merge gate, and it
+survives if this session dies before your report is read.
+
+`qa-run-{cycle}.md` must record, per IT code: the scenarios implemented, the spec
+file, pass/fail, and the triage decision and reasoning for every failure. It must
+also note anything that concerns you even though coverage is complete. The tech lead
+can learn that nowhere else.
+
+Reply per `.claude/shared/subagent-contract.md` with one of:
+
+```
+VERDICT: SIGNED_OFF
+REPORT: {journal_dir}/qa-run-{cycle}.md
+IT_CODES: {n}/{n} passing
+```
+
+```
+VERDICT: BUGS (n)
+REPORT: {journal_dir}/qa-run-{cycle}.md
+BUGS: #123, #124
+IT_CODES: {n}/{m} passing
+```
+
+```
+VERDICT: NEEDS_RULING (n)
+REPORT: {journal_dir}/qa-run-{cycle}.md
+```
+
+`BUGS` is an ordinary outcome: it means the testing worked. Never paste test output
+into the reply.
