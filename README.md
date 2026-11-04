@@ -49,7 +49,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 | API | ASP.NET Core Web API (.NET 10) |
 | BGG Write Layer | Node.js + Playwright (Chromium + stealth) |
 | CQRS | MediatR |
-| Database | SQLite via Dapper |
+| Database | PostgreSQL via Dapper (stored functions) |
 | Web Server | nginx (reverse proxy + static files) |
 | Container | Docker / Docker Compose |
 
@@ -195,7 +195,7 @@ cd src/Api
 dotnet run
 ```
 
-The API starts on `http://localhost:5074` by default. Start the dev database first (see "Running the dev database"). Point the API at it with `Database:Host=localhost`, `Database:Port=5433` (`DEV_DB_PORT`), `Database:Name=bgci`, `Database:User=bgci` and `Database:Password=bgci`, the values in `.env.example`.
+The API starts on `http://localhost:5074` by default. Start the dev database first (see "Running the dev database"). Point the API at it with `Database:Host=localhost`, `Database:Port=5433` (`DEV_DB_PORT`), `Database:Name=bgci`, `Database:User=bgci` and `Database:Password=bgci`, the values in `.env.example`. Put them in the `Database` section of your local `src/Api/appsettings.Development.json`. That file is git-ignored, so each developer keeps their own copy.
 
 ### Frontend
 
@@ -265,7 +265,7 @@ Then attach via the VS Code "Node.js: Attach" launch configuration on `localhost
 }
 ```
 
-**`appsettings.Development.json`** (local development):
+**`appsettings.Development.json`** (local development). This file is not in the repository. Create it yourself:
 ```json
 {
   "Database": {
@@ -305,7 +305,7 @@ The app monitors BGG reachability at runtime using a dedicated lightweight backg
 - Polls every **15 minutes** while BGG is available (low overhead)
 - When BGG becomes unavailable: BGG search is disabled, the sync button is disabled, "View on BGG" badge links are deactivated, and a status banner is shown
 - When BGG is restored: all features re-enable automatically without a page refresh, and an immediate sync is triggered to catch up any changes missed while BGG was down
-- The collection always loads from the local SQLite cache regardless of BGG availability
+- The collection always loads from the local PostgreSQL database regardless of BGG availability
 
 ### Info Button & Manual Sync
 

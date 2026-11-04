@@ -6,10 +6,10 @@ namespace GameCollection.Infrastructure.Postgres.Migrations;
 
 public sealed class DatabaseMigrationRunner
 {
-	private const string _journalschema = "public";
-	private const string _schemajournal = "migration_schema_journal";
-	private const string _functionjournal = "migration_function_journal";
-	private const string _seedjournal = "migration_seed_journal";
+	private const string _journalSchema = "public";
+	private const string _schemaJournal = "migration_schema_journal";
+	private const string _functionJournal = "migration_function_journal";
+	private const string _seedJournal = "migration_seed_journal";
 
 	private readonly string _connectionString;
 	private readonly MigrationScripts _scripts;
@@ -22,9 +22,9 @@ public sealed class DatabaseMigrationRunner
 
 	public Task RunAsync(CancellationToken cancellationToken = default)
 	{
-		Apply(_scripts.Schema, _schemajournal, runAlways: false, cancellationToken);
-		Apply(_scripts.Functions, _functionjournal, runAlways: true, cancellationToken);
-		Apply(_scripts.Seeds, _seedjournal, runAlways: true, cancellationToken);
+		Apply(_scripts.Schema, _schemaJournal, runAlways: false, cancellationToken);
+		Apply(_scripts.Functions, _functionJournal, runAlways: true, cancellationToken);
+		Apply(_scripts.Seeds, _seedJournal, runAlways: true, cancellationToken);
 		return Task.CompletedTask;
 	}
 
@@ -51,7 +51,7 @@ public sealed class DatabaseMigrationRunner
 
 		builder.Configure(config =>
 		{
-			var journal = new PostgresqlTableJournal(() => config.ConnectionManager, () => config.Log, _journalschema, journalTable);
+			var journal = new PostgresqlTableJournal(() => config.ConnectionManager, () => config.Log, _journalSchema, journalTable);
 			config.Journal = runAlways ? new RunAlwaysJournal(journal) : journal;
 		});
 

@@ -69,7 +69,7 @@ public class BggCollectionWriterAdapter : IBggCollectionWriter
 		}
 		catch (Exception ex)
 		{
-			// BGG write failure is non-fatal — SQLite delete proceeds regardless
+			// BGG write failure is non-fatal — the local delete proceeds regardless
 			_logger.LogWarning(ex, "Failed to remove collId {CollId} from BGG collection.", bggCollId);
 		}
 	}

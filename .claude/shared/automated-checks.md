@@ -34,8 +34,6 @@ dotnet test src/bgci.slnx
   (`IDE1006`) that `dotnet format` cannot fix. Do not drop the flag until those are fixed.
 - `dotnet test` on the solution reports results per project. If it ran nothing, report
   "No backend test projects found" instead of pass or fail.
-- `dotnet build` prints a known `NU1903` warning for `SQLitePCLRaw.lib.e_sqlite3`. It is not
-  a failure. Do not add `/warnaserror` until it is resolved.
 
 ## Frontend
 

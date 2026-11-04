@@ -16,7 +16,7 @@ publish/
 # Rider
 .idea/
 
-# SQLite databases
+# Local database files
 *.db
 *.db-shm
 *.db-wal

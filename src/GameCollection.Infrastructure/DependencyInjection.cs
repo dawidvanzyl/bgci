@@ -1,7 +1,9 @@
 using GameCollection.Domain.Repositories;
-using GameCollection.Infrastructure.Sqlite;
+using GameCollection.Infrastructure.Postgres;
+using GameCollection.Infrastructure.Postgres.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace GameCollection.Infrastructure;
 
@@ -11,14 +13,37 @@ public static class DependencyInjection
 		this IServiceCollection services,
 		IConfiguration configuration)
 	{
-		var dbPath = configuration["Database:Path"] ?? "/data/bgci.db";
-		var connectionString = $"Data Source={dbPath}";
+		var connectionString = BuildConnectionString(configuration);
 
 		services.AddScoped<ICollectedGameRepository>(
-			_ => new SqliteCollectedGameRepository(connectionString));
+			_ => new PostgresCollectedGameRepository(connectionString));
 
-		services.AddSingleton(new DatabaseMigrator(connectionString));
+		services.AddSingleton(new DatabaseMigrationRunner(connectionString, MigrationScripts.LoadEmbedded()));
 
 		return services;
+	}
+
+	private static string BuildConnectionString(IConfiguration configuration)
+	{
+		var port = int.TryParse(Require(configuration, "Database:Port"), out var parsedPort)
+			? parsedPort
+			: throw new InvalidOperationException("The configuration key 'Database:Port' must be a number.");
+
+		return new NpgsqlConnectionStringBuilder
+		{
+			Host = Require(configuration, "Database:Host"),
+			Port = port,
+			Database = Require(configuration, "Database:Name"),
+			Username = Require(configuration, "Database:User"),
+			Password = Require(configuration, "Database:Password")
+		}.ConnectionString;
+	}
+
+	private static string Require(IConfiguration configuration, string key)
+	{
+		var value = configuration[key];
+		return string.IsNullOrWhiteSpace(value)
+			? throw new InvalidOperationException($"The configuration key '{key}' is missing or empty.")
+			: value;
 	}
 }

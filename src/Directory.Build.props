@@ -7,8 +7,6 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<IsPackable>false</IsPackable>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<!-- Known SQLitePCLRaw advisory pulled in transitively by Infrastructure. Remove once the package is updated. -->
-		<WarningsNotAsErrors>NU1903</WarningsNotAsErrors>
 	</PropertyGroup>
 
 	<!-- Only *.Tests projects run tests. *.Testing projects are plain libraries. -->
