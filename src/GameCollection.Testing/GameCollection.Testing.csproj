@@ -3,4 +3,8 @@
 		<ProjectReference Include="..\GameCollection.Application\GameCollection.Application.csproj" />
 		<ProjectReference Include="..\GameCollection.Domain\GameCollection.Domain.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Testcontainers.PostgreSql" Version="4.16.0" />
+		<PackageReference Include="xunit.v3.extensibility.core" Version="3.2.2" />
+	</ItemGroup>
 </Project>
