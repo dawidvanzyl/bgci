@@ -1,13 +1,45 @@
 # Development and QA stacks, built from source. Production is docker-compose.prod.yml.
 #
-# The qa profile is the stack the Playwright suite runs against. It has no volumes, so every
-# `up` starts with an empty database, and it replaces BoardGameGeek and the bgg-writer sidecar
-# with e2e/mock-bgg:
+# The qa profile is the stack the Playwright suite runs against. Its PostgreSQL service keeps
+# its data in memory, so every `up` starts with an empty database, and the profile replaces
+# BoardGameGeek and the bgg-writer sidecar with e2e/mock-bgg:
 #   docker compose --profile qa up --build -d
 #   docker compose --profile qa down -v
+#
+# The dev profile starts only a PostgreSQL service for running the API from source. Its data
+# lives in a named volume until the profile is taken down with -v. It can run next to qa:
+#   docker compose --profile dev up -d
+#   docker compose --profile dev down -v
 name: bgci-qa
 
+x-postgres: &postgres
+  image: postgres:17-alpine
+  environment:
+    POSTGRES_DB: ${DB_NAME:-bgci}
+    POSTGRES_USER: ${DB_USER:-bgci}
+    POSTGRES_PASSWORD: ${DB_PASSWORD:-bgci}
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+    interval: 5s
+    timeout: 5s
+    retries: 20
+    start_period: 10s
+
 services:
+  bgci-db:
+    <<: *postgres
+    profiles: [qa]
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  bgci-dev-db:
+    <<: *postgres
+    profiles: [dev]
+    ports:
+      - "${DEV_DB_PORT:-5433}:5432"
+    volumes:
+      - bgci-dev-data:/var/lib/postgresql/data
+
   mock-bgg:
     build: ./e2e/mock-bgg
     profiles: [qa]
@@ -29,7 +61,12 @@ services:
     profiles: [qa]
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      Database__Path: /data/bgci.db
+      Database__Path: /tmp/bgci.db
+      Database__Host: bgci-db
+      Database__Port: "5432"
+      Database__Name: ${DB_NAME:-bgci}
+      Database__User: ${DB_USER:-bgci}
+      Database__Password: ${DB_PASSWORD:-bgci}
       Bgg__BaseUrl: http://mock-bgg:4010/xmlapi2/
       Bgg__BearerToken: qa-token
       Bgg__Username: qa-user
@@ -37,6 +74,8 @@ services:
       APP_VERSION: qa
     depends_on:
       mock-bgg:
+        condition: service_healthy
+      bgci-db:
         condition: service_healthy
 
   bgci-web:
@@ -48,3 +87,6 @@ services:
       - "${QA_WEB_PORT:-3000}:80"
     depends_on:
       - bgci-api
+
+volumes:
+  bgci-dev-data:
