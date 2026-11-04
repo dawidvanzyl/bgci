@@ -168,8 +168,10 @@ nothing.
     new handler in the context's test fixture, and move a setup a second test repeats into a
     context helper.
   - frontend — vitest tests in `frontend/tests/<module>.test.js`, run in Node with no DOM,
-    built on the factories in `frontend/tests/factories/`. The test name starts with the exact
-    code (`it('48UC1 …')`). Keep new logic in pure functions so it needs no DOM
+    built on the factories in `frontend/tests/factories/`. Tag the test with the exact code
+    (`it('does X', { tags: ['48UC1'] }, …)`) and register each new code in the `tags` array of
+    `frontend/vitest.config.js` (name = the code, description = the behaviour), because an
+    unregistered tag fails the run. Keep new logic in pure functions so it needs no DOM
     (`docs/coding-standards-frontend.md` §3 and §7).
 - **Never run `prettier --write` on a shared config file** such as
   `frontend/vitest.config.js`. Add only the new lines by hand, then check that
