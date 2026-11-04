@@ -1,6 +1,12 @@
 import {
-	bggReachable, bggConfigured, bggPollInterval,
-	setBggReachable, setBggConfigured, setBggSearchEnabled, setBggCollectionEnabled, setBggPollInterval,
+	bggReachable,
+	bggConfigured,
+	bggPollInterval,
+	setBggReachable,
+	setBggConfigured,
+	setBggSearchEnabled,
+	setBggCollectionEnabled,
+	setBggPollInterval,
 } from './state.js';
 import { loadConfig } from './api.js';
 import { fetchBggPreview } from './api.js';
@@ -88,7 +94,8 @@ export function initBggSearch(config) {
 		bggSearchInput.classList.add('bgg-search-disabled');
 		const notice = document.createElement('p');
 		notice.className = 'bgg-search-notice';
-		notice.innerHTML = 'Requires a BGG API token. See <a href="https://boardgamegeek.com/applications" target="_blank" rel="noopener">boardgamegeek.com/applications</a>.';
+		notice.innerHTML =
+			'Requires a BGG API token. See <a href="https://boardgamegeek.com/applications" target="_blank" rel="noopener">boardgamegeek.com/applications</a>.';
 		wrap.appendChild(notice);
 	}
 }
@@ -102,7 +109,7 @@ export function renderBggResults(results, { onSelect } = {}) {
 	if (!results.length) {
 		bggResults.innerHTML = '<li class="dropdown-empty">No results found.</li>';
 	} else {
-		results.forEach(r => {
+		results.forEach((r) => {
 			const li = document.createElement('li');
 			li.innerHTML = `${esc(r.name)}<span class="year">${r.year ?? ''}</span>`;
 			li.addEventListener('click', () => onSelect && onSelect(r));
@@ -130,7 +137,10 @@ export async function selectBggGame(result, { onOpenModal } = {}) {
 	document.getElementById('bgg-search-input').value = '';
 
 	const preview = await fetchBggPreview(result.bggId);
-	if (!preview) { alert('Could not load game details from BGG.'); return; }
+	if (!preview) {
+		alert('Could not load game details from BGG.');
+		return;
+	}
 
 	if (onOpenModal) onOpenModal(null, false, preview);
 }

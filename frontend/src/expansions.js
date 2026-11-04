@@ -45,20 +45,24 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 		addSection.appendChild(knownWrap);
 
 		// Load known expansions asynchronously
-		fetchBggExpansions(game.bggId).then(expansions => {
-			const allGameBggIds = new Set(allGames.filter(g => g.bggId).map(g => g.bggId));
-			const available = (expansions || []).filter(e => !allGameBggIds.has(e.bggId));
-			if (available.length === 0) {
-				knownSelect.innerHTML = '<option value="">No new expansions found</option>';
-			} else {
-				knownSelect.innerHTML =
-					'<option value="">\u2014 Select expansion \u2014</option>' +
-					available.map(e => `<option value="${e.bggId}">${esc(e.name)}${e.year ? ` (${e.year})` : ''}</option>`).join('');
-				knownSelect.disabled = false;
-			}
-		}).catch(() => {
-			knownSelect.innerHTML = '<option value="">Failed to load</option>';
-		});
+		fetchBggExpansions(game.bggId)
+			.then((expansions) => {
+				const allGameBggIds = new Set(allGames.filter((g) => g.bggId).map((g) => g.bggId));
+				const available = (expansions || []).filter((e) => !allGameBggIds.has(e.bggId));
+				if (available.length === 0) {
+					knownSelect.innerHTML = '<option value="">No new expansions found</option>';
+				} else {
+					knownSelect.innerHTML =
+						'<option value="">\u2014 Select expansion \u2014</option>' +
+						available
+							.map((e) => `<option value="${e.bggId}">${esc(e.name)}${e.year ? ` (${e.year})` : ''}</option>`)
+							.join('');
+					knownSelect.disabled = false;
+				}
+			})
+			.catch(() => {
+				knownSelect.innerHTML = '<option value="">Failed to load</option>';
+			});
 
 		knownSelect.addEventListener('change', () => {
 			knownAddBtn.disabled = !knownSelect.value;
@@ -102,7 +106,8 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 		const searchStatus = document.createElement('span');
 		searchStatus.className = 'exp-search-status';
 		searchStatus.hidden = true;
-		searchStatus.innerHTML = '<svg class="btn-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" /></svg>Adding\u2026';
+		searchStatus.innerHTML =
+			'<svg class="btn-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" /></svg>Adding\u2026';
 		searchRow.appendChild(searchStatus);
 
 		searchWrap.appendChild(searchRow);
@@ -117,22 +122,31 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 		searchInput.addEventListener('input', () => {
 			clearTimeout(expansionSearchTimer);
 			const q = searchInput.value.trim();
-			if (q.length < 2) { searchResults.hidden = true; return; }
-			setExpansionSearchTimer(setTimeout(async () => {
-				try {
-					const data = await searchBgg(q);
-					const allGameBggIds = new Set(allGames.filter(g => g.bggId).map(g => g.bggId));
-					const filtered = data.filter(r => !allGameBggIds.has(r.bggId));
-					searchResults.innerHTML = filtered.length === 0
-						? '<li class="dropdown-item dropdown-empty">No results</li>'
-						: filtered.map(r =>
-							`<li class="dropdown-item" data-bgg-id="${r.bggId}">${esc(r.name)}${r.year ? ` (${r.year})` : ''}</li>`
-						).join('');
-					searchResults.hidden = false;
-				} catch {
-					searchResults.hidden = true;
-				}
-			}, 400));
+			if (q.length < 2) {
+				searchResults.hidden = true;
+				return;
+			}
+			setExpansionSearchTimer(
+				setTimeout(async () => {
+					try {
+						const data = await searchBgg(q);
+						const allGameBggIds = new Set(allGames.filter((g) => g.bggId).map((g) => g.bggId));
+						const filtered = data.filter((r) => !allGameBggIds.has(r.bggId));
+						searchResults.innerHTML =
+							filtered.length === 0
+								? '<li class="dropdown-item dropdown-empty">No results</li>'
+								: filtered
+										.map(
+											(r) =>
+												`<li class="dropdown-item" data-bgg-id="${r.bggId}">${esc(r.name)}${r.year ? ` (${r.year})` : ''}</li>`
+										)
+										.join('');
+						searchResults.hidden = false;
+					} catch {
+						searchResults.hidden = true;
+					}
+				}, 400)
+			);
 		});
 
 		searchResults.addEventListener('click', async (e) => {
@@ -189,7 +203,7 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 	container.appendChild(divider);
 
 	// ── Owned expansions ──────────────────────────────────
-	const owned = allGames.filter(g => g.parentGameId === game.id);
+	const owned = allGames.filter((g) => g.parentGameId === game.id);
 
 	const ownedSection = document.createElement('section');
 	ownedSection.className = 'exp-section';
@@ -207,26 +221,30 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 	} else {
 		const list = document.createElement('ul');
 		list.className = 'exp-owned-list';
-		owned.forEach(exp => {
+		owned.forEach((exp) => {
 			const ratingBadge = exp.bggRating
 				? `<span class="badge badge-rating">&#9733; ${Number(exp.bggRating).toFixed(1)}</span>`
 				: '';
 
 			const detailContent = (() => {
-				const bggLinkHtml = exp.bggId && bggReachable
-					? `<a class="btn btn-secondary btn-sm exp-bgg-link" href="https://boardgamegeek.com/boardgame/${exp.bggId}" target="_blank" rel="noopener">&#128279; View on BGG</a>`
-					: '';
+				const bggLinkHtml =
+					exp.bggId && bggReachable
+						? `<a class="btn btn-secondary btn-sm exp-bgg-link" href="https://boardgamegeek.com/boardgame/${exp.bggId}" target="_blank" rel="noopener">&#128279; View on BGG</a>`
+						: '';
 
-				const rightContent = exp.description || bggLinkHtml
-					? `<div class="exp-detail-right">
+				const rightContent =
+					exp.description || bggLinkHtml
+						? `<div class="exp-detail-right">
 							${exp.description ? `<textarea class="exp-detail-desc" readonly rows="4">${esc(exp.description)}</textarea>` : ''}
 							${bggLinkHtml}
 						</div>`
-					: '';
+						: '';
 
 				const parts = [];
 				if (exp.coverImageUrl) {
-					parts.push(`<img class="exp-detail-img" src="${esc(exp.coverImageUrl)}" alt="${esc(exp.name)}" loading="lazy">`);
+					parts.push(
+						`<img class="exp-detail-img" src="${esc(exp.coverImageUrl)}" alt="${esc(exp.name)}" loading="lazy">`
+					);
 				}
 				if (rightContent) {
 					parts.push(rightContent);
@@ -257,11 +275,11 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 			`;
 
 			// Toggle accordion
-			li.addEventListener('click', e => {
+			li.addEventListener('click', (e) => {
 				if (e.target.closest('.exp-remove-btn')) return;
 				const isOpen = li.classList.contains('is-expanded');
 				// Close all open items first
-				list.querySelectorAll('.exp-owned-item.is-expanded').forEach(other => {
+				list.querySelectorAll('.exp-owned-item.is-expanded').forEach((other) => {
 					other.classList.remove('is-expanded');
 					other.querySelector('.exp-owned-detail').classList.add('hidden');
 				});
@@ -296,7 +314,10 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 
 	manualAddBtn.addEventListener('click', async () => {
 		const name = manualInput.value.trim();
-		if (!name) { manualInput.focus(); return; }
+		if (!name) {
+			manualInput.focus();
+			return;
+		}
 		setButtonLoading(manualAddBtn, 'Adding\u2026');
 		try {
 			await saveExpansion({ name }, game.id);

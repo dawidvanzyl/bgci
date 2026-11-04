@@ -1,4 +1,4 @@
-import { SORT_FIELDS, DEFAULT_SORT, sortCriteria, setSortCriteria } from './state.js';
+import { SORT_FIELDS, sortCriteria, setSortCriteria } from './state.js';
 export { SORT_FIELDS } from './state.js';
 
 export function saveSort() {
@@ -8,8 +8,8 @@ export function saveSort() {
 export function sortGames(games) {
 	return [...games].sort((a, b) => {
 		for (const { field, dir } of sortCriteria) {
-			const def = SORT_FIELDS.find(f => f.field === field);
-			if (!def) continue;  // skip unknown/stale fields
+			const def = SORT_FIELDS.find((f) => f.field === field);
+			if (!def) continue; // skip unknown/stale fields
 			// For array fields, sort by first element
 			let av = a[field] ?? null;
 			let bv = b[field] ?? null;
@@ -32,13 +32,13 @@ export function sortGames(games) {
 }
 
 export function renderSortBar(onSortChanged) {
-	const chipsEl  = document.getElementById('sort-chips');
+	const chipsEl = document.getElementById('sort-chips');
 	const clearBtn = document.getElementById('btn-sort-clear');
-	const addBtn   = document.getElementById('btn-sort-add');
+	const addBtn = document.getElementById('btn-sort-add');
 
 	chipsEl.innerHTML = '';
 	sortCriteria.forEach(({ field, dir }) => {
-		const def = SORT_FIELDS.find(f => f.field === field);
+		const def = SORT_FIELDS.find((f) => f.field === field);
 		if (!def) return;
 		const chip = document.createElement('div');
 		chip.className = 'sort-chip';
@@ -61,14 +61,17 @@ export function renderSortBar(onSortChanged) {
 
 export function toggleSortDropdown(onSortChanged) {
 	const dropdown = document.getElementById('sort-add-dropdown');
-	if (!dropdown.hidden) { hideSortDropdown(); return; }
+	if (!dropdown.hidden) {
+		hideSortDropdown();
+		return;
+	}
 
-	const used = new Set(sortCriteria.map(x => x.field));
+	const used = new Set(sortCriteria.map((x) => x.field));
 	dropdown.innerHTML = '';
-	SORT_FIELDS.filter(f => !used.has(f.field)).forEach(f => {
+	SORT_FIELDS.filter((f) => !used.has(f.field)).forEach((f) => {
 		const li = document.createElement('li');
 		li.textContent = f.label;
-		li.addEventListener('click', e => {
+		li.addEventListener('click', (e) => {
 			e.stopPropagation();
 			setSortCriteria([...sortCriteria, { field: f.field, dir: f.defaultDir }]);
 			saveSort();

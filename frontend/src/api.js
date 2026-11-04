@@ -20,7 +20,7 @@ export async function loadGames(onLoaded) {
 }
 
 export async function saveGame(payload, id) {
-	const url    = id ? `${API}/games/${id}` : `${API}/games`;
+	const url = id ? `${API}/games/${id}` : `${API}/games`;
 	const method = id ? 'PUT' : 'POST';
 	const res = await fetch(url, {
 		method,
