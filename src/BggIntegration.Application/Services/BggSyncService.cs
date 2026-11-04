@@ -52,7 +52,7 @@ public class BggSyncService
 
 		var allBggIds = bggCollectionById.Keys.Concat(bggExpansionCollectionById.Keys).ToHashSet();
 
-		// 2. Fetch all SQLite games that have a bgg_id
+		// 2. Fetch all local games that have a bgg_id
 		var allGames = await _mediator.Send(new GetAllGamesQuery(), cancellationToken);
 		var localBggGames = allGames
 			.Where(g => g.BggId.HasValue)
@@ -67,7 +67,7 @@ public class BggSyncService
 		var added = 0;
 		var deleted = 0;
 
-		// 4. Add base games in BGG but not in SQLite
+		// 4. Add base games in BGG but not in the collection
 		foreach (var bggId in toAddBase)
 		{
 			try
@@ -114,7 +114,7 @@ public class BggSyncService
 			}
 		}
 
-		// 5. Add expansions in BGG but not in SQLite
+		// 5. Add expansions in BGG but not in the collection
 		if (toAddExpansion.Count > 0)
 		{
 			// Refresh local games to pick up any base games just added in this sync run
@@ -188,7 +188,7 @@ public class BggSyncService
 			}
 		}
 
-		// 6. Delete games in SQLite that are no longer in BGG collection (base or expansion)
+		// 6. Delete games in the collection that are no longer in BGG collection (base or expansion)
 		foreach (var bggId in toDelete)
 		{
 			try

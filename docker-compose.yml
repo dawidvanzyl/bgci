@@ -61,7 +61,6 @@ services:
     profiles: [qa]
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      Database__Path: /tmp/bgci.db
       Database__Host: bgci-db
       Database__Port: "5432"
       Database__Name: ${DB_NAME:-bgci}
