@@ -69,7 +69,7 @@ npm run typecheck
 ```
 
 The specs themselves run against the QA stack. Run only the story's IT codes locally, one
-`--grep "@{IT_CODE}"` per code. CI runs the full suite.
+`--grep "@{IT_CODE}(?!\d)"` per code. CI runs the full suite.
 
 ## Comment labels
 
