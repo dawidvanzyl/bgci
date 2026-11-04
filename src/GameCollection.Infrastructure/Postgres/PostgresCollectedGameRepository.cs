@@ -1,10 +1,10 @@
-using System.Data;
 using Dapper;
 using GameCollection.Domain.Aggregates;
 using GameCollection.Domain.Repositories;
 using GameCollection.Domain.ValueObjects;
 using GameCollection.Infrastructure.Models;
 using Npgsql;
+using System.Data;
 
 namespace GameCollection.Infrastructure.Postgres;
 

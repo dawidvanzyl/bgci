@@ -25,10 +25,9 @@ public static class DependencyInjection
 
 	private static string BuildConnectionString(IConfiguration configuration)
 	{
-		if (!int.TryParse(Require(configuration, "Database:Port"), out var port))
-		{
-			throw new InvalidOperationException("The configuration key 'Database:Port' must be a number.");
-		}
+		var port = int.TryParse(Require(configuration, "Database:Port"), out var parsedPort)
+			? parsedPort
+			: throw new InvalidOperationException("The configuration key 'Database:Port' must be a number.");
 
 		return new NpgsqlConnectionStringBuilder
 		{
