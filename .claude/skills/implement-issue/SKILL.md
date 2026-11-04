@@ -58,7 +58,7 @@ and stop, saying why, when any of these holds:
 | It has a milestone (epic or story) | milestone work runs through `implement-milestone` |
 | It's closed | nothing to do |
 | `## Test Specifications` is missing, or empty without an explicit `N/A` | QA has no contract; the codes are written when the issue is created, never by this run |
-| It touches the UI (`layer: frontend` or a `## Page Architecture` section) with no **Design reference:** bullet | the mockup is authoritative and is never invented — ask for one in `.design/` and a Design reference on the issue |
+| It touches the UI (`layer: frontend` or a `## Page Architecture` section) with no **Design reference:** bullet. The bullet may name a mockup, or read `N/A — {reason}` when no screen changes, as in a refactor | the mockup is authoritative and is never invented — ask for one in `.design/` and a Design reference on the issue. Never add the `N/A` yourself: the owner decides that no mockup applies |
 | A `Depends on #X` in `## Context & Constraints` is still open | it can't be built yet |
 
 Then set up the journal at `{HOME}/.claude/runs/bgci/issues/{issue_number}/`,

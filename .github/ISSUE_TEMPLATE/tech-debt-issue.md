@@ -44,6 +44,8 @@ has never seen the offending code.
 - **Existing patterns to follow:** e.g. all service classes use X pattern
 - **Known constraints:** e.g. public signatures/behaviour must not change; stay compatible with the current API contract
 - **Related issues:** Depends on #issue / Supersedes decision from #issue
+- **Design reference:** frontend work only — the mockup the change must match, or
+  `N/A — no visible change` for a refactor. Omit when nothing in `frontend/` changes.
 
 ---
 

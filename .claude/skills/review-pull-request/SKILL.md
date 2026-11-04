@@ -150,7 +150,7 @@ is missing, wrong or inconsistent:
 - A deviation from the API contract is a ❌ Blocker.
 - A violation of Context & Constraints is a ❌ Blocker.
 - Look for evidence that the Notes were read and acted on.
-- For a story with a Design reference, spot-check mockup fidelity by rendering the
+- For a story with a Design reference other than `N/A`, spot-check mockup fidelity by rendering the
   mockup and the shipped component and comparing computed styles. Any deviation from
   an authoritative mockup is a ❌ Blocker on the first cycle.
 - If the diff implements anything listed in Out of Scope, raise a ❌ Blocker: "Diff
