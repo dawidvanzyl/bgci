@@ -34,7 +34,8 @@ frontend/
 - One responsibility per module. Add a new module before a module grows a second
   responsibility.
 - Only `api.js` calls `fetch`. Every other module goes through it.
-- `main.js` wires events and calls the other modules. It holds no feature logic.
+- `main.js` wires events and calls the other modules. It holds no feature logic. When the UI is
+  wired it sets `data-ready="true"` on `body`, which the end-to-end tests wait for.
 - State lives in `state.js`. A module changes shared state only through that module's
   exported setters.
 
