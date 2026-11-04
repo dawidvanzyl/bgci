@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 describe('syncBgg', () => {
-	it('55UC1 sends POST to the sync endpoint and resolves', async () => {
+	it('sends POST to the sync endpoint and resolves', { tags: ['55UC1'] }, async () => {
 		const fetchStub = vi.fn(async () => ({ ok: true, status: 200, text: async () => '' }));
 		vi.stubGlobal('fetch', fetchStub);
 
@@ -23,7 +23,7 @@ describe('syncBgg', () => {
 		expect(fetchStub).toHaveBeenCalledWith('/api/sync/bgg', { method: 'POST' });
 	});
 
-	it('55UC2 rejects with the response text when the server answers with an error', async () => {
+	it('rejects with the response text when the server answers with an error', { tags: ['55UC2'] }, async () => {
 		const body = 'BGG sync failed: upstream';
 		vi.stubGlobal(
 			'fetch',
