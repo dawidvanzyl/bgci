@@ -24,11 +24,11 @@ public class BggController : ControllerBase
 	}
 
 	[HttpGet("search")]
-    public async Task<ActionResult<IReadOnlyList<BggSearchResult>>> Search(
-        [FromQuery] string query,
-        CancellationToken cancellationToken)
-    {
-        if (!_bggAvailability.IsAvailable)
+	public async Task<ActionResult<IReadOnlyList<BggSearchResult>>> Search(
+		[FromQuery] string query,
+		CancellationToken cancellationToken)
+	{
+		if (!_bggAvailability.IsAvailable)
 		{
 			return StatusCode(503, _bggUnavailableMessage);
 		}
@@ -39,57 +39,57 @@ public class BggController : ControllerBase
 		}
 
 		var results = await _mediator.Send(new SearchBggQuery(query), cancellationToken);
-        return Ok(results);
-    }
+		return Ok(results);
+	}
 
-    [HttpGet("game/{bggId:int}")]
-    public async Task<ActionResult<BggGameDetails>> GetGameDetails(
-        int bggId,
-        CancellationToken cancellationToken)
-    {
-        if (!_bggAvailability.IsAvailable)
+	[HttpGet("game/{bggId:int}")]
+	public async Task<ActionResult<BggGameDetails>> GetGameDetails(
+		int bggId,
+		CancellationToken cancellationToken)
+	{
+		if (!_bggAvailability.IsAvailable)
 		{
 			return StatusCode(503, _bggUnavailableMessage);
 		}
 
 		var details = await _mediator.Send(new GetBggGameDetailsQuery(bggId), cancellationToken);
-        return details is null ? NotFound() : Ok(details);
-    }
+		return details is null ? NotFound() : Ok(details);
+	}
 
-    /// <summary>
-    /// Returns a pre-translated AddGameFromBggCommand ready for the frontend to confirm and POST to /api/games/from-bgg.
-    /// </summary>
-    [HttpGet("game/{bggId:int}/preview")]
-    public async Task<ActionResult<AddGameFromBggCommand>> PreviewGame(
-        int bggId,
-        CancellationToken cancellationToken)
-    {
-        if (!_bggAvailability.IsAvailable)
+	/// <summary>
+	/// Returns a pre-translated AddGameFromBggCommand ready for the frontend to confirm and POST to /api/games/from-bgg.
+	/// </summary>
+	[HttpGet("game/{bggId:int}/preview")]
+	public async Task<ActionResult<AddGameFromBggCommand>> PreviewGame(
+		int bggId,
+		CancellationToken cancellationToken)
+	{
+		if (!_bggAvailability.IsAvailable)
 		{
 			return StatusCode(503, _bggUnavailableMessage);
 		}
 
 		var details = await _mediator.Send(new GetBggGameDetailsQuery(bggId), cancellationToken);
-        if (details is null)
+		if (details is null)
 		{
 			return NotFound();
 		}
 
 		var command = details.ToAddGameCommand();
-        return Ok(command);
-    }
+		return Ok(command);
+	}
 
-    [HttpGet("game/{bggId:int}/expansions")]
-    public async Task<ActionResult<IReadOnlyList<BggSearchResult>>> GetExpansions(
-        int bggId,
-        CancellationToken cancellationToken)
-    {
-        if (!_bggAvailability.IsAvailable)
+	[HttpGet("game/{bggId:int}/expansions")]
+	public async Task<ActionResult<IReadOnlyList<BggSearchResult>>> GetExpansions(
+		int bggId,
+		CancellationToken cancellationToken)
+	{
+		if (!_bggAvailability.IsAvailable)
 		{
 			return StatusCode(503, _bggUnavailableMessage);
 		}
 
 		var results = await _mediator.Send(new GetBggExpansionsQuery(bggId), cancellationToken);
-        return Ok(results);
-    }
+		return Ok(results);
+	}
 }

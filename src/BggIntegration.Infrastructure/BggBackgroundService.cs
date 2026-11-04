@@ -20,7 +20,7 @@ namespace BggIntegration.Infrastructure;
 internal sealed class BggBackgroundService : BackgroundService
 {
 	private static readonly TimeSpan _healthCheckIntervalWhenDown = TimeSpan.FromMinutes(2);
-	private static readonly TimeSpan _healthCheckIntervalWhenUp   = TimeSpan.FromMinutes(15);
+	private static readonly TimeSpan _healthCheckIntervalWhenUp = TimeSpan.FromMinutes(15);
 
 	private readonly IBggAvailabilityService _availability;
 	private readonly IServiceScopeFactory _scopeFactory;
@@ -38,8 +38,8 @@ internal sealed class BggBackgroundService : BackgroundService
 	{
 		_availability = availability;
 		_scopeFactory = scopeFactory;
-		_settings     = settings.Value;
-		_logger       = logger;
+		_settings = settings.Value;
+		_logger = logger;
 	}
 
 	protected override Task ExecuteAsync(CancellationToken stoppingToken) =>

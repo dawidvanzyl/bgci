@@ -2,12 +2,12 @@ namespace GameCollection.Domain.ValueObjects;
 
 public record PlayerCount
 {
-    public int Min { get; }
-    public int Max { get; }
+	public int Min { get; }
+	public int Max { get; }
 
-    public PlayerCount(int min, int max)
-    {
-        if (min < 1)
+	public PlayerCount(int min, int max)
+	{
+		if (min < 1)
 		{
 			throw new ArgumentException("Minimum player count must be at least 1.", nameof(min));
 		}
@@ -18,8 +18,8 @@ public record PlayerCount
 		}
 
 		Min = min;
-        Max = max;
-    }
+		Max = max;
+	}
 
-    public override string ToString() => Min == Max ? $"{Min}" : $"{Min}–{Max}";
+	public override string ToString() => Min == Max ? $"{Min}" : $"{Min}–{Max}";
 }
