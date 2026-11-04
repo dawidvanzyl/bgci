@@ -20,10 +20,11 @@ public static class DependencyInjection
 		services.Configure<BggWriterSettings>(configuration.GetSection("BggWriter"));
 
 		var bearerToken = configuration["Bgg:BearerToken"];
+		var bggBaseAddress = ResolveBggBaseAddress(configuration["Bgg:BaseUrl"]);
 
 		services.AddHttpClient<IBggClient, BggHttpClient>(client =>
 		{
-			client.BaseAddress = new Uri(BggApiConstants.BaseAddress);
+			client.BaseAddress = bggBaseAddress;
 			client.Timeout = TimeSpan.FromSeconds(30);
 			client.DefaultRequestHeaders.Add("User-Agent", BggApiConstants.UserAgent);
 
@@ -50,7 +51,7 @@ public static class DependencyInjection
 		// so failures are detected immediately rather than after multiple backoff attempts.
 		services.AddHttpClient(BggAvailabilityService._httpClientName, client =>
 		{
-			client.BaseAddress = new Uri(BggApiConstants.BaseAddress);
+			client.BaseAddress = bggBaseAddress;
 			client.Timeout = TimeSpan.FromSeconds(10);
 			client.DefaultRequestHeaders.Add("User-Agent", BggApiConstants.UserAgent);
 
@@ -70,5 +71,13 @@ public static class DependencyInjection
 		services.AddHostedService<BggBackgroundService>();
 
 		return services;
+	}
+
+	// The QA stack points Bgg:BaseUrl at a mock server. Production leaves it unset.
+	private static Uri ResolveBggBaseAddress(string? configured)
+	{
+		return string.IsNullOrWhiteSpace(configured)
+			? new Uri(BggApiConstants.BaseAddress)
+			: new Uri(configured.Trim().TrimEnd('/') + "/");
 	}
 }
