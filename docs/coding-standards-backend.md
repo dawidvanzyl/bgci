@@ -2,13 +2,15 @@
 
 These are guidelines, not rigid rules. The goal is consistency and clarity. When in doubt, favour readability and explicitness over cleverness.
 
+> Workflow, branching, commit, PR and comment rules: `coding-standards.md`. Those rules outrank this document. Frontend: `coding-standards-frontend.md`. Node sidecar: `coding-standards-bgg-writer.md`.
+
 ---
 
 ## 1. Project & Folder Structure
 
 - One type per file. The file name must match the type name exactly (e.g. `CollectedGame.cs` contains `class CollectedGame`).
 - Folder structure within a project mirrors the namespace structure.
-- Each bounded context (BC) is a self-contained set of four projects: `Domain`, `Application`, `Infrastructure`, and the shared `Api` composition root.
+- Each bounded context (BC) is a self-contained set of projects: `Domain`, `Application` and `Infrastructure`. The shared `Api` project is the composition root. Current BCs: `GameCollection`, `BggIntegration`, `KickstarterTracking` and `KickstarterIntegration` (no `Application` project yet).
 
 ```
 src/
@@ -18,7 +20,8 @@ src/
 ├── GameCollection.Infrastructure/    # Repository implementations, DB migrations
 ├── BggIntegration.Domain/            # BGG models, IBggClient, IBggTranslator (ACL)
 ├── BggIntegration.Application/       # BGG query handlers
-└── BggIntegration.Infrastructure/    # HTTP client, XML parser
+├── BggIntegration.Infrastructure/    # HTTP client, XML parser
+└── KickstarterTracking.* and KickstarterIntegration.*   # Same layout
 ```
 
 - **No cross-BC project references** except through the Anti-Corruption Layer. `BggIntegration` may reference `GameCollection.Application` only to produce `AddGameFromBggCommand` via `IBggTranslator`. It must never reference `GameCollection.Domain` directly.

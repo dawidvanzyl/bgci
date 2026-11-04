@@ -1,5 +1,7 @@
 # bgg-writer Coding Standards
 
+> Workflow, branching, commit, PR and comment rules: `coding-standards.md`. Those rules outrank this document.
+
 ## Purpose
 
 `bgg-writer` is a single-responsibility Node.js sidecar service. It exists solely to write to the BGG collection API using a real Firefox browser (via Playwright) to bypass Cloudflare bot protection. It exposes two HTTP endpoints consumed by the main .NET API.
