@@ -2,8 +2,6 @@ name: Publish Docker Images
 
 on:
   push:
-    branches:
-      - master
     tags:
       - 'v*.*.*'
 
@@ -92,7 +90,7 @@ jobs:
         run: |
           mkdir release
           cp docker-compose.prod.yml release/docker-compose.yml
-          cp .env.prod.example release/.env.example
+          cp .env.prod.example release/env.example
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -100,4 +98,5 @@ jobs:
         with:
           files: |
             release/docker-compose.yml
-            release/.env.example
+            release/env.example
+          generate_release_notes: true
