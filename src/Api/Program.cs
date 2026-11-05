@@ -2,7 +2,10 @@ using BggIntegration.Application.Queries;
 using BggIntegration.Infrastructure;
 using GameCollection.Application;
 using GameCollection.Infrastructure;
-using GameCollection.Infrastructure.Sqlite;
+using GameCollection.Infrastructure.Postgres;
+using GameCollection.Infrastructure.Postgres.Migrations;
+
+PostgresClientSettings.Apply();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,11 +33,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Run DB migrations at startup
-using (var scope = app.Services.CreateScope())
-{
-	var migrator = scope.ServiceProvider.GetRequiredService<DatabaseMigrator>();
-	await migrator.MigrateAsync();
-}
+await app.Services.GetRequiredService<DatabaseMigrationRunner>().RunAsync(app.Lifetime.ApplicationStopping);
 
 app.UseCors();
 app.MapControllers();

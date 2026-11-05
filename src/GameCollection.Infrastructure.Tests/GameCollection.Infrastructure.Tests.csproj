@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<ItemGroup>
+		<ProjectReference Include="..\GameCollection.Infrastructure\GameCollection.Infrastructure.csproj" />
+		<ProjectReference Include="..\GameCollection.Testing\GameCollection.Testing.csproj" />
+	</ItemGroup>
+</Project>

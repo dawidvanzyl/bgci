@@ -65,7 +65,7 @@ public record GameName
 ### Repository Interfaces
 
 - Repository interfaces are defined in the `Domain` layer. They describe what the domain needs, in domain language.
-- Implementations live in `Infrastructure`. The domain has no knowledge of Dapper, SQLite, or any persistence concern.
+- Implementations live in `Infrastructure`. The domain has no knowledge of Dapper, PostgreSQL, or any persistence concern.
 - Repository methods accept `CancellationToken` and are always async.
 
 ---
@@ -185,11 +185,12 @@ public CollectedGame? GetById(GameId id)
 public static class DependencyInjection
 {
     public static IServiceCollection AddGameCollectionInfrastructure(
-        this IServiceCollection services, string connectionString)
+        this IServiceCollection services, IConfiguration configuration)
     {
+        var connectionString = BuildConnectionString(configuration);
         services.AddScoped<ICollectedGameRepository>(
-            _ => new SqliteCollectedGameRepository(connectionString));
-        services.AddSingleton(new DatabaseMigrator(connectionString));
+            _ => new PostgresCollectedGameRepository(connectionString));
+        services.AddSingleton(new DatabaseMigrationRunner(connectionString, MigrationScripts.LoadEmbedded()));
         return services;
     }
 }
@@ -215,6 +216,7 @@ public static class DependencyInjection
 
 - `src/Directory.Build.props` gives every `*.Tests` and `*.Testing` project its target framework, nullable and warnings-as-errors settings. `*.Tests` projects also get xUnit v3, Shouldly, Moq and the test SDK. A test project's `.csproj` lists only its `ProjectReference` items. Do not repeat package references.
 - Stack: xUnit v3, Shouldly for assertions, Moq for fakes.
+- Infrastructure tests run against a real database that Testcontainers starts in Docker, so `dotnet test` needs Docker running. They do not use the handler fixture of section 7.2.
 
 ### 7.2 The test pattern
 
@@ -255,3 +257,26 @@ public sealed class DeleteGameCommandHandlerTests : IClassFixture<GameCollection
 - Assert the outcome, then verify only the interactions that matter. Do not verify every call.
 - Tag a test with its acceptance criterion code: `[Trait("AC", "{issue_number}UC{n}")]` (see `coding-standards.md` §5). Tests written before this convention carry no code.
 - Run all checks as listed in `.claude/shared/automated-checks.md`.
+
+
+---
+
+## 8. Database Migrations
+
+`GameCollection.Infrastructure` changes the PostgreSQL database with `DatabaseMigrationRunner`, which uses DbUp. The scripts are `.sql` files in three folders under `Postgres/Scripts`. Every `.sql` file there is embedded in the assembly.
+
+| Folder | Runs | Journal table |
+|---|---|---|
+| `Schema` | Once per database | `migration_schema_journal` |
+| `Functions` | On every run | `migration_function_journal` |
+| `Seeds` | On every run | `migration_seed_journal` |
+
+- **Run order:** schema, then functions, then seeds. This order does not change.
+- **Schema scripts:** name them `NNNN_snake_case_description.sql`, with four digits and the next free number. A script runs once and is recorded once. A schema script is immutable once it is applied anywhere. A change is a new script.
+- **Function scripts:** one function per file, named after the function. Use `CREATE OR REPLACE`. Edit the file in place. The runner deploys it on every run and records one journal entry per deployment.
+- **Removing a function:** deleting the file does not remove the function from a database that has it. Removing a function, or changing its signature in a way `CREATE OR REPLACE` cannot do (for example a new return type), needs a versioned schema script that drops it. Schema runs first, so the changed function script then creates the new signature in the same run.
+- **Seed scripts:** a seed script must be safe to run again (`ON CONFLICT DO NOTHING` or `WHERE NOT EXISTS`). The runner applies it on every run and records one journal entry per application.
+- **Failure:** each script runs in its own transaction. A failed script leaves no journal record, stops the run, and raises `DatabaseMigrationException` that names the script.
+- **Locking:** the runner takes no lock. Run one API instance at a time.
+- **Data access:** a repository calls the stored functions with Dapper as `CommandType.StoredProcedure`, and lists cross the boundary as `text[]`. `PostgresClientSettings.Apply()` must run first in the process (the API start and the Infrastructure test assembly).
+- **Tests:** the `GameCollection.Infrastructure.Tests` project runs against a PostgreSQL that Testcontainers starts in Docker. `dotnet test` needs Docker running.

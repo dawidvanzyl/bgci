@@ -1,6 +1,6 @@
 # BoardGame Collection Insights
 
-A personal board game collection tracker. Search [BoardGameGeek](https://boardgamegeek.com) to populate game details automatically, or add games manually. Runs entirely on your local machine via Docker as two containers: the main API and a `bgg-writer` sidecar.
+A personal board game collection tracker. Search [BoardGameGeek](https://boardgamegeek.com) to populate game details automatically, or add games manually. Runs entirely on your local machine via Docker: the main API, a PostgreSQL database and a `bgg-writer` sidecar.
 
 ---
 
@@ -49,7 +49,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 | API | ASP.NET Core Web API (.NET 10) |
 | BGG Write Layer | Node.js + Playwright (Chromium + stealth) |
 | CQRS | MediatR |
-| Database | SQLite via Dapper |
+| Database | PostgreSQL via Dapper (stored functions) |
 | Web Server | nginx (reverse proxy + static files) |
 | Container | Docker / Docker Compose |
 
@@ -66,6 +66,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - [Node.js 20+](https://nodejs.org/) — required for both the Vite frontend dev server and `bgg-writer`
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — `dotnet test` needs it running, because the database tests start PostgreSQL through Testcontainers
 
 ---
 
@@ -92,11 +93,16 @@ cp .env.example .env
 Open `.env` and fill in your values:
 
 ```
+DB_PASSWORD=choose-a-password       # required, password of the PostgreSQL database
+DB_NAME=bgci                        # optional, database name
+DB_USER=bgci                        # optional, database user
 BGG_BEARER_TOKEN=your-token-here    # required for BGG search
 BGG_USERNAME=your-bgg-username      # required for collection sync
 BGG_PASSWORD=your-bgg-password      # required for collection write-back
 ```
 
+> `DB_PASSWORD` is required. The stack does not start without it. `DB_NAME` and `DB_USER` default to `bgci`.
+>
 > `BGG_BEARER_TOKEN` requires a formal application at [boardgamegeek.com/applications](https://boardgamegeek.com/applications), which may take several weeks to be approved. **Without it, BGG search is disabled in the UI.**
 >
 > `BGG_USERNAME` and `BGG_PASSWORD` are optional — without them the app works as a standalone manual collection tracker with no BGG sync.
@@ -127,17 +133,26 @@ docker compose down
 
 **Data persistence**
 
-Game data is stored in a Docker volume named `bgci-data`. Your collection persists across container restarts. To wipe all data:
+Game data is stored in PostgreSQL, in a Docker volume named `bgci-pgdata`. Your collection persists across container restarts. To wipe all data:
 
 ```bash
 docker compose down -v
 ```
 
+**Upgrading from 1.x**
+
+Version 2.0.0 stores the collection in PostgreSQL instead of SQLite. This is a breaking change:
+
+- Existing SQLite data is not migrated.
+- Games from BoardGameGeek return through sync.
+- Games you added manually are not carried over.
+- The old `bgci-data` volume is no longer used. Remove it with `docker volume rm bgci-data`.
+
 ---
 
 ### Running the QA stack (for developers)
 
-Requires Docker Desktop. The `qa` profile of the root `docker-compose.yml` builds the API and the web server from source and replaces BoardGameGeek and the `bgg-writer` sidecar with a mock server (`e2e/mock-bgg`). The database starts empty on every run. It is the stack the Playwright suite runs against; see `docs/coding-standards-e2e.md`.
+Requires Docker Desktop. The `qa` profile of the root `docker-compose.yml` builds the API and the web server from source and replaces BoardGameGeek and the `bgg-writer` sidecar with a mock server (`e2e/mock-bgg`). It also runs a PostgreSQL service that keeps its data in memory, so the database starts empty on every run. It is the stack the Playwright suite runs against; see `docs/coding-standards-e2e.md`.
 
 ```bash
 docker compose --profile qa up --build -d
@@ -149,11 +164,25 @@ Open `http://localhost:3000` (`QA_WEB_PORT` changes the port; copy `.env.example
 docker compose --profile qa down -v
 ```
 
-To run the production stack from the published images with your own BGG credentials, copy `.env.prod.example` to `.env.prod`, fill it in, and run:
+To run the production stack from the published images, copy `.env.prod.example` to `.env.prod`, set `DB_PASSWORD` and your BGG credentials, and run:
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 ```
+
+---
+
+### Running the dev database (for developers)
+
+The `dev` profile of the root `docker-compose.yml` starts only a PostgreSQL service, for running the API from source:
+
+```bash
+docker compose --profile dev up -d
+```
+
+- It listens on host port `DEV_DB_PORT` (default 5433), on the loopback address 127.0.0.1 only, so other machines on your network cannot reach it. The database name, user and password are the `DB_*` values in `.env.example` (all `bgci` by default).
+- Its data stays in the `bgci-dev-data` volume until you run `docker compose --profile dev down -v`.
+- It is separate from the QA database, so it can run at the same time as the `qa` profile.
 
 ---
 
@@ -166,7 +195,7 @@ cd src/Api
 dotnet run
 ```
 
-The API starts on `http://localhost:5074` by default. In development mode it uses `appsettings.Development.json`, which stores the SQLite database as `bgci.db` in the `src/Api/` working directory.
+The API starts on `http://localhost:5074` by default. Start the dev database first (see "Running the dev database"). Point the API at it with `Database:Host=localhost`, `Database:Port=5433` (`DEV_DB_PORT`), `Database:Name=bgci`, `Database:User=bgci` and `Database:Password=bgci`, the values in `.env.example`. Put them in the `Database` section of your local `src/Api/appsettings.Development.json`. That file is git-ignored, so each developer keeps their own copy.
 
 ### Frontend
 
@@ -215,7 +244,11 @@ Then attach via the VS Code "Node.js: Attach" launch configuration on `localhost
 
 | Key | Description | Default |
 |---|---|---|
-| `Database:Path` | Path to the SQLite database file | `/data/bgci.db` |
+| `Database:Host` | Host name of the PostgreSQL server | `bgci-db` in Docker |
+| `Database:Port` | Port of the PostgreSQL server | `5432` |
+| `Database:Name` | Database name | `bgci` |
+| `Database:User` | Database user | `bgci` |
+| `Database:Password` | Database password | *(none, set `DB_PASSWORD`)* |
 | `Bgg:BearerToken` | BGG API bearer token. Without it, BGG search is disabled. Requires approval at [boardgamegeek.com/applications](https://boardgamegeek.com/applications). | *(empty)* |
 | `Bgg:Username` | BGG username for collection sync. | *(empty)* |
 | `BggWriter:BaseUrl` | Internal URL of the `bgg-writer` sidecar. Pre-configured in `docker-compose.yml`. | *(empty)* |
@@ -224,16 +257,23 @@ Then attach via the VS Code "Node.js: Attach" launch configuration on `localhost
 ```json
 {
   "Database": {
-    "Path": "/data/bgci.db"
+    "Host": "bgci-db",
+    "Port": 5432,
+    "Name": "bgci",
+    "User": "bgci"
   }
 }
 ```
 
-**`appsettings.Development.json`** (local development):
+**`appsettings.Development.json`** (local development). This file is not in the repository. Create it yourself:
 ```json
 {
   "Database": {
-    "Path": "bgci.db"
+    "Host": "localhost",
+    "Port": 5433,
+    "Name": "bgci",
+    "User": "bgci",
+    "Password": "bgci"
   }
 }
 ```
@@ -241,7 +281,11 @@ Then attach via the VS Code "Node.js: Attach" launch configuration on `localhost
 **Docker environment variable override:**
 ```yaml
 environment:
-  - Database__Path=/data/bgci.db
+  - Database__Host=bgci-db
+  - Database__Port=5432
+  - Database__Name=bgci
+  - Database__User=bgci
+  - Database__Password=${DB_PASSWORD}
 ```
 
 Note the double underscore `__` — this is the ASP.NET Core convention for nested configuration keys in environment variables.
@@ -261,7 +305,7 @@ The app monitors BGG reachability at runtime using a dedicated lightweight backg
 - Polls every **15 minutes** while BGG is available (low overhead)
 - When BGG becomes unavailable: BGG search is disabled, the sync button is disabled, "View on BGG" badge links are deactivated, and a status banner is shown
 - When BGG is restored: all features re-enable automatically without a page refresh, and an immediate sync is triggered to catch up any changes missed while BGG was down
-- The collection always loads from the local SQLite cache regardless of BGG availability
+- The collection always loads from the local PostgreSQL database regardless of BGG availability
 
 ### Info Button & Manual Sync
 
