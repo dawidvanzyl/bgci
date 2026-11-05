@@ -80,14 +80,14 @@ No source code, .NET SDK, or Node.js required — just Docker Desktop.
 
 From the [latest GitHub Release](https://github.com/dawidvanzyl/bgci/releases/latest), download:
 - `docker-compose.yml`
-- `.env.example`
+- `env.example` (GitHub hides the leading dot on release files)
 
 Place both files in the same folder.
 
 **2. Configure your environment**
 
 ```bash
-cp .env.example .env
+cp env.example .env
 ```
 
 Open `.env` and fill in your values:
