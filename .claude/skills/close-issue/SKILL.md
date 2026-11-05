@@ -94,8 +94,10 @@ the code names: a false green, which is worse than an obvious gap.
    - Base `milestone/*`: CI runs on the push. Use `--workflow CI` and the job named `E2E`.
 
    If that job concluded `success` on the merge SHA, every code whose spec exists is ✅ PASS. Do not
-   accept a run for any other SHA. If the job is still running, has no run yet, or failed, verify
-   locally instead (a failed job is not a reason to skip the check, so read its log):
+   accept a run for any other SHA. If the job is still running (`in_progress` or `queued`), wait
+   for it with `gh run watch {run_id}`, then read its conclusion again. If there is no run or the
+   job failed, verify locally instead (a failed job is not a reason to skip the check, so read
+   its log):
    - Bring the stack up with
      `curl --silent --fail http://localhost:3000/api/config || docker compose --profile qa up --build -d`.
      The suite's global setup waits until the API is ready.

@@ -64,7 +64,8 @@ workers) with `issue_number`, `milestone_number`, `run_dir` (the manifest's
 returns once the story is merged into the milestone branch and `close-issue` has run,
 or when it stops on the owner.
 
-Then go back to step 2. Don't batch merges: the plan stage already put the owner's
+After it returns, run `git checkout {base_branch} && git pull --ff-only` (the milestone
+branch), so the next story starts from the merged head. Then go back to step 2. Don't batch merges: the plan stage already put the owner's
 judgement before every story, so holding back adds latency, not a check.
 
 ### 4) Ending the milestone

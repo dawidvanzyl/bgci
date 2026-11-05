@@ -91,6 +91,10 @@ spawn, then spawn with `subagent_type` = role and `run_in_background: true`.
 | `reviewing` | `reviewer` | `review-pull-request` | `gate: reviewer-approved` |
 | `awaiting-merge` | — (owner) | — | standalone only: the owner's merge into `master` |
 
+**No IT codes, no `specifying`.** When the story's `it_codes` list is empty (`N/A`),
+skip `specifying` and go from the approved plans to `implementing`. Record nothing in
+`rulings.md` for the skip.
+
 **Always background:** only background subagents can `SendMessage` to `main`, and you
 couldn't read it while blocked anyway — a foreground worker turns every escalation into
 "give up and report".
@@ -98,14 +102,17 @@ couldn't read it while blocked anyway — a foreground worker turns every escala
 **One agent per role per issue, kept warm.** Spawn each role once. For every rework or
 revision — a critique sending the plan back, a bug or finding sending the developer
 back — resume the *same* agent by name with `SendMessage`; it already holds the context
-a fresh spawn would burn tokens re-deriving.
+a fresh spawn would burn tokens re-deriving. Once a story is `closed`, never
+`SendMessage` its workers. Spawn new workers for the next story.
 
 **The brief** (per `subagent-contract.md`) is named inputs plus one sentence of
 intent, rulings cited by number — never a narrative, which drifts between retellings so
 a respawned worker silently gets a different task. Always include `issue_number`,
 `journal_dir` (absolute), `base_branch`, `mode: subagent` and `outcome`, plus role
 inputs. `planner` and `plan-critique` have no shell, so first write `issue_body_file`
-into `journal_dir` — and for a milestone story also `epic_body_file`, `it_codes_file`
+into `journal_dir` from `gh issue view {issue_number} --json body --jq .body`, never
+copied from `final.md`, which can hold unresolved placeholders such as `{IT_CODES}` and
+`#{ISSUE}` — and for a milestone story also `epic_body_file`, `it_codes_file`
 and `test_intents_file`; a standalone issue has none, and its own
 `## Test Specifications` and `## Acceptance Criteria (G/W/T)` are the codes. The
 `planner` writes the versioned plans and `plan-critique` writes `critique-v{n}.md`, all
