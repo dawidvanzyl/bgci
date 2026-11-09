@@ -37,12 +37,13 @@ export async function saveGameFromBgg(payload) {
 		body: JSON.stringify(payload),
 	});
 	if (!res.ok) throw new Error(await res.text());
+	return res.json();
 }
 
-export async function deleteGame(id, onDeleted) {
+export async function deleteGame(id) {
 	const res = await fetch(`${API}/games/${id}`, { method: 'DELETE' });
 	if (!res.ok) throw new Error(await res.text());
-	if (onDeleted) await onDeleted();
+	return res.json();
 }
 
 export async function syncBgg() {
@@ -86,4 +87,6 @@ export async function saveExpansionFromBgg(bggId, parentGameId) {
 		body: JSON.stringify({ ...preview, parentGameId }),
 	});
 	if (!res.ok) throw new Error(await res.text());
+	const result = await res.json();
+	return { ...result, name: preview.name };
 }
