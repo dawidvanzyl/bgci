@@ -44,12 +44,12 @@ public class GamesController : ControllerBase
 	}
 
 	[HttpPost("from-bgg")]
-	public async Task<ActionResult<Guid>> AddFromBgg(
+	public async Task<ActionResult<AddGameFromBggResult>> AddFromBgg(
 		[FromBody] AddGameFromBggCommand command,
 		CancellationToken cancellationToken)
 	{
-		var id = await _mediator.Send(command, cancellationToken);
-		return CreatedAtAction(nameof(GetById), new { id }, id);
+		var result = await _mediator.Send(command, cancellationToken);
+		return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
 	}
 
 	[HttpPut("{id:guid}")]
@@ -94,9 +94,9 @@ public class GamesController : ControllerBase
 	}
 
 	[HttpDelete("{id:guid}")]
-	public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+	public async Task<ActionResult<DeleteGameResult>> Delete(Guid id, CancellationToken cancellationToken)
 	{
-		await _mediator.Send(new DeleteGameCommand(id), cancellationToken);
-		return NoContent();
+		var result = await _mediator.Send(new DeleteGameCommand(id), cancellationToken);
+		return Ok(result);
 	}
 }
