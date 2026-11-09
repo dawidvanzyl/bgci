@@ -3,8 +3,9 @@ name: plan-milestone
 description: >
   Load this skill when the user says "plan milestone", "plan-milestone", or
   "/plan-milestone". Derives sub-issues for a milestone epic, persists all
-  artifacts to disk, requires a design mockup for every UI story, and creates GitHub
-  issues only after full approval.
+  artifacts to disk, requires a design mockup for every UI story, creates GitHub
+  issues only after full approval, and applies their dependency graph as GitHub
+  blocked-by links.
 license: MIT
 metadata:
   audience: maintainers
@@ -369,6 +370,39 @@ The REST API returns 404 for sub-issue linking; use GraphQL.
 
 If GraphQL fails, fall back to a comment on the epic listing the sub-issues.
 
+## 5.1 Dependency graph
+
+Apply the dependency graph only after every sub-issue exists, so every blocker has an
+issue number. The graph lets GitHub show what blocks each story. `implement-milestone`
+still selects stories from `depends_on`, so the links on GitHub must match it.
+
+1. **Map.** Take each story's `depends_on` from `00-skeleton.md` and map the story ids
+   to the issue numbers that Step 4 recorded. Write the mapped issue numbers to each
+   story's `depends_on` in the manifest.
+2. **Check (hard stop).** Stop and report if a dependency points to a story that was
+   excluded or not created, or if the graph has a cycle. Don't drop the dependency to
+   get past the check. A dependency on an issue outside this milestone is applied only
+   when `00-skeleton.md` names that issue number explicitly.
+3. **Read the current links.** Per sub-issue:
+   ```
+   gh api repos/OWNER/REPO/issues/N/dependencies/blocked_by --jq '[.[].number]'
+   ```
+4. **Add the missing links.** The API takes the blocker's database id, not its issue
+   number. Resolve each id once with `gh api repos/OWNER/REPO/issues/BLOCKER --jq .id`,
+   then:
+   ```
+   gh api -X POST repos/OWNER/REPO/issues/N/dependencies/blocked_by -F issue_id=BLOCKER_ID
+   ```
+   Add only the links that are missing, so a resumed run never duplicates one. Never
+   remove a link that exists on GitHub but is not in `00-skeleton.md`. Report it and
+   ask the user.
+5. **Verify.** Read the links again and compare them with the manifest. Report every
+   difference.
+
+If the API fails, report the error, continue to Step 6, and list the missing links in
+the hand-off. The plan stays valid, because `depends_on` in the journal is the source of
+truth.
+
 ---
 
 # 6) Epic Patch
@@ -416,6 +450,8 @@ The journal is never deleted: implementation runs from it. Record
 `planning_complete: true` in the manifest, and report:
 
 * issues created (number + URL)
+* the dependency graph: each sub-issue and the issues that block it, plus any link that
+  failed or differs from `00-skeleton.md`
 * IT code count and its distribution across criteria
 * epic update confirmation (both blocks)
 * journal root path
