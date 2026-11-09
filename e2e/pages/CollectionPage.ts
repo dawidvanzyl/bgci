@@ -59,6 +59,8 @@ export class CollectionPage {
 	readonly cardTitles: Locator;
 	readonly infoPanel: Locator;
 	readonly expansionsTab: Locator;
+	readonly bggResults: Locator;
+	readonly knownExpansionOptions: Locator;
 	private readonly bggSearchInput: Locator;
 	private readonly saveButton: Locator;
 	private readonly filterInput: Locator;
@@ -70,6 +72,8 @@ export class CollectionPage {
 		this.cardTitles = page.locator('.game-card-title');
 		this.infoPanel = page.locator('#game-info-panel');
 		this.expansionsTab = page.locator('#expansions-tab-content');
+		this.bggResults = page.locator('#bgg-search-results');
+		this.knownExpansionOptions = page.locator('.exp-known-select option:not([value=""])');
 		this.bggSearchInput = page.locator('#bgg-search-input');
 		this.saveButton = page.locator('#btn-save');
 		this.filterInput = page.locator('#filter-input');
@@ -164,6 +168,16 @@ export class CollectionPage {
 
 	ownedExpansion(name: string): Locator {
 		return this.expansionsTab.locator('.exp-owned-name', { hasText: name });
+	}
+
+	async searchBgg(query: string): Promise<void> {
+		await this.bggSearchInput.fill(query);
+	}
+
+	/** Picks a search result and waits until the pre-filled form is open. */
+	async selectBggResult(name: string): Promise<void> {
+		await this.bggResults.locator('li', { hasText: name }).click();
+		await this.page.locator('#game-form').waitFor();
 	}
 
 	/** Searches BGG, picks the result, and saves the pre-filled form. */

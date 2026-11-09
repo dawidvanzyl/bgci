@@ -11,6 +11,8 @@ Conventions for the Playwright suite in `e2e/`.
 ## 1. Layout
 
 ```text
+test-data/
+└── bgg-games.json         # The standard game data set, shared with the live suite
 e2e/
 ├── mock-bgg/              # Mock of the BGG XML API and the bgg-writer sidecar
 ├── playwright.config.ts
@@ -50,8 +52,45 @@ docker compose --profile qa down -v
 `mock-bgg` replaces both BoardGameGeek and the `bgg-writer` sidecar. The API reaches it
 through `Bgg__BaseUrl` and `BggWriter__BaseUrl`. Tests never call the real BGG.
 
-- It serves `search`, `thing` and `collection` as BGG XML, built from `mock-bgg/games.mjs`.
-  Add a game there when a spec needs one. Use real BGG ids so the data reads naturally.
+- It serves `search`, `thing` and `collection` as BGG XML, built from the standard game data set.
+  The data set is `test-data/bgg-games.json` at the repository root. Mock BGG and the live suite
+  both read this one file. Neither keeps a game list of its own.
+- The file is one JSON object with one key, `games`, an array of entries. An entry has these fields.
+  All are required unless marked optional.
+
+  | Field | Type | Meaning |
+  |---|---|---|
+  | `id` | integer | Real BGG id. Unique in the data set. |
+  | `name` | string | Primary name, as mock BGG serves it. |
+  | `year` | integer | Year published. |
+  | `description` | string | Description text. |
+  | `minPlayers`, `maxPlayers` | integer | Player count range. |
+  | `playTime`, `minPlayTime`, `maxPlayTime` | integer | Minutes. |
+  | `minAge` | integer | Minimum age. |
+  | `rating` | number | BGG average rating. It is a community value, not a user rating. |
+  | `weight` | number | BGG average weight. It is a community value, not a user weight vote. |
+  | `categories`, `mechanics`, `designers`, `artists`, `publishers`, `subdomains` | string[] | Link names. May be empty. |
+  | `expansions` | `{ "id": integer, "name": string }[]` | Expansions of this game. May be empty. |
+  | `expansionOf` | integer, optional | Only on an expansion entry: the BGG id of its parent game. |
+  | `liveWritable` | boolean | `true` when the live suite may add this game to the test account and remove it again. |
+
+- The ids are real BGG ids. The other values are test values and can differ from the current values
+  on BGG. A consumer of the real BGG matches a game by `id` only, never by name or details.
+- `liveWritable` applies to its own entry only. A writable parent does not make its expansions
+  writable. Mark a game writable only when the test account does not own it outside the live suite.
+- To add a game:
+  1. Take the real BGG id from boardgamegeek.com. It must not be in the data set already.
+  2. Fill every required field.
+  3. For an expansion, set both sides of the link: the expansion's `expansionOf` and an entry in
+     the parent's `expansions`.
+  4. Set `liveWritable` to `false` unless the owner approves a live write for the game.
+- To add a new kind of data, such as plays, ratings or weight votes, add a new optional key to the
+  entries. Never rename or remove a key, and never give a key a new meaning. A consumer ignores keys
+  it does not use. Give user-entered data its own key name, for example `plays`, `userRating` or
+  `weightVote`, never `rating` or `weight`.
+- The mock BGG image holds a copy of the data set made at build time. After a change to the file, run
+  `docker compose --profile qa up --build -d` so the image gets it. The build reads the file through
+  a second build context, so it needs Docker Compose 2.17 or later.
 - It records `bgg-writer` calls. Read them with `mockBgg.writerCalls()`.
 - Steer it from a spec through the `mockBgg` fixture: `setAvailable(false)`,
   `setCollection([...])`, `reset()`.

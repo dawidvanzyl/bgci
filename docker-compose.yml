@@ -41,7 +41,10 @@ services:
       - bgci-dev-data:/var/lib/postgresql/data
 
   mock-bgg:
-    build: ./e2e/mock-bgg
+    build:
+      context: ./e2e/mock-bgg
+      additional_contexts:
+        test-data: ./test-data
     profiles: [qa]
     environment:
       PUBLIC_BASE_URL: http://localhost:${QA_MOCK_PORT:-4010}
