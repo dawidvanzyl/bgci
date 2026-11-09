@@ -20,7 +20,7 @@ All calls go to `https://boardgamegeek.com`. The page makes them with XHR from a
 | Body | JSON. The field names are in the note below. |
 | Response that shows success | HTTP 204. The response has no body. |
 
-Note on the body: the developer did not open the login payload, because it holds the password. The owner reads the field names in Chrome's Network view. Owner-reported structure: {OWNER_REPORT_PENDING}.
+Note on the body: the developer did not open the login payload, because it holds the password. The owner reads the field names in Chrome's Network view. Owner-reported structure: `{ "credentials": { "username": "{USERNAME}", "password": "{PASSWORD}" } }`. There are two fields, both inside one `credentials` object, and no other fields.
 
 The website sends only `Content-Type` and `Accept`. It does not send `X-KL-Ajax-Request` or `Origin` on the login call.
 
