@@ -5,6 +5,9 @@ export function buildWarningParts(warning, { onDismiss }) {
 	text.className = 'bgg-write-warning-text';
 	text.textContent = warning.text;
 
+	const body = document.createElement('span');
+	body.className = 'bgg-write-warning-body';
+
 	const link = document.createElement('a');
 	link.className = 'bgg-write-warning-link';
 	link.textContent = 'Open on BGG';
@@ -20,7 +23,9 @@ export function buildWarningParts(warning, { onDismiss }) {
 	dismiss.setAttribute('aria-label', 'Dismiss warning');
 	dismiss.addEventListener('click', onDismiss);
 
-	return [text, link, dismiss];
+	body.append(text, ' ', link);
+
+	return [body, dismiss];
 }
 
 export function showPageWarning(warning) {

@@ -489,7 +489,7 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .bgg-write-warning[hidden] {
 	display: none;
 }
-.bgg-write-warning-text {
+.bgg-write-warning-body {
 	flex: 1;
 	text-align: center;
 	line-height: 1.5;
@@ -506,6 +506,7 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 	border: none;
 	font-size: 1.25rem;
 	padding: 2px 8px;
+	flex-shrink: 0;
 	border-radius: 6px;
 }
 .bgg-write-warning-close:hover {
@@ -518,7 +519,7 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 	border-radius: var(--radius);
 	padding: 10px 12px;
 }
-.bgg-write-warning--inline .bgg-write-warning-text {
+.bgg-write-warning--inline .bgg-write-warning-body {
 	text-align: left;
 }
 
