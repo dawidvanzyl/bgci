@@ -29,6 +29,7 @@ const initialState = () => ({
 	available: true,
 	collection: [],
 	writerCalls: [],
+	writerFailing: false,
 	nextCollId: 1000,
 });
 
@@ -83,6 +84,10 @@ const handleXmlApi = (url, res) => {
 const handleWriter = async (req, url, res) => {
 	const body = await readJson(req);
 
+	if (state.writerFailing) {
+		return send(res, 500, { error: 'bgg-writer is failing' });
+	}
+
 	if (url.pathname === '/collection/add') {
 		if (!body.username || !body.bggId) {
 			return send(res, 400, { error: 'username and bggId are required' });
@@ -107,6 +112,11 @@ const handleControl = async (req, url, res) => {
 
 	if (url.pathname === '/__control/availability') {
 		state.available = Boolean((await readJson(req)).available);
+		return send(res, 200, {});
+	}
+
+	if (url.pathname === '/__control/writer') {
+		state.writerFailing = Boolean((await readJson(req)).failing);
 		return send(res, 200, {});
 	}
 
