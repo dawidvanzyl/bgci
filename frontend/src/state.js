@@ -28,6 +28,7 @@ export let bggCollectionEnabled = false; // BGG collection sync is enabled
 export let bggPollInterval = null; // polling handle while BGG is unavailable
 export let currentViewMode = 'large';
 export let sortCriteria = [...DEFAULT_SORT];
+export let expansionWarning = null; // { parentGameId, warning } shown inline in the Expansions tab
 
 // ── State setters ──────────────────────────────────────────
 // ES module exports are live bindings but cannot be reassigned from outside.
@@ -67,4 +68,7 @@ export function setCurrentViewMode(val) {
 }
 export function setSortCriteria(val) {
 	sortCriteria = val;
+}
+export function setExpansionWarning(val) {
+	expansionWarning = val;
 }

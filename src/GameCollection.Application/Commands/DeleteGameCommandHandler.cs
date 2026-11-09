@@ -1,4 +1,5 @@
 using GameCollection.Application.Abstractions;
+using GameCollection.Application.DTOs;
 using GameCollection.Domain.Repositories;
 using GameCollection.Domain.ValueObjects;
 using MediatR;
@@ -6,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace GameCollection.Application.Commands;
 
-public class DeleteGameCommandHandler : IRequestHandler<DeleteGameCommand>
+public class DeleteGameCommandHandler : IRequestHandler<DeleteGameCommand, DeleteGameResult>
 {
 	private readonly ICollectedGameRepository _repository;
 	private readonly IBggCollectionWriter _bggCollectionWriter;
@@ -22,24 +23,31 @@ public class DeleteGameCommandHandler : IRequestHandler<DeleteGameCommand>
 		_logger = logger;
 	}
 
-	public async Task Handle(DeleteGameCommand request, CancellationToken cancellationToken)
+	public async Task<DeleteGameResult> Handle(DeleteGameCommand request, CancellationToken cancellationToken)
 	{
 		var id = GameId.From(request.Id);
 		var game = await _repository.GetByIdAsync(id, cancellationToken);
 
-		if (game is not null && game.IsBggSourced)
-		{
-			try
-			{
-				await _bggCollectionWriter.RemoveFromCollectionAsync(game.BggCollId, cancellationToken);
-			}
-			catch (Exception ex)
-			{
-				// BGG write failure is non-fatal — the local delete proceeds regardless
-				_logger.LogWarning(ex, "Failed to remove collId {CollId} from BGG collection before delete.", game.BggCollId);
-			}
-		}
+		var outcome = game is not null && game.IsBggSourced
+			? await RemoveFromBggAsync(game.BggCollId, cancellationToken)
+			: BggWriteOutcome.None;
 
 		await _repository.DeleteAsync(id, cancellationToken);
+
+		return new DeleteGameResult(outcome);
+	}
+
+	private async Task<BggWriteOutcome> RemoveFromBggAsync(long? bggCollId, CancellationToken cancellationToken)
+	{
+		try
+		{
+			return await _bggCollectionWriter.RemoveFromCollectionAsync(bggCollId, cancellationToken);
+		}
+		catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+		{
+			// BGG write failure is non-fatal — the local delete proceeds regardless
+			_logger.LogWarning(ex, "Failed to remove collId {CollId} from BGG collection before delete.", bggCollId);
+			return BggWriteOutcome.Failed;
+		}
 	}
 }

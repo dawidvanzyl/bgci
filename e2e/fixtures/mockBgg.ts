@@ -70,6 +70,11 @@ export class MockBgg {
 		await this.post('/__control/availability', { available });
 	}
 
+	/** While failing, the writer's add and remove calls answer 500 and are not recorded. `reset()` clears it. */
+	async setWriterFailing(failing: boolean): Promise<void> {
+		await this.post('/__control/writer', { failing });
+	}
+
 	async setCollection(items: MockCollectionItem[]): Promise<void> {
 		await this.post('/__control/collection', { items });
 	}

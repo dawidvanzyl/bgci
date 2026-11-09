@@ -93,7 +93,9 @@ through `Bgg__BaseUrl` and `BggWriter__BaseUrl`. Tests never call the real BGG.
   a second build context, so it needs Docker Compose 2.17 or later.
 - It records `bgg-writer` calls. Read them with `mockBgg.writerCalls()`.
 - Steer it from a spec through the `mockBgg` fixture: `setAvailable(false)`,
-  `setCollection([...])`, `reset()`.
+  `setCollection([...])`, `setWriterFailing(true)` / `setWriterFailing(false)`, `reset()`.
+  `setWriterFailing(true)` makes the writer answer every add and remove with a 500. `reset()` restores
+  writer success.
 - The `cleanState` auto fixture empties the collection and resets the mock before every test.
   A spec never depends on data from another spec.
 
