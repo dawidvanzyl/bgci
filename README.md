@@ -47,7 +47,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 |---|---|
 | Frontend | Vanilla JS ES modules, HTML, CSS — bundled by Vite |
 | API | ASP.NET Core Web API (.NET 10) |
-| BGG Write Layer | Node.js + Playwright (Chromium + stealth) |
+| BGG Write Layer | Node.js (plain HTTP) |
 | CQRS | MediatR |
 | Database | PostgreSQL via Dapper (stored functions) |
 | Web Server | nginx (reverse proxy + static files) |
@@ -117,13 +117,13 @@ docker compose up -d
 
 **4. Find the port and open the app**
 
-The web UI is assigned a random available port on your machine. To find it:
+The web UI listens on host port 15000. Set `BGCI_WEB_PORT` in `.env` to use another port. To check that the stack is up:
 
 ```bash
 docker compose ps
 ```
 
-Look for the port mapping under `bgci-web`, for example `0.0.0.0:49152->80/tcp`. Then open `http://localhost:49152` in your browser (substitute your actual port).
+Look for `0.0.0.0:15000->80/tcp` under `bgci-web`. Then open `http://localhost:15000` in your browser.
 
 **5. Stop the application**
 
@@ -155,13 +155,13 @@ Version 2.0.0 stores the collection in PostgreSQL instead of SQLite. This is a b
 Requires Docker Desktop. The `qa` profile of the root `docker-compose.yml` builds the API and the web server from source and replaces BoardGameGeek and the `bgg-writer` sidecar with a mock server (`e2e/mock-bgg`). It also runs a PostgreSQL service that keeps its data in memory, so the database starts empty on every run. It is the stack the Playwright suite runs against; see `docs/coding-standards-e2e.md`.
 
 ```bash
-docker compose --profile qa up --build -d
+docker compose --env-file .env.qa --profile qa up --build -d
 ```
 
-Open `http://localhost:3000` (`QA_WEB_PORT` changes the port; copy `.env.example` to `.env` to set it).
+Open `http://localhost:15100`. To change ports, copy `.env.qa.example` to `.env.qa` and edit it. Every value has a default, so `--env-file .env.qa` is optional.
 
 ```bash
-docker compose --profile qa down -v
+docker compose --env-file .env.qa --profile qa down -v
 ```
 
 To run the production stack from the published images, copy `.env.prod.example` to `.env.prod`, set `DB_PASSWORD` and your BGG credentials, and run:
@@ -172,17 +172,21 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 
 ---
 
-### Running the dev database (for developers)
+### Running the dev stack (for developers)
 
-The `dev` profile of the root `docker-compose.yml` starts only a PostgreSQL service, for running the API from source:
+The `dev` profile of the root `docker-compose.yml` builds the database, `bgg-writer`, the API and the web server from source and runs them against the real BoardGameGeek. Use a test BGG account.
 
 ```bash
-docker compose --profile dev up -d
+cp .env.dev.example .env.dev
+# fill in BGG_USERNAME, BGG_PASSWORD and BGG_BEARER_TOKEN in .env.dev
+docker compose --env-file .env.dev --profile dev up --build -d
 ```
 
-- It listens on host port `DEV_DB_PORT` (default 5433), on the loopback address 127.0.0.1 only, so other machines on your network cannot reach it. The database name, user and password are the `DB_*` values in `.env.example` (all `bgci` by default).
-- Its data stays in the `bgci-dev-data` volume until you run `docker compose --profile dev down -v`.
-- It is separate from the QA database, so it can run at the same time as the `qa` profile.
+- Open `http://localhost:15200` (`DEV_WEB_PORT` changes the port).
+- To run only the database, for running the API from source, name the service: `docker compose --env-file .env.dev --profile dev up -d bgci-dev-db`. It listens on host port `DEV_DB_PORT` (default 15202), on the loopback address 127.0.0.1 only, so other machines on your network cannot reach it.
+- Its data stays in the `bgci-dev-data` volume until you run `docker compose --env-file .env.dev --profile dev down -v`.
+- It is separate from the QA stack, so both can run at the same time.
+- Docker Compose gives variables set in your shell priority over `--env-file`. If the stack uses the wrong account, check your shell for `BGG_USERNAME`, `BGG_PASSWORD` and `BGG_BEARER_TOKEN`.
 
 ---
 
@@ -195,7 +199,7 @@ cd src/Api
 dotnet run
 ```
 
-The API starts on `http://localhost:5074` by default. Start the dev database first (see "Running the dev database"). Point the API at it with `Database:Host=localhost`, `Database:Port=5433` (`DEV_DB_PORT`), `Database:Name=bgci`, `Database:User=bgci` and `Database:Password=bgci`, the values in `.env.example`. Put them in the `Database` section of your local `src/Api/appsettings.Development.json`. That file is git-ignored, so each developer keeps their own copy.
+The API starts on `http://localhost:5074` by default. Start the dev database first (see "Running the dev stack"; start only `bgci-dev-db`). Point the API at it with `Database:Host=localhost`, `Database:Port=15202` (`DEV_DB_PORT`), `Database:Name=bgci`, `Database:User=bgci` and `Database:Password=bgci`, the values in `.env.dev.example`. Put them in the `Database` section of your local `src/Api/appsettings.Development.json`. That file is git-ignored, so each developer keeps their own copy.
 
 ### Frontend
 
@@ -216,19 +220,12 @@ The app is available at `http://localhost:5173`.
 ```bash
 cd node/bgg-writer
 cp .env.example .env
-# fill in BGG_PASSWORD in .env
+# fill in BGG_PASSWORD and BGG_BEARER_TOKEN in .env
 npm install
-npx playwright install chromium
 node src/index.js
 ```
 
 The .NET API's `appsettings.Development.json` already points `BggWriter:BaseUrl` at `http://localhost:3001` — no additional configuration needed.
-
-To debug with the Playwright Inspector (visible Chromium browser with step-through execution):
-
-```bash
-PWDEBUG=1 node src/index.js
-```
 
 To attach a Node.js debugger (VS Code or similar):
 
@@ -270,7 +267,7 @@ Then attach via the VS Code "Node.js: Attach" launch configuration on `localhost
 {
   "Database": {
     "Host": "localhost",
-    "Port": 5433,
+    "Port": 15202,
     "Name": "bgci",
     "User": "bgci",
     "Password": "bgci"
@@ -317,11 +314,11 @@ When `BGG_USERNAME` is configured, a **↻ Sync BGG** button appears in the head
 
 **Why it exists**
 
-BGG's collection write endpoint (`geekcollection.php`) is protected by Cloudflare bot detection. Any plain HTTP client — regardless of headers or cookies — receives a 403 response with a JavaScript challenge page. This cannot be bypassed without a real browser that executes JavaScript.
+BGG has no public API for writing to a collection. The BGG website writes through its own calls, and the writer sends the same calls. The .NET API does not hold the BGG password, so the writer is a separate service that holds `BGG_PASSWORD`.
 
 **How it works**
 
-`bgg-writer` launches a headless Chromium browser via [Playwright](https://playwright.dev/) with the stealth plugin active (masking the headless fingerprint). It navigates to the BGG login page, fills in the credentials, and submits the form. Once authenticated, it calls `geekcollection.php` via `page.evaluate(fetch(...))` from within the browser context — Cloudflare sees a legitimate browser with valid JavaScript execution and session cookies, and allows the request through.
+`bgg-writer` uses plain HTTP requests from Node.js. It does not use a browser. It signs in once with the BGG JSON login API (`/login/api/v1`) and keeps the session cookies. It adds a game with `POST /api/collectionitem` and removes one with `DELETE /api/collectionitem/{collId}`. After an add, it looks up the new `collId` with the BGG XML API, using `BGG_BEARER_TOKEN`. If BGG rejects a write with 401 or 403, the writer signs in again once and retries. If BGG answers with a Cloudflare challenge page, the writer fails with an error that names the step. One writer instance serves one account.
 
 **Architecture**
 

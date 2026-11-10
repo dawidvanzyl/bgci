@@ -15,11 +15,11 @@ public class BggWriterHttpClient : IBggWriterClient
 		_logger = logger;
 	}
 
-	public async Task<long> AddToCollectionAsync(string username, int bggId, CancellationToken cancellationToken = default)
+	public async Task<long> AddToCollectionAsync(string username, int bggId, string name, CancellationToken cancellationToken = default)
 	{
 		var response = await _http.PostAsJsonAsync(
 			BggWriterApiEndpoints.AddToCollection,
-			new { username, bggId },
+			new { username, bggId, name },
 			cancellationToken);
 
 		if (!response.IsSuccessStatusCode)

@@ -17,10 +17,10 @@ public sealed class BggCollectionWriterAdapterTests
 	[Trait("AC", "90UC1")]
 	public async Task AddToCollectionAsync_ClientThrows_ReturnsFailed()
 	{
-		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new HttpRequestException("BGG down"));
 
-		var result = await CreateAdapter().AddToCollectionAsync(13, CancellationToken.None);
+		var result = await CreateAdapter().AddToCollectionAsync(13, "Wingspan", CancellationToken.None);
 
 		result.ShouldBe(new BggAddResult(BggWriteOutcome.Failed, null));
 	}
@@ -29,10 +29,10 @@ public sealed class BggCollectionWriterAdapterTests
 	[Trait("AC", "90UC1")]
 	public async Task AddToCollectionAsync_ClientTimesOut_ReturnsFailed()
 	{
-		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new TaskCanceledException("timeout"));
 
-		var result = await CreateAdapter().AddToCollectionAsync(13, CancellationToken.None);
+		var result = await CreateAdapter().AddToCollectionAsync(13, "Wingspan", CancellationToken.None);
 
 		result.ShouldBe(new BggAddResult(BggWriteOutcome.Failed, null));
 	}
@@ -41,10 +41,10 @@ public sealed class BggCollectionWriterAdapterTests
 	[Trait("AC", "90UC1")]
 	public async Task AddToCollectionAsync_NoCollId_ReturnsFailed()
 	{
-		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync(0);
 
-		var result = await CreateAdapter().AddToCollectionAsync(13, CancellationToken.None);
+		var result = await CreateAdapter().AddToCollectionAsync(13, "Wingspan", CancellationToken.None);
 
 		result.ShouldBe(new BggAddResult(BggWriteOutcome.Failed, null));
 	}
@@ -53,10 +53,10 @@ public sealed class BggCollectionWriterAdapterTests
 	[Trait("AC", "90UC2")]
 	public async Task AddToCollectionAsync_ClientReturnsCollId_ReturnsSucceeded()
 	{
-		_client.Setup(c => c.AddToCollectionAsync("user", 13, It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.AddToCollectionAsync("user", 13, It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync(555);
 
-		var result = await CreateAdapter().AddToCollectionAsync(13, CancellationToken.None);
+		var result = await CreateAdapter().AddToCollectionAsync(13, "Wingspan", CancellationToken.None);
 
 		result.ShouldBe(new BggAddResult(BggWriteOutcome.Succeeded, 555));
 	}
@@ -67,7 +67,7 @@ public sealed class BggCollectionWriterAdapterTests
 	[InlineData("user", "")]
 	public async Task AddToCollectionAsync_NotConfigured_ReturnsSkipped(string username, string baseUrl)
 	{
-		var result = await CreateAdapter(username, baseUrl).AddToCollectionAsync(13, CancellationToken.None);
+		var result = await CreateAdapter(username, baseUrl).AddToCollectionAsync(13, "Wingspan", CancellationToken.None);
 
 		result.ShouldBe(new BggAddResult(BggWriteOutcome.Skipped, null));
 		_client.VerifyNoOtherCalls();
@@ -135,11 +135,11 @@ public sealed class BggCollectionWriterAdapterTests
 	{
 		using var cts = new CancellationTokenSource();
 		await cts.CancelAsync();
-		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new OperationCanceledException(cts.Token));
 
 		await Should.ThrowAsync<OperationCanceledException>(
-			() => CreateAdapter().AddToCollectionAsync(13, cts.Token));
+			() => CreateAdapter().AddToCollectionAsync(13, "Wingspan", cts.Token));
 	}
 
 	[Fact]
