@@ -42,7 +42,7 @@ docker compose --profile qa down -v
 
 - The stack is the `qa` profile of the root `docker-compose.yml`. It runs a PostgreSQL service with no
   volume, so every `up` starts with an empty database. Production is `docker-compose.prod.yml`.
-- Ports: web `QA_WEB_PORT` (default 3000), mock BGG `QA_MOCK_PORT` (default 4010).
+- Ports: web `QA_WEB_PORT` (default 15100), mock BGG `QA_MOCK_PORT` (default 15103).
 - To run one story's tests, filter by its code: `npx playwright test --grep "@{IT_CODE}"`.
   Run the whole suite in CI, not locally.
 - The suite shares one database, so it runs with one worker. Do not enable parallel runs.

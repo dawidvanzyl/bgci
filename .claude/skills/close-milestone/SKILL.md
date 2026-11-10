@@ -76,7 +76,7 @@ IT codes are proven by Playwright alone. Check each code.
    job concluded `success`, every code whose spec exists passes. If the job is still running,
    has no run, or failed, verify locally (and read the log of a failed job first):
    - Bring the stack up if needed:
-     `curl --silent --fail http://localhost:3000/api/config || docker compose --profile qa up --build -d`
+     `curl --silent --fail http://localhost:15100/api/config || docker compose --profile qa up --build -d`
    - From `e2e/`, run `npx playwright test --grep "@{IT_CODE}(?!\d)"` for each code.
 
 Also check that no unit test carries an IT code. Any hit is a ❌ Blocker and never counts as

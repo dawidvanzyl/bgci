@@ -48,7 +48,7 @@ test.describe('Start-up — the collection survives an API restart', { tag: ['@6
 		});
 		await collection.addGame({ name: 'Restart Beta' });
 
-		await restartApi(baseURL ?? 'http://localhost:3000');
+		await restartApi(baseURL ?? 'http://localhost:15100');
 		await collection.reload();
 
 		await expect(collection.card('Restart Alpha')).toBeVisible();

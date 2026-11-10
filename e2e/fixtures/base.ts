@@ -1,7 +1,7 @@
 import { test as base, type APIRequestContext } from '@playwright/test';
 import { MockBgg } from './mockBgg';
 
-const mockUrl = process.env.E2E_MOCK_URL ?? `http://localhost:${process.env.QA_MOCK_PORT ?? 4010}`;
+const mockUrl = process.env.E2E_MOCK_URL ?? `http://localhost:${process.env.QA_MOCK_PORT ?? 15103}`;
 
 async function removeAllGames(request: APIRequestContext): Promise<void> {
 	const games = (await (await request.get('/api/games')).json()) as { id: string }[];
