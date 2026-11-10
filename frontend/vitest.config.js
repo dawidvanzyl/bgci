@@ -9,6 +9,9 @@ export default defineConfig({
 		tags: [
 			{ name: '55UC1', description: 'Sync request sends POST to the sync endpoint and resolves' },
 			{ name: '55UC2', description: 'Sync request rejects with the response text on a server error' },
+			{ name: '90UC7', description: 'A failed BGG add resolves and yields the add warning with the BGG link' },
+			{ name: '90UC8', description: 'A failed BGG remove resolves and yields the remove warning with the BGG link' },
+			{ name: '90UC9', description: 'A succeeded, skipped or none outcome yields no warning' },
 		],
 	},
 });

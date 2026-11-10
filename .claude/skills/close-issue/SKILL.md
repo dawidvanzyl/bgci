@@ -99,7 +99,7 @@ the code names: a false green, which is worse than an obvious gap.
    job failed, verify locally instead (a failed job is not a reason to skip the check, so read
    its log):
    - Bring the stack up with
-     `curl --silent --fail http://localhost:3000/api/config || docker compose --profile qa up --build -d`.
+     `curl --silent --fail http://localhost:15100/api/config || docker compose --profile qa up --build -d`.
      The suite's global setup waits until the API is ready.
    - From `e2e/`, run `npx playwright test --grep "@CODE(?!\d)"` for each code.
 

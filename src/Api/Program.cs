@@ -4,13 +4,16 @@ using GameCollection.Application;
 using GameCollection.Infrastructure;
 using GameCollection.Infrastructure.Postgres;
 using GameCollection.Infrastructure.Postgres.Migrations;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 PostgresClientSettings.Apply();
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+	.AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 
 // MediatR — register handlers from all application assemblies
 builder.Services.AddMediatR(cfg =>

@@ -1,3 +1,4 @@
+using GameCollection.Application.DTOs;
 using MediatR;
 
 namespace GameCollection.Application.Commands;
@@ -27,4 +28,4 @@ public record AddGameFromBggCommand(
 	long? BggCollId = null,
 	bool SkipBggWrite = false,
 	Guid? ParentGameId = null
-) : IRequest<Guid>;
+) : IRequest<AddGameFromBggResult>;

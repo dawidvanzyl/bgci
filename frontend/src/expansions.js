@@ -1,10 +1,44 @@
-import { allGames, expansionSearchTimer, setExpansionSearchTimer, bggReachable } from './state.js';
+import {
+	allGames,
+	expansionSearchTimer,
+	setExpansionSearchTimer,
+	bggReachable,
+	expansionWarning,
+	setExpansionWarning,
+} from './state.js';
 import { fetchBggExpansions, saveExpansion, saveExpansionFromBgg, deleteGame, searchBgg } from './api.js';
 import { esc, setButtonLoading, clearButtonLoading, showInlineError } from './helpers.js';
+import { bggWriteWarning } from './bggWriteWarning.js';
+import { buildWarningParts } from './warningBanner.js';
+
+function recordExpansionWarning(parentGameId, { bggWrite, action, name, bggId }) {
+	const warning = bggWriteWarning({ bggWrite, action, isExpansion: true, name, bggId });
+	if (warning) setExpansionWarning({ parentGameId, warning });
+}
+
+function buildExpansionWarning(warning) {
+	const el = document.createElement('div');
+	el.id = 'expansion-bgg-write-warning';
+	el.className = 'bgg-status-banner bgg-write-warning bgg-write-warning--inline';
+	el.setAttribute('role', 'alert');
+	el.append(
+		...buildWarningParts(warning, {
+			onDismiss: () => {
+				setExpansionWarning(null);
+				el.remove();
+			},
+		})
+	);
+	return el;
+}
 
 export async function renderExpansionsTab(game, { onRefresh } = {}) {
 	const container = document.getElementById('expansions-tab-content');
 	container.innerHTML = '';
+
+	if (expansionWarning?.parentGameId === game.id) {
+		container.appendChild(buildExpansionWarning(expansionWarning.warning));
+	}
 
 	// ── Add expansion ──────────────────────────────────────
 	const addSection = document.createElement('section');
@@ -73,7 +107,8 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 			if (!bggId) return;
 			setButtonLoading(knownAddBtn, 'Adding\u2026');
 			try {
-				await saveExpansionFromBgg(bggId, game.id);
+				const result = await saveExpansionFromBgg(bggId, game.id);
+				recordExpansionWarning(game.id, { bggWrite: result.bggWrite, action: 'add', name: result.name, bggId });
 				if (onRefresh) await onRefresh();
 				await renderExpansionsTab(game, { onRefresh });
 			} catch (err) {
@@ -158,7 +193,8 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 			searchInput.disabled = true;
 			searchStatus.hidden = false;
 			try {
-				await saveExpansionFromBgg(bggId, game.id);
+				const result = await saveExpansionFromBgg(bggId, game.id);
+				recordExpansionWarning(game.id, { bggWrite: result.bggWrite, action: 'add', name: result.name, bggId });
 				if (onRefresh) await onRefresh();
 				await renderExpansionsTab(game, { onRefresh });
 			} catch (err) {
@@ -296,7 +332,13 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 				const btn = e.currentTarget;
 				setButtonLoading(btn, 'Removing\u2026');
 				try {
-					await deleteGame(exp.id);
+					const result = await deleteGame(exp.id);
+					recordExpansionWarning(game.id, {
+						bggWrite: result.bggWrite,
+						action: 'remove',
+						name: exp.name,
+						bggId: exp.bggId,
+					});
 					if (onRefresh) await onRefresh();
 					await renderExpansionsTab(game, { onRefresh });
 				} catch (err) {

@@ -30,47 +30,58 @@ public class BggCollectionWriterAdapter : IBggCollectionWriter
 		_logger = logger;
 	}
 
-	public async Task<long?> AddToCollectionAsync(int bggId, CancellationToken cancellationToken = default)
+	public async Task<BggAddResult> AddToCollectionAsync(int bggId, string name, CancellationToken cancellationToken = default)
 	{
-		if (string.IsNullOrWhiteSpace(_settings.Username) || string.IsNullOrWhiteSpace(_writerSettings.BaseUrl))
+		if (!IsConfigured())
 		{
-			// BGG writer not configured — skip silently
-			return null;
+			return new BggAddResult(BggWriteOutcome.Skipped, null);
 		}
 
 		try
 		{
-			return await _bggWriterClient.AddToCollectionAsync(_settings.Username, bggId, cancellationToken);
+			var collId = await _bggWriterClient.AddToCollectionAsync(_settings.Username, bggId, name, cancellationToken);
+			if (collId <= 0)
+			{
+				_logger.LogWarning("BGG writer returned no collection item id for bggId {BggId}.", bggId);
+				return new BggAddResult(BggWriteOutcome.Failed, null);
+			}
+
+			return new BggAddResult(BggWriteOutcome.Succeeded, collId);
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
 		{
+			// A BGG failure or writer timeout is an outcome; only a cancelled request propagates
 			_logger.LogWarning(ex, "Failed to add bggId {BggId} to BGG collection for user {Username}.", bggId, _settings.Username);
-			return null;
+			return new BggAddResult(BggWriteOutcome.Failed, null);
 		}
 	}
 
-	public async Task RemoveFromCollectionAsync(long? bggCollId, CancellationToken cancellationToken = default)
+	public async Task<BggWriteOutcome> RemoveFromCollectionAsync(long? bggCollId, CancellationToken cancellationToken = default)
 	{
-		if (string.IsNullOrWhiteSpace(_settings.Username) || string.IsNullOrWhiteSpace(_writerSettings.BaseUrl))
+		if (!IsConfigured())
 		{
-			// BGG writer not configured — skip silently
-			return;
+			return BggWriteOutcome.Skipped;
 		}
 
 		if (bggCollId is null or <= 0)
 		{
-			_logger.LogWarning("BGG RemoveFromCollection skipped — no collId available.");
-			return;
+			_logger.LogWarning("BGG RemoveFromCollection failed — no collId available.");
+			return BggWriteOutcome.Failed;
 		}
 
 		try
 		{
 			await _bggWriterClient.RemoveFromCollectionAsync(_settings.Username, bggCollId.Value, cancellationToken);
+			return BggWriteOutcome.Succeeded;
 		}
-		catch (Exception ex)
+		catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
 		{
-			// BGG write failure is non-fatal — the local delete proceeds regardless
+			// A BGG failure or writer timeout is an outcome; only a cancelled request propagates
 			_logger.LogWarning(ex, "Failed to remove collId {CollId} from BGG collection.", bggCollId);
+			return BggWriteOutcome.Failed;
 		}
 	}
+
+	private bool IsConfigured() =>
+		!string.IsNullOrWhiteSpace(_settings.Username) && !string.IsNullOrWhiteSpace(_writerSettings.BaseUrl);
 }

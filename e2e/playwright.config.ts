@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const webPort = process.env.QA_WEB_PORT ?? '3000';
+const webPort = process.env.QA_WEB_PORT ?? '15100';
 
 export default defineConfig({
 	testDir: './features',

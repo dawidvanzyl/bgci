@@ -1,16 +1,16 @@
 'use strict';
 
-const { chromium: baseChromium } = require('playwright-extra');
-const stealth = require('puppeteer-extra-plugin-stealth');
-baseChromium.use(stealth());
-const chromium = baseChromium;
-
 const BGG_BASE_URL = 'https://boardgamegeek.com';
-const COLLECTION_WRITE_URL = `${BGG_BASE_URL}/geekcollection.php`;
+const LOGIN_URL = `${BGG_BASE_URL}/login/api/v1`;
+const COLLECTION_ITEM_URL = `${BGG_BASE_URL}/api/collectionitem`;
 const XMLAPI_BASE_URL = `${BGG_BASE_URL}/xmlapi2`;
+const REQUEST_TIMEOUT_MS = 30000;
+const LOOKUP_ATTEMPTS = 5;
 
-let cachedBrowser = null;
-let cachedContext = null;
+const BGG_PASSWORD = process.env.BGG_PASSWORD;
+const BGG_BEARER_TOKEN = process.env.BGG_BEARER_TOKEN;
+
+let session = null;
 let sessionLock = Promise.resolve();
 
 function withLock(fn) {
@@ -26,116 +26,150 @@ class AuthError extends Error {
 	}
 }
 
+function isChallenge(text) {
+	return /just a moment|security verification|cf-chl/i.test(text);
+}
+
 /**
- * Logs in to BGG via the JSON API from within the browser context.
- * Sets SessionID cookie (via API) and bggusername cookie (injected manually).
+ * Sends a request to BGG. Throws an Error that names the failing step when BGG
+ * answers with a Cloudflare challenge page or the request does not complete.
  *
- * @param {import('playwright').BrowserContext} context
- * @param {string} username
- * @param {string} password
- * @returns {Promise<void>}
+ * @param {string} step Name of the step, used in error messages.
+ * @param {string} url
+ * @param {RequestInit} init
+ * @returns {Promise<{ status: number, text: string, headers: Headers }>}
  */
-async function login(context, username, password) {
-	const page = await context.newPage();
-
+async function send(step, url, init) {
+	let response;
 	try {
-		console.log('[bgg-writer] navigating to BGG homepage to satisfy Cloudflare');
-		await page.goto(BGG_BASE_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
-		await page.waitForFunction(
-			() => !document.title.includes('Just a moment'),
-			{ timeout: 30000 }
-		);
+		response = await fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+	} catch (err) {
+		throw new Error(`BGG ${step} request failed: ${err.message}`);
+	}
 
-		console.log('[bgg-writer] logging in via JSON API');
-		const loginOk = await page.evaluate(async ({ credentials, bggBaseUrl }) => {
-			const response = await fetch('/login/api/v1', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Origin': bggBaseUrl,
-					'X-KL-Ajax-Request': 'Ajax_Request',
-				},
-				body: JSON.stringify({ credentials }),
-			});
-			return response.ok;
-		}, { credentials: { username, password }, bggBaseUrl: BGG_BASE_URL });
+	const text = await response.text();
+	console.log(`[bgg-writer] ${step}: ${init.method ?? 'GET'} ${new URL(url).pathname} -> ${response.status}`);
 
-		if (!loginOk) {
-			throw new AuthError('BGG login failed');
-		}
+	if (isChallenge(text)) {
+		throw new Error(`BGG Cloudflare challenge during ${step}`);
+	}
 
-		await context.addCookies([{
-			name: 'bggusername',
-			value: username,
-			domain: 'boardgamegeek.com',
-			path: '/',
-		}]);
+	return { status: response.status, text, headers: response.headers };
+}
 
-		console.log('[bgg-writer] BGG login successful');
-	} finally {
-		await page.close();
+function parseMessage(text) {
+	try {
+		return JSON.parse(text).message ?? null;
+	} catch {
+		return null;
 	}
 }
 
 /**
- * Ensures a cached authenticated browser context exists, serialising session
- * init and invalidation through a mutex so concurrent requests cannot race.
- * The action itself runs outside the lock — only session lifecycle is serialised.
- * On AuthError from the action, re-acquires the lock, rebuilds the session,
- * and retries the action once.
+ * Summarises a BGG response body for an error message. Uses the JSON error
+ * message when there is one, and otherwise the first 200 characters of the body.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function describeBody(text) {
+	try {
+		const body = JSON.parse(text);
+		const message = body.message ?? body.errors?.message ?? body.error;
+		if (message) {
+			return String(message);
+		}
+	} catch {
+		// Not JSON — fall through to the raw text
+	}
+
+	const trimmed = text.replace(/\s+/g, ' ').trim();
+	return trimmed ? trimmed.slice(0, 200) : '(empty body)';
+}
+
+/**
+ * Logs in to BGG through the JSON login API and returns the session cookies
+ * as a single Cookie header value.
  *
  * @param {string} username
- * @param {function(import('playwright').Page): Promise<T>} action
+ * @param {string} password
+ * @returns {Promise<string>}
+ */
+async function login(username, password) {
+	console.log(`[bgg-writer] logging in via JSON API as user ${username}`);
+
+	const result = await send('login', LOGIN_URL, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+		body: JSON.stringify({ credentials: { username, password } }),
+	});
+
+	if (result.status !== 204) {
+		throw new Error(`BGG login failed with status ${result.status}: ${describeBody(result.text)}`);
+	}
+
+	const cookies = new Map();
+	for (const setCookie of result.headers.getSetCookie()) {
+		const pair = setCookie.split(';')[0];
+		const separator = pair.indexOf('=');
+		if (separator > 0) {
+			cookies.set(pair.slice(0, separator), pair.slice(separator + 1));
+		}
+	}
+
+	if (cookies.size === 0) {
+		throw new Error('BGG login returned no session cookies');
+	}
+
+	cookies.set('bggusername', username);
+
+	console.log('[bgg-writer] BGG login successful');
+	return [...cookies].map(([name, value]) => `${name}=${value}`).join('; ');
+}
+
+/**
+ * Ensures a cached login session exists, serialising session init and
+ * invalidation through a mutex so concurrent requests cannot race.
+ * The action itself runs outside the lock — only session lifecycle is serialised.
+ * On AuthError from the action, rebuilds the session once and retries the action.
+ * One writer instance serves one account: the session stays bound to the first username.
+ *
+ * @param {string} username
+ * @param {function(string): Promise<T>} action Receives the Cookie header value.
  * @returns {Promise<T>}
  */
 async function withBggSession(username, action) {
-	const password = process.env.BGG_PASSWORD;
-	if (!password) {
+	if (!BGG_PASSWORD) {
 		throw new Error('BGG_PASSWORD environment variable is not set');
 	}
 
-	await withLock(async () => {
-		if (!cachedBrowser || !cachedContext) {
-			console.log('[bgg-writer] launching browser and creating session');
-			cachedBrowser = await chromium.launch({ headless: true });
-			cachedContext = await cachedBrowser.newContext();
-			await login(cachedContext, username, password);
+	const ensureSession = (staleCookie) => withLock(async () => {
+		if (!session || session.cookie === staleCookie) {
+			session = { username, cookie: await login(username, BGG_PASSWORD) };
 		}
+		return session.cookie;
 	});
 
-	const page = await cachedContext.newPage();
-	await page.goto(BGG_BASE_URL, { waitUntil: 'domcontentloaded' });
+	const cookie = await ensureSession(null);
 
 	try {
-		return await action(page);
+		return await action(cookie);
 	} catch (err) {
 		if (!(err instanceof AuthError)) {
 			throw err;
 		}
 
-		console.log('[bgg-writer] auth failure detected — re-logging in and retrying');
-
-		await withLock(async () => {
-			if (cachedBrowser) {
-				await cachedBrowser.close().catch(() => {});
-			}
-			cachedBrowser = await chromium.launch({ headless: true });
-			cachedContext = await cachedBrowser.newContext();
-			await login(cachedContext, username, password);
-		});
-
-		const retryPage = await cachedContext.newPage();
-		await retryPage.goto(BGG_BASE_URL, { waitUntil: 'domcontentloaded' });
-		try {
-			return await action(retryPage);
-		} finally {
-			await retryPage.close();
-		}
-	} finally {
-		if (!page.isClosed()) {
-			await page.close();
-		}
+		console.log('[bgg-writer] auth failure detected — logging in again and retrying');
+		return await action(await ensureSession(cookie));
 	}
+}
+
+function writeHeaders(cookie) {
+	return {
+		'Accept': 'application/json',
+		'X-KL-Ajax-Request': 'Ajax_Request',
+		'Cookie': cookie,
+	};
 }
 
 /**
@@ -143,53 +177,50 @@ async function withBggSession(username, action) {
  *
  * @param {string} username
  * @param {number} bggId
+ * @param {string} name
  * @returns {Promise<number>}
  */
-async function addToCollection(username, bggId) {
-	return await withBggSession(username, async (page) => {
+async function addToCollection(username, bggId, name) {
+	// Check before the add, so a missing token cannot leave an item on BGG with no collId
+	if (!BGG_BEARER_TOKEN) {
+		throw new Error('BGG collection item id lookup needs the BGG_BEARER_TOKEN environment variable');
+	}
+
+	return await withBggSession(username, async (cookie) => {
 		console.log(`[bgg-writer] adding bggId ${bggId} to collection for user ${username}`);
 
-		const result = await page.evaluate(
-			async ({ url, bggId }) => {
-				const body = new URLSearchParams({
+		const result = await send('add', COLLECTION_ITEM_URL, {
+			method: 'POST',
+			headers: { ...writeHeaders(cookie), 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				item: {
+					collid: 0,
+					pp_currency: 'USD',
+					cv_currency: 'USD',
 					objecttype: 'thing',
 					objectid: String(bggId),
-					addowned: 'true',
-					addwish: 'false',
-					wishlistpriority: '1',
-					force: 'true',
-					ajax: '1',
-					action: 'additem',
-				});
-
-				const response = await fetch(url, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded',
-						'X-Requested-With': 'XMLHttpRequest',
-						'X-KL-Ajax-Request': 'Ajax_Request',
-					},
-					body: body.toString(),
-				});
-
-				return { status: response.status, ok: response.ok };
-			},
-			{ url: COLLECTION_WRITE_URL, bggId }
-		);
+					status: { own: true },
+					objectname: name,
+					acquisitiondate: null,
+					invdate: null,
+				},
+			}),
+		});
 
 		if (result.status === 401 || result.status === 403) {
-			throw new AuthError(`BGG geekcollection.php add rejected with status ${result.status}`);
+			throw new AuthError(`BGG add rejected with status ${result.status}: ${describeBody(result.text)}`);
 		}
 
-		if (!result.ok) {
-			throw new Error(`BGG geekcollection.php add failed with status ${result.status}`);
+		const message = parseMessage(result.text);
+		if (result.status !== 200 || message !== 'Item saved') {
+			throw new Error(`BGG add failed with status ${result.status}: ${describeBody(result.text)}`);
 		}
 
 		// Resolve collId via XML API — retry a few times as BGG may lag
-		const collId = await resolveCollId(page, username, bggId);
+		const collId = await resolveCollId(username, bggId);
 
 		if (!collId) {
-			throw new Error(`Could not resolve collId for bggId ${bggId} after add`);
+			throw new Error(`BGG collection item id lookup found no collId for bggId ${bggId} after add`);
 		}
 
 		console.log(`[bgg-writer] bggId ${bggId} added, collId=${collId}`);
@@ -205,38 +236,21 @@ async function addToCollection(username, bggId) {
  * @returns {Promise<void>}
  */
 async function removeFromCollection(username, collId) {
-	return await withBggSession(username, async (page) => {
+	return await withBggSession(username, async (cookie) => {
 		console.log(`[bgg-writer] removing collId ${collId} from collection for user ${username}`);
 
-		const result = await page.evaluate(
-			async ({ url, collId }) => {
-				const body = new URLSearchParams({
-					ajax: '1',
-					action: 'delete',
-					collid: String(collId),
-				});
-
-				const response = await fetch(url, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded',
-						'X-Requested-With': 'XMLHttpRequest',
-						'X-KL-Ajax-Request': 'Ajax_Request',
-					},
-					body: body.toString(),
-				});
-
-				return { status: response.status, ok: response.ok };
-			},
-			{ url: COLLECTION_WRITE_URL, collId }
-		);
+		const result = await send('remove', `${COLLECTION_ITEM_URL}/${encodeURIComponent(collId)}`, {
+			method: 'DELETE',
+			headers: writeHeaders(cookie),
+		});
 
 		if (result.status === 401 || result.status === 403) {
-			throw new AuthError(`BGG geekcollection.php delete rejected with status ${result.status}`);
+			throw new AuthError(`BGG remove rejected with status ${result.status}: ${describeBody(result.text)}`);
 		}
 
-		if (!result.ok) {
-			throw new Error(`BGG geekcollection.php delete failed with status ${result.status}`);
+		const message = parseMessage(result.text);
+		if (result.status !== 200 || message !== 'Item removed from collection') {
+			throw new Error(`BGG remove failed with status ${result.status}: ${describeBody(result.text)}`);
 		}
 
 		console.log(`[bgg-writer] collId ${collId} removed`);
@@ -245,33 +259,38 @@ async function removeFromCollection(username, collId) {
 
 /**
  * Resolves the BGG collection item ID (collId) for a given bggId by querying
- * the XML API from within the authenticated browser context.
+ * the XML API with the bearer token.
  *
- * @param {import('playwright').Page} page
  * @param {string} username
  * @param {number} bggId
  * @returns {Promise<number|null>}
  */
-async function resolveCollId(page, username, bggId) {
+async function resolveCollId(username, bggId) {
+	if (!BGG_BEARER_TOKEN) {
+		throw new Error('BGG collection item id lookup needs the BGG_BEARER_TOKEN environment variable');
+	}
+
 	const url = `${XMLAPI_BASE_URL}/collection?username=${encodeURIComponent(username)}&id=${bggId}&own=1`;
 
-	for (let attempt = 1; attempt <= 5; attempt++) {
+	for (let attempt = 1; attempt <= LOOKUP_ATTEMPTS; attempt++) {
 		if (attempt > 1) {
 			await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
 		}
 
-		const xml = await page.evaluate(async (fetchUrl) => {
-			const response = await fetch(fetchUrl);
-			if (response.status === 202) return null;
-			return response.text();
-		}, url);
+		const result = await send('collection item id lookup', url, {
+			headers: { 'Authorization': `Bearer ${BGG_BEARER_TOKEN}` },
+		});
 
-		if (!xml) {
-			console.log(`[bgg-writer] resolveCollId attempt ${attempt}: BGG returned 202, retrying`);
+		if (result.status === 202) {
+			console.log(`[bgg-writer] collection item id lookup attempt ${attempt}: BGG returned 202, retrying`);
 			continue;
 		}
 
-		const match = xml.match(/collid="(\d+)"/);
+		if (result.status !== 200) {
+			throw new Error(`BGG collection item id lookup failed with status ${result.status}: ${describeBody(result.text)}`);
+		}
+
+		const match = result.text.match(/collid="(\d+)"/);
 		if (match) {
 			return parseInt(match[1], 10);
 		}

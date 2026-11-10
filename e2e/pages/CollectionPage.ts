@@ -52,6 +52,31 @@ export const listFields = ['categories', 'mechanics', 'designers', 'artists', 'p
 
 const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+export interface Box {
+	top: number;
+	bottom: number;
+	left: number;
+	right: number;
+	width: number;
+}
+
+/** The parts of a BGG write warning, found inside its root element. */
+export class WriteWarning {
+	readonly text: Locator;
+	readonly link: Locator;
+	readonly dismissButton: Locator;
+
+	constructor(readonly root: Locator) {
+		this.text = root.locator('.bgg-write-warning-text');
+		this.link = root.getByRole('link', { name: 'Open on BGG' });
+		this.dismissButton = root.getByRole('button', { name: 'Dismiss warning' });
+	}
+
+	async dismiss(): Promise<void> {
+		await this.dismissButton.click();
+	}
+}
+
 export class CollectionPage {
 	readonly emptyState: Locator;
 	readonly syncButton: Locator;
@@ -59,6 +84,13 @@ export class CollectionPage {
 	readonly cardTitles: Locator;
 	readonly infoPanel: Locator;
 	readonly expansionsTab: Locator;
+	readonly bggResults: Locator;
+	readonly knownExpansionOptions: Locator;
+	readonly pageWarning: WriteWarning;
+	readonly expansionWarning: WriteWarning;
+	readonly statusBanner: Locator;
+	readonly header: Locator;
+	readonly toolbarBlock: Locator;
 	private readonly bggSearchInput: Locator;
 	private readonly saveButton: Locator;
 	private readonly filterInput: Locator;
@@ -70,6 +102,13 @@ export class CollectionPage {
 		this.cardTitles = page.locator('.game-card-title');
 		this.infoPanel = page.locator('#game-info-panel');
 		this.expansionsTab = page.locator('#expansions-tab-content');
+		this.bggResults = page.locator('#bgg-search-results');
+		this.knownExpansionOptions = page.locator('.exp-known-select option:not([value=""])');
+		this.pageWarning = new WriteWarning(page.locator('#bgg-write-warning'));
+		this.expansionWarning = new WriteWarning(page.locator('#expansion-bgg-write-warning'));
+		this.statusBanner = page.locator('#bgg-status-banner');
+		this.header = page.locator('header');
+		this.toolbarBlock = page.locator('.sticky-controls');
 		this.bggSearchInput = page.locator('#bgg-search-input');
 		this.saveButton = page.locator('#btn-save');
 		this.filterInput = page.locator('#filter-input');
@@ -166,6 +205,16 @@ export class CollectionPage {
 		return this.expansionsTab.locator('.exp-owned-name', { hasText: name });
 	}
 
+	async searchBgg(query: string): Promise<void> {
+		await this.bggSearchInput.fill(query);
+	}
+
+	/** Picks a search result and waits until the pre-filled form is open. */
+	async selectBggResult(name: string): Promise<void> {
+		await this.bggResults.locator('li', { hasText: name }).click();
+		await this.page.locator('#game-form').waitFor();
+	}
+
 	/** Searches BGG, picks the result, and saves the pre-filled form. */
 	async importFromBgg(query: string, resultName: string): Promise<void> {
 		await this.bggSearchInput.fill(query);
@@ -187,6 +236,19 @@ export class CollectionPage {
 	async remove(name: string): Promise<void> {
 		await this.card(name).locator('.btn-delete').click();
 		await this.page.locator('#btn-confirm-delete').click();
+	}
+
+	async removeExpansion(name: string): Promise<void> {
+		await this.expansionsTab.locator('.exp-owned-item', { hasText: name }).locator('.exp-remove-btn').click();
+	}
+
+	/** Reads the bounding box of an element that is on the page. */
+	async box(locator: Locator): Promise<Box> {
+		const box = await locator.boundingBox();
+		if (!box) {
+			throw new Error('The element has no bounding box');
+		}
+		return { top: box.y, bottom: box.y + box.height, left: box.x, right: box.x + box.width, width: box.width };
 	}
 
 	async filter(text: string): Promise<void> {

@@ -1,4 +1,6 @@
-import { allGames, deleteTargetId, setDeleteTargetId } from './state.js';
+import { allGames, deleteTargetId, setDeleteTargetId, setExpansionWarning } from './state.js';
+import { bggWriteWarning } from './bggWriteWarning.js';
+import { showPageWarning } from './warningBanner.js';
 import { setButtonLoading, clearButtonLoading, showInlineError, intOrNull, floatOrNull, esc } from './helpers.js';
 import { saveGame, saveGameFromBgg, deleteGame } from './api.js';
 import { renderExpansionsTab } from './expansions.js';
@@ -325,6 +327,7 @@ export function closeModal() {
 	_currentGame = null;
 	_tabRefresh = null;
 	_readOnly = false;
+	setExpansionWarning(null);
 	expansionsContent.innerHTML = '';
 	expansionsContent.classList.add('hidden');
 	gameInfoPanel.classList.add('hidden');
@@ -382,14 +385,17 @@ export async function handleFormSubmit(e, { onSaved } = {}) {
 	setButtonLoading(saveBtn, 'Saving\u2026');
 
 	try {
+		let warning = null;
 		if (id) {
 			await saveGame(payload, id);
 		} else if (bggId) {
-			await saveGameFromBgg({ ...payload, bggId });
+			const result = await saveGameFromBgg({ ...payload, bggId });
+			warning = bggWriteWarning({ bggWrite: result.bggWrite, action: 'add', isExpansion: false, name, bggId });
 		} else {
 			await saveGame(payload, null);
 		}
 		closeModal();
+		showPageWarning(warning);
 		if (onSaved) await onSaved();
 	} catch (err) {
 		showInlineError(saveBtn, err.message);
@@ -410,9 +416,20 @@ export async function handleConfirmDelete({ onDeleted } = {}) {
 	const confirmBtn = document.getElementById('btn-confirm-delete');
 	setButtonLoading(confirmBtn, 'Removing\u2026');
 	try {
-		await deleteGame(deleteTargetId, onDeleted);
+		const game = allGames.find((g) => g.id === deleteTargetId);
+		const result = await deleteGame(deleteTargetId);
+		showPageWarning(
+			bggWriteWarning({
+				bggWrite: result.bggWrite,
+				action: 'remove',
+				isExpansion: Boolean(game?.parentGameId),
+				name: game?.name,
+				bggId: game?.bggId,
+			})
+		);
 		confirmOverlay.classList.add('hidden');
 		setDeleteTargetId(null);
+		if (onDeleted) await onDeleted();
 	} catch (err) {
 		showInlineError(confirmBtn, err.message);
 	} finally {

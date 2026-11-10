@@ -1,8 +1,26 @@
 // Mock of the BGG XML API 2 and the bgg-writer sidecar, for the QA stack.
 // It has no dependencies. Tests steer it through the /__control endpoints.
+import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { games } from './games.mjs';
 import { collectionXml, emptyItemsXml, searchXml, thingXml } from './xml.mjs';
+
+const { games } = JSON.parse(readFileSync(new URL('../../test-data/bgg-games.json', import.meta.url), 'utf8'));
+
+const validateGames = () => {
+	const ids = new Set();
+	for (const game of games) {
+		if (ids.has(game.id)) {
+			throw new Error(`Duplicate game id ${game.id} in the game data set`);
+		}
+		ids.add(game.id);
+	}
+	for (const game of games) {
+		if (game.expansionOf !== undefined && !ids.has(game.expansionOf)) {
+			throw new Error(`Game ${game.id} is an expansion of ${game.expansionOf}, which is not in the game data set`);
+		}
+	}
+};
+validateGames();
 
 const PORT = Number(process.env.PORT ?? 4010);
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL ?? `http://localhost:${PORT}`;
@@ -11,6 +29,7 @@ const initialState = () => ({
 	available: true,
 	collection: [],
 	writerCalls: [],
+	writerFailing: false,
 	nextCollId: 1000,
 });
 
@@ -65,6 +84,10 @@ const handleXmlApi = (url, res) => {
 const handleWriter = async (req, url, res) => {
 	const body = await readJson(req);
 
+	if (state.writerFailing) {
+		return send(res, 500, { error: 'bgg-writer is failing' });
+	}
+
 	if (url.pathname === '/collection/add') {
 		if (!body.username || !body.bggId) {
 			return send(res, 400, { error: 'username and bggId are required' });
@@ -89,6 +112,11 @@ const handleControl = async (req, url, res) => {
 
 	if (url.pathname === '/__control/availability') {
 		state.available = Boolean((await readJson(req)).available);
+		return send(res, 200, {});
+	}
+
+	if (url.pathname === '/__control/writer') {
+		state.writerFailing = Boolean((await readJson(req)).failing);
 		return send(res, 200, {});
 	}
 

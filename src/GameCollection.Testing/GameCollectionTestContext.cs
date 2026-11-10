@@ -39,5 +39,33 @@ public sealed class GameCollectionTestContext
 	public sealed class ServiceMocks
 	{
 		public Mock<IBggCollectionWriter> BggCollectionWriterMock { get; } = new();
+
+		public void BggAddReturns(BggAddResult result)
+		{
+			BggCollectionWriterMock
+				.Setup(w => w.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+				.ReturnsAsync(result);
+		}
+
+		public void BggAddThrows(Exception exception)
+		{
+			BggCollectionWriterMock
+				.Setup(w => w.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+				.ThrowsAsync(exception);
+		}
+
+		public void BggRemoveReturns(BggWriteOutcome outcome)
+		{
+			BggCollectionWriterMock
+				.Setup(w => w.RemoveFromCollectionAsync(It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+				.ReturnsAsync(outcome);
+		}
+
+		public void BggRemoveThrows(Exception exception)
+		{
+			BggCollectionWriterMock
+				.Setup(w => w.RemoveFromCollectionAsync(It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+				.ThrowsAsync(exception);
+		}
 	}
 }
