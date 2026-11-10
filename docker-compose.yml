@@ -19,7 +19,8 @@
 #   docker compose --env-file .env.dev --profile dev up -d bgci-dev-db
 #   docker compose --env-file .env.dev --profile dev down -v
 #
-# The two profiles use separate networks and ports, so they can run at the same time.
+# The two profiles use separate networks and ports, so they can run at the same time. Each env file sets
+# COMPOSE_PROJECT_NAME (bgci-qa or bgci-dev), so Docker groups the containers by stack.
 #
 # Host ports. Each stack has its own block of 100, below the Windows dynamic port range
 # (49152 and up), so no port here clashes with Docker's random ports:
@@ -52,6 +53,7 @@ services:
       - /var/lib/postgresql/data
 
   mock-bgg:
+    image: bgci-qa-mock-bgg
     build:
       context: ./e2e/mock-bgg
       additional_contexts:
@@ -70,6 +72,7 @@ services:
 
   # The service name is bgci-api because nginx.conf proxies /api/ to http://bgci-api:8080.
   bgci-api:
+    image: bgci-qa-api
     build:
       context: .
       dockerfile: Dockerfile
@@ -94,6 +97,7 @@ services:
         condition: service_healthy
 
   bgci-web:
+    image: bgci-qa-web
     build:
       context: .
       dockerfile: Dockerfile.web
@@ -116,6 +120,7 @@ services:
       - bgci-dev-data:/var/lib/postgresql/data
 
   bgg-writer:
+    image: bgci-dev-writer
     build:
       context: .
       dockerfile: Dockerfile.writer
@@ -129,6 +134,7 @@ services:
   # nginx.conf proxies /api/ to http://bgci-api:8080, so the dev API takes that name as an
   # alias on the dev network. The qa API uses it on the qa network.
   bgci-dev-api:
+    image: bgci-dev-api
     build:
       context: .
       dockerfile: Dockerfile
@@ -154,6 +160,7 @@ services:
         condition: service_healthy
 
   bgci-dev-web:
+    image: bgci-dev-web
     build:
       context: .
       dockerfile: Dockerfile.web
