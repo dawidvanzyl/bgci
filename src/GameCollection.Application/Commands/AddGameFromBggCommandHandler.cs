@@ -28,7 +28,7 @@ public class AddGameFromBggCommandHandler : IRequestHandler<AddGameFromBggComman
 	{
 		var bggAdd = request.SkipBggWrite
 			? new BggAddResult(BggWriteOutcome.None, request.BggCollId)
-			: await AddToBggAsync(request.BggId, cancellationToken);
+			: await AddToBggAsync(request.BggId, request.Name, cancellationToken);
 
 		var game = CollectedGame.Create(
 			name: new GameName(request.Name),
@@ -72,11 +72,11 @@ public class AddGameFromBggCommandHandler : IRequestHandler<AddGameFromBggComman
 		return new AddGameFromBggResult(game.Id.Value, bggAdd.Outcome);
 	}
 
-	private async Task<BggAddResult> AddToBggAsync(int bggId, CancellationToken cancellationToken)
+	private async Task<BggAddResult> AddToBggAsync(int bggId, string name, CancellationToken cancellationToken)
 	{
 		try
 		{
-			return await _bggCollectionWriter.AddToCollectionAsync(bggId, cancellationToken);
+			return await _bggCollectionWriter.AddToCollectionAsync(bggId, name, cancellationToken);
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
 		{

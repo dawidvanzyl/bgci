@@ -10,7 +10,7 @@ namespace GameCollection.Application.Abstractions;
 /// </summary>
 public interface IBggCollectionWriter
 {
-	Task<BggAddResult> AddToCollectionAsync(int bggId, CancellationToken cancellationToken = default);
+	Task<BggAddResult> AddToCollectionAsync(int bggId, string name, CancellationToken cancellationToken = default);
 
 	Task<BggWriteOutcome> RemoveFromCollectionAsync(long? bggCollId, CancellationToken cancellationToken = default);
 }

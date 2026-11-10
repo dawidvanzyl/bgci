@@ -47,7 +47,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 |---|---|
 | Frontend | Vanilla JS ES modules, HTML, CSS — bundled by Vite |
 | API | ASP.NET Core Web API (.NET 10) |
-| BGG Write Layer | Node.js + Playwright (Chromium + stealth) |
+| BGG Write Layer | Node.js (plain HTTP) |
 | CQRS | MediatR |
 | Database | PostgreSQL via Dapper (stored functions) |
 | Web Server | nginx (reverse proxy + static files) |
@@ -216,19 +216,12 @@ The app is available at `http://localhost:5173`.
 ```bash
 cd node/bgg-writer
 cp .env.example .env
-# fill in BGG_PASSWORD in .env
+# fill in BGG_PASSWORD and BGG_BEARER_TOKEN in .env
 npm install
-npx playwright install chromium
 node src/index.js
 ```
 
 The .NET API's `appsettings.Development.json` already points `BggWriter:BaseUrl` at `http://localhost:3001` — no additional configuration needed.
-
-To debug with the Playwright Inspector (visible Chromium browser with step-through execution):
-
-```bash
-PWDEBUG=1 node src/index.js
-```
 
 To attach a Node.js debugger (VS Code or similar):
 
@@ -317,11 +310,11 @@ When `BGG_USERNAME` is configured, a **↻ Sync BGG** button appears in the head
 
 **Why it exists**
 
-BGG's collection write endpoint (`geekcollection.php`) is protected by Cloudflare bot detection. Any plain HTTP client — regardless of headers or cookies — receives a 403 response with a JavaScript challenge page. This cannot be bypassed without a real browser that executes JavaScript.
+BGG has no public API for writing to a collection. The BGG website writes through its own calls, and the writer sends the same calls. The .NET API does not hold the BGG password, so the writer is a separate service that holds `BGG_PASSWORD`.
 
 **How it works**
 
-`bgg-writer` launches a headless Chromium browser via [Playwright](https://playwright.dev/) with the stealth plugin active (masking the headless fingerprint). It navigates to the BGG login page, fills in the credentials, and submits the form. Once authenticated, it calls `geekcollection.php` via `page.evaluate(fetch(...))` from within the browser context — Cloudflare sees a legitimate browser with valid JavaScript execution and session cookies, and allows the request through.
+`bgg-writer` uses plain HTTP requests from Node.js. It does not use a browser. It signs in once with the BGG JSON login API (`/login/api/v1`) and keeps the session cookies. It adds a game with `POST /api/collectionitem` and removes one with `DELETE /api/collectionitem/{collId}`. After an add, it looks up the new `collId` with the BGG XML API, using `BGG_BEARER_TOKEN`. If BGG rejects a write with 401 or 403, the writer signs in again once and retries. If BGG answers with a Cloudflare challenge page, the writer fails with an error that names the step. One writer instance serves one account.
 
 **Architecture**
 

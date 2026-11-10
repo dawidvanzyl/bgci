@@ -4,13 +4,13 @@
 
 ## Purpose
 
-`bgg-writer` is a single-responsibility Node.js sidecar service. It exists solely to write to the BGG collection API using a real Firefox browser (via Playwright) to bypass Cloudflare bot protection. It exposes two HTTP endpoints consumed by the main .NET API.
+`bgg-writer` is a single-responsibility Node.js sidecar service. It exists solely to write to the BGG collection through the calls the BGG website makes, using plain HTTP requests (no browser). It exposes two HTTP endpoints consumed by the main .NET API.
 
 ---
 
 ## Module Structure
 
-- **One responsibility per file.** `index.js` owns Express wiring only. `bggWriter.js` owns all Playwright and BGG interaction logic.
+- **One responsibility per file.** `index.js` owns Express wiring only. `bggWriter.js` owns all BGG interaction logic.
 - Do not add controllers, routers, or service subdirectories unless the service meaningfully grows beyond two endpoints.
 - If a third responsibility emerges, create a new file — do not expand existing files.
 
@@ -36,48 +36,43 @@
 
 ## Error Handling
 
-- Wrap individual `Page` operations in `try/finally` to ensure pages are always closed. Do not close the `Browser` or `BrowserContext` in error handling — those are managed by the session lifecycle described in the Playwright Conventions section.
+- Name the failing step in every error message: Cloudflare challenge, login, add, collection item id lookup or remove.
+- Never put a password, cookie or token in a log line or an error message.
 - Throw `Error` instances with descriptive messages — callers (`index.js`) are responsible for translating to HTTP responses.
 - Do not swallow errors silently. Log with `console.error` before re-throwing or responding with 500.
 - Non-fatal warnings use `console.warn`. Informational steps use `console.log`.
 
 ---
 
-## Playwright Conventions
+## BGG Session Conventions
 
-- Always use `firefox` — do not use Chromium or WebKit.
-- Maintain a single module-level `BrowserContext` reused across requests. Launch the browser and log in once on first use; do not re-launch unless an authenticated request is rejected with a 401/403.
-- All session initialisation and invalidation must be serialised through a mutex (promise-chain lock) to prevent concurrent requests from racing to create or destroy the browser.
-- Close individual `Page` instances in a `finally` block after each request. Do not close the `Browser` or `BrowserContext` except during session invalidation.
-- Use `page.evaluate()` for all `fetch()` calls to `geekcollection.php` — this ensures requests originate from within the authenticated browser context and pass Cloudflare validation.
-- Do not navigate to pages unnecessarily. Only load what is required to complete the operation.
+- Use plain `fetch()` from Node.js. Do not add a browser or a browser-automation library.
+- Keep one module-level login session (the cookie header), reused across requests. Log in on first use. Log in again once only when BGG rejects a write with 401/403.
+- Serialise all session initialisation and invalidation through a mutex (promise-chain lock) so concurrent requests cannot race.
+- One writer instance serves one account. The session stays bound to the first username.
+- Treat a write as successful only when the status and the message in the response body match the website call reference below. Do not trust any `2xx`.
+- Detect a Cloudflare challenge page in a response and fail with an error that names the step. Do not try to solve or bypass it.
 
 ---
 
 ## HTTP Layer (`index.js`)
 
-- Validate required fields and return `400` before calling any Playwright logic.
+- Validate required fields and return `400` before calling any BGG logic.
 - Return `200` with a JSON body on success.
 - Return `500` with `{ error: message }` on failure.
-- Do not put business logic or Playwright calls directly in route handlers — delegate entirely to `bggWriter.js`.
+- Do not put business logic or BGG calls directly in route handlers — delegate entirely to `bggWriter.js`.
 
 ---
 
 ## Dependencies
 
-- Keep dependencies minimal: `express`, `playwright`, `dotenv`.
+- Keep dependencies minimal: `express`, `dotenv`.
 - Do not add an ORM, database client, or queue library — this service has no persistence.
 - Pin major versions in `package.json`.
 
 ---
 
 ## Debugging
-
-To run locally with the Playwright Inspector (visible browser + step-through):
-
-```bash
-PWDEBUG=1 node src/index.js
-```
 
 To attach a Node.js debugger (VS Code or similar):
 

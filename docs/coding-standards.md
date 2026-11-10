@@ -104,7 +104,7 @@ Standards**.
   domain and application architecture, data access and backend tests.
 - Frontend (`coding-standards-frontend.md`) governs the Vite and ES-module frontend and
   its tests.
-- bgg-writer (`coding-standards-bgg-writer.md`) governs the Node.js Playwright sidecar.
+- bgg-writer (`coding-standards-bgg-writer.md`) governs the Node.js sidecar.
 - End-to-end (`coding-standards-e2e.md`) governs the Playwright suite, the QA stack and the
   mock BGG server.
 - Design (`design-standards.md`) governs visual style, components and wording.

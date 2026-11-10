@@ -56,6 +56,7 @@ services:
     restart: unless-stopped
     environment:
       - BGG_PASSWORD=${BGG_PASSWORD:-}
+      - BGG_BEARER_TOKEN=${BGG_BEARER_TOKEN:-}
       - PORT=3001
     networks:
       - bgci-net

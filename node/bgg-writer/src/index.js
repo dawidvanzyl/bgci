@@ -11,14 +11,14 @@ app.use(express.json());
 const PORT = process.env.PORT || 3001;
 
 app.post('/collection/add', async (req, res) => {
-	const { username, bggId } = req.body;
+	const { username, bggId, name } = req.body;
 
-	if (!username || !bggId) {
-		return res.status(400).json({ error: 'username and bggId are required' });
+	if (!username || !bggId || !name) {
+		return res.status(400).json({ error: 'username, bggId and name are required' });
 	}
 
 	try {
-		const collId = await addToCollection(username, bggId);
+		const collId = await addToCollection(username, bggId, name);
 		return res.status(200).json({ collId });
 	} catch (err) {
 		console.error('[bgg-writer] addToCollection failed:', err.message);

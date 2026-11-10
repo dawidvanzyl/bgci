@@ -30,7 +30,7 @@ public class BggCollectionWriterAdapter : IBggCollectionWriter
 		_logger = logger;
 	}
 
-	public async Task<BggAddResult> AddToCollectionAsync(int bggId, CancellationToken cancellationToken = default)
+	public async Task<BggAddResult> AddToCollectionAsync(int bggId, string name, CancellationToken cancellationToken = default)
 	{
 		if (!IsConfigured())
 		{
@@ -39,7 +39,7 @@ public class BggCollectionWriterAdapter : IBggCollectionWriter
 
 		try
 		{
-			var collId = await _bggWriterClient.AddToCollectionAsync(_settings.Username, bggId, cancellationToken);
+			var collId = await _bggWriterClient.AddToCollectionAsync(_settings.Username, bggId, name, cancellationToken);
 			if (collId <= 0)
 			{
 				_logger.LogWarning("BGG writer returned no collection item id for bggId {BggId}.", bggId);

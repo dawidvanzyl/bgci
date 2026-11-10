@@ -92,7 +92,7 @@ public sealed class AddGameFromBggCommandHandlerTests : IClassFixture<GameCollec
 		result.BggWrite.ShouldBe(BggWriteOutcome.None);
 		SavedGame().BggCollId.ShouldBe(42);
 		_context.Services.BggCollectionWriterMock
-			.Verify(w => w.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+			.Verify(w => w.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]

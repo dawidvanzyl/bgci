@@ -43,14 +43,14 @@ public sealed class GameCollectionTestContext
 		public void BggAddReturns(BggAddResult result)
 		{
 			BggCollectionWriterMock
-				.Setup(w => w.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+				.Setup(w => w.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 				.ReturnsAsync(result);
 		}
 
 		public void BggAddThrows(Exception exception)
 		{
 			BggCollectionWriterMock
-				.Setup(w => w.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+				.Setup(w => w.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 				.ThrowsAsync(exception);
 		}
 
