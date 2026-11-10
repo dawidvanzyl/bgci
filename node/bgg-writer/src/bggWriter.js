@@ -83,7 +83,7 @@ function describeBody(text) {
 		// Not JSON — fall through to the raw text
 	}
 
-	const trimmed = text.replace(/s+/g, ' ').trim();
+	const trimmed = text.replace(/\s+/g, ' ').trim();
 	return trimmed ? trimmed.slice(0, 200) : '(empty body)';
 }
 
@@ -181,6 +181,11 @@ function writeHeaders(cookie) {
  * @returns {Promise<number>}
  */
 async function addToCollection(username, bggId, name) {
+	// Check before the add, so a missing token cannot leave an item on BGG with no collId
+	if (!BGG_BEARER_TOKEN) {
+		throw new Error('BGG collection item id lookup needs the BGG_BEARER_TOKEN environment variable');
+	}
+
 	return await withBggSession(username, async (cookie) => {
 		console.log(`[bgg-writer] adding bggId ${bggId} to collection for user ${username}`);
 
