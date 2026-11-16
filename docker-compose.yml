@@ -6,7 +6,7 @@
 #
 # The qa profile is the stack the Playwright suite runs against. Its PostgreSQL service keeps
 # its data in memory, so every `up` starts with an empty database, and the profile replaces
-# BoardGameGeek and the bgg-writer sidecar with e2e/mock-bgg. Every value has a default, so
+# BoardGameGeek with e2e/mock-bgg. Every value has a default, so
 # --env-file is optional for qa:
 #   docker compose --env-file .env.qa --profile qa up --build -d
 #   docker compose --env-file .env.qa --profile qa down -v
@@ -85,10 +85,10 @@ services:
       Database__Name: ${DB_NAME:-bgci}
       Database__User: ${DB_USER:-bgci}
       Database__Password: ${DB_PASSWORD:-bgci}
-      Bgg__BaseUrl: http://mock-bgg:4010/xmlapi2/
+      Bgg__BaseUrl: http://mock-bgg:4010/
       Bgg__BearerToken: qa-token
       Bgg__Username: qa-user
-      BggWriter__BaseUrl: http://mock-bgg:4010
+      Bgg__Password: qa-password
       APP_VERSION: qa
     depends_on:
       mock-bgg:
@@ -151,6 +151,7 @@ services:
       Database__Password: ${DB_PASSWORD:-bgci}
       Bgg__BearerToken: ${BGG_BEARER_TOKEN:-}
       Bgg__Username: ${BGG_USERNAME:-}
+      Bgg__Password: ${BGG_PASSWORD:-}
       BggWriter__BaseUrl: http://bgg-writer:3001
       APP_VERSION: dev
     depends_on:

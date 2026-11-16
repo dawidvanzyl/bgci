@@ -40,6 +40,7 @@ public static class DependencyInjection
 			client.BaseAddress = bggBaseAddress;
 			client.Timeout = TimeSpan.FromSeconds(30);
 		})
+		.RedactLoggedHeaders(_ => true)
 		.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
 		{
 			UseCookies = false,

@@ -90,14 +90,11 @@ public sealed partial class BggWriteHttpClient : IBggWriteClient
 			result = await SendAsync(step, buildRequest(cookie), cancellationToken);
 		}
 
-		if (result.Status != HttpStatusCode.OK || ParseMessage(result.Body) != expectedMessage)
-		{
-			throw new BggWriteException(
+		return result.Status != HttpStatusCode.OK || ParseMessage(result.Body) != expectedMessage
+			? throw new BggWriteException(
 				step,
-				$"BGG {step} failed with status {(int)result.Status}: {Describe(result.Body, cookie)}");
-		}
-
-		return cookie;
+				$"BGG {step} failed with status {(int)result.Status}: {Describe(result.Body, cookie)}")
+			: cookie;
 	}
 
 	private async Task<string> LoginAsync(CancellationToken cancellationToken)
@@ -226,12 +223,9 @@ public sealed partial class BggWriteHttpClient : IBggWriteClient
 				(int)response.StatusCode);
 
 			// Runs before any status check, so a challenge page on a 403 is not read as a rejected session
-			if (ChallengePattern().IsMatch(body))
-			{
-				throw new BggWriteException(step, $"BGG Cloudflare challenge during {step}.");
-			}
-
-			return new StepResult(response.StatusCode, body, setCookies);
+			return ChallengePattern().IsMatch(body)
+				? throw new BggWriteException(step, $"BGG Cloudflare challenge during {step}.")
+				: new StepResult(response.StatusCode, body, setCookies);
 		}
 	}
 
@@ -352,12 +346,9 @@ public sealed partial class BggWriteHttpClient : IBggWriteClient
 
 	private static string? TextOf(JsonElement element, string property)
 	{
-		if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(property, out var value))
-		{
-			return null;
-		}
-
-		return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
+		return element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(property, out var value)
+			? null
+			: value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
 	}
 
 	private string Redact(string text, string? cookie)

@@ -3,6 +3,7 @@ using BggIntegration.Infrastructure.Http;
 using GameCollection.Application.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Shouldly;
 using Xunit;
@@ -11,13 +12,14 @@ namespace BggIntegration.Infrastructure.Tests;
 
 public sealed class BggCollectionWriterAdapterTests
 {
-	private readonly Mock<IBggWriterClient> _client = new();
+	private readonly Mock<IBggWriteClient> _client = new();
+	private readonly FakeTimeProvider _time = new();
 
 	[Fact]
 	[Trait("AC", "90UC1")]
 	public async Task AddToCollectionAsync_ClientThrows_ReturnsFailed()
 	{
-		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new HttpRequestException("BGG down"));
 
 		var result = await CreateAdapter().AddToCollectionAsync(13, "Wingspan", CancellationToken.None);
@@ -29,7 +31,7 @@ public sealed class BggCollectionWriterAdapterTests
 	[Trait("AC", "90UC1")]
 	public async Task AddToCollectionAsync_ClientTimesOut_ReturnsFailed()
 	{
-		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new TaskCanceledException("timeout"));
 
 		var result = await CreateAdapter().AddToCollectionAsync(13, "Wingspan", CancellationToken.None);
@@ -39,9 +41,27 @@ public sealed class BggCollectionWriterAdapterTests
 
 	[Fact]
 	[Trait("AC", "90UC1")]
+	public async Task AddToCollectionAsync_ExceedsTotalTimeLimit_ReturnsFailed()
+	{
+		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.Returns(async (int _, string _, CancellationToken token) =>
+			{
+				await Task.Delay(Timeout.Infinite, token);
+				return 0L;
+			});
+
+		var add = CreateAdapter().AddToCollectionAsync(13, "Wingspan", CancellationToken.None);
+		add.IsCompleted.ShouldBeFalse();
+		_time.Advance(TimeSpan.FromSeconds(60));
+
+		(await add).ShouldBe(new BggAddResult(BggWriteOutcome.Failed, null));
+	}
+
+	[Fact]
+	[Trait("AC", "90UC1")]
 	public async Task AddToCollectionAsync_NoCollId_ReturnsFailed()
 	{
-		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync(0);
 
 		var result = await CreateAdapter().AddToCollectionAsync(13, "Wingspan", CancellationToken.None);
@@ -53,7 +73,7 @@ public sealed class BggCollectionWriterAdapterTests
 	[Trait("AC", "90UC2")]
 	public async Task AddToCollectionAsync_ClientReturnsCollId_ReturnsSucceeded()
 	{
-		_client.Setup(c => c.AddToCollectionAsync("user", 13, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.AddToCollectionAsync(13, It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync(555);
 
 		var result = await CreateAdapter().AddToCollectionAsync(13, "Wingspan", CancellationToken.None);
@@ -63,11 +83,11 @@ public sealed class BggCollectionWriterAdapterTests
 
 	[Theory]
 	[Trait("AC", "90UC3")]
-	[InlineData("", "http://writer")]
+	[InlineData("", "secret")]
 	[InlineData("user", "")]
-	public async Task AddToCollectionAsync_NotConfigured_ReturnsSkipped(string username, string baseUrl)
+	public async Task AddToCollectionAsync_NotConfigured_ReturnsSkipped(string username, string password)
 	{
-		var result = await CreateAdapter(username, baseUrl).AddToCollectionAsync(13, "Wingspan", CancellationToken.None);
+		var result = await CreateAdapter(username, password).AddToCollectionAsync(13, "Wingspan", CancellationToken.None);
 
 		result.ShouldBe(new BggAddResult(BggWriteOutcome.Skipped, null));
 		_client.VerifyNoOtherCalls();
@@ -75,11 +95,11 @@ public sealed class BggCollectionWriterAdapterTests
 
 	[Theory]
 	[Trait("AC", "90UC3")]
-	[InlineData("", "http://writer")]
+	[InlineData("", "secret")]
 	[InlineData("user", "")]
-	public async Task RemoveFromCollectionAsync_NotConfigured_ReturnsSkipped(string username, string baseUrl)
+	public async Task RemoveFromCollectionAsync_NotConfigured_ReturnsSkipped(string username, string password)
 	{
-		var result = await CreateAdapter(username, baseUrl).RemoveFromCollectionAsync(99, CancellationToken.None);
+		var result = await CreateAdapter(username, password).RemoveFromCollectionAsync(99, CancellationToken.None);
 
 		result.ShouldBe(BggWriteOutcome.Skipped);
 		_client.VerifyNoOtherCalls();
@@ -89,7 +109,7 @@ public sealed class BggCollectionWriterAdapterTests
 	[Trait("AC", "90UC4")]
 	public async Task RemoveFromCollectionAsync_ClientThrows_ReturnsFailed()
 	{
-		_client.Setup(c => c.RemoveFromCollectionAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.RemoveFromCollectionAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new HttpRequestException("BGG down"));
 
 		var result = await CreateAdapter().RemoveFromCollectionAsync(99, CancellationToken.None);
@@ -99,9 +119,23 @@ public sealed class BggCollectionWriterAdapterTests
 
 	[Fact]
 	[Trait("AC", "90UC4")]
+	public async Task RemoveFromCollectionAsync_ExceedsTotalTimeLimit_ReturnsFailed()
+	{
+		_client.Setup(c => c.RemoveFromCollectionAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+			.Returns((long _, CancellationToken token) => Task.Delay(Timeout.Infinite, token));
+
+		var remove = CreateAdapter().RemoveFromCollectionAsync(99, CancellationToken.None);
+		remove.IsCompleted.ShouldBeFalse();
+		_time.Advance(TimeSpan.FromSeconds(60));
+
+		(await remove).ShouldBe(BggWriteOutcome.Failed);
+	}
+
+	[Fact]
+	[Trait("AC", "90UC4")]
 	public async Task RemoveFromCollectionAsync_ClientTimesOut_ReturnsFailed()
 	{
-		_client.Setup(c => c.RemoveFromCollectionAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.RemoveFromCollectionAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new TaskCanceledException("timeout"));
 
 		var result = await CreateAdapter().RemoveFromCollectionAsync(99, CancellationToken.None);
@@ -115,7 +149,7 @@ public sealed class BggCollectionWriterAdapterTests
 		var result = await CreateAdapter().RemoveFromCollectionAsync(99, CancellationToken.None);
 
 		result.ShouldBe(BggWriteOutcome.Succeeded);
-		_client.Verify(c => c.RemoveFromCollectionAsync("user", 99, It.IsAny<CancellationToken>()), Times.Once);
+		_client.Verify(c => c.RemoveFromCollectionAsync(99, It.IsAny<CancellationToken>()), Times.Once);
 	}
 
 	[Theory]
@@ -135,7 +169,7 @@ public sealed class BggCollectionWriterAdapterTests
 	{
 		using var cts = new CancellationTokenSource();
 		await cts.CancelAsync();
-		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new OperationCanceledException(cts.Token));
 
 		await Should.ThrowAsync<OperationCanceledException>(
@@ -147,19 +181,19 @@ public sealed class BggCollectionWriterAdapterTests
 	{
 		using var cts = new CancellationTokenSource();
 		await cts.CancelAsync();
-		_client.Setup(c => c.RemoveFromCollectionAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
+		_client.Setup(c => c.RemoveFromCollectionAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new OperationCanceledException(cts.Token));
 
 		await Should.ThrowAsync<OperationCanceledException>(
 			() => CreateAdapter().RemoveFromCollectionAsync(99, cts.Token));
 	}
 
-	private BggCollectionWriterAdapter CreateAdapter(string username = "user", string baseUrl = "http://writer")
+	private BggCollectionWriterAdapter CreateAdapter(string username = "user", string password = "secret")
 	{
 		return new BggCollectionWriterAdapter(
 			_client.Object,
-			Options.Create(new BggSettings { Username = username }),
-			Options.Create(new BggWriterSettings { BaseUrl = baseUrl }),
+			Options.Create(new BggSettings { Username = username, Password = password }),
+			_time,
 			NullLogger<BggCollectionWriterAdapter>.Instance);
 	}
 }

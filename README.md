@@ -248,6 +248,7 @@ Then attach via the VS Code "Node.js: Attach" launch configuration on `localhost
 | `Database:Password` | Database password | *(none, set `DB_PASSWORD`)* |
 | `Bgg:BearerToken` | BGG API bearer token. Without it, BGG search is disabled. Requires approval at [boardgamegeek.com/applications](https://boardgamegeek.com/applications). | *(empty)* |
 | `Bgg:Username` | BGG username for collection sync. | *(empty)* |
+| `Bgg:Password` | BGG password. The API logs in with it to add and remove games in your BGG collection. Without it, BGG search and collection writes are disabled. | *(empty)* |
 | `BggWriter:BaseUrl` | Internal URL of the `bgg-writer` sidecar. Pre-configured in `docker-compose.yml`. | *(empty)* |
 
 **`appsettings.json`** (production / Docker):
