@@ -14,11 +14,11 @@ public static partial class LiveFailureClassifier
 	[GeneratedRegex(@"with status 5\d\d")]
 	private static partial Regex ServerErrorPattern();
 
-	public static LiveFailure Classify(Exception exception, string phase, CancellationToken governingToken) => exception switch
+	public static LiveFailure Classify(Exception exception, string phase, CancellationToken governingToken, string? timedOutStep = null) => exception switch
 	{
 		OperationCanceledException when governingToken.IsCancellationRequested =>
 			new LiveFailure(phase, LiveFailureKind.TimeLimit, "The time limit ran out."),
-		OperationCanceledException => new LiveFailure(phase, LiveFailureKind.Outage, "No answer from BGG."),
+		OperationCanceledException => new LiveFailure(timedOutStep ?? phase, LiveFailureKind.Outage, "No answer from BGG."),
 		LiveReadException read => new LiveFailure(phase, read.Kind, read.Message),
 		BggWriteException write => new LiveFailure(StepFor(write, phase), KindOf(write), write.Message),
 		_ => new LiveFailure(phase, LiveFailureKind.ReadFailed, $"{exception.GetType().Name}: {exception.Message}"),

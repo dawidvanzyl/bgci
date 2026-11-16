@@ -31,7 +31,8 @@ public sealed class BggWriteHttpClientLiveTests
 		var output = TestContext.Current.TestOutputHelper;
 		void Log(string line) => output?.WriteLine(redactor.Redact(line));
 
-		using var writeHandler = CreateHandler();
+		using var writeInnerHandler = CreateHandler();
+		using var writeHandler = new StepTrackingHandler(writeInnerHandler);
 		using var readHandler = CreateHandler();
 		using var writeHttp = CreateHttpClient(writeHandler);
 		using var readHttp = CreateHttpClient(readHandler);
@@ -47,6 +48,7 @@ public sealed class BggWriteHttpClientLiveTests
 		var phase = LiveFailureClassifier.CleanupStep;
 		var addSent = false;
 		var confirmedGone = false;
+		var removed = new HashSet<long>();
 
 		using var runSource = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
 		runSource.CancelAfter(_runLimit);
@@ -58,7 +60,7 @@ public sealed class BggWriteHttpClientLiveTests
 			var leftover = await reader.ListCollectionItemIdsAsync(_liveBggId, runToken);
 			if (leftover.Count > 0)
 			{
-				await RemoveAllAsync(client, leftover, runToken);
+				await RemoveAllAsync(client, leftover, removed, runToken);
 				if (!await WaitUntilGoneAsync(reader, runToken))
 				{
 					failures.Add(new LiveFailure(phase, LiveFailureKind.StillListed, $"{entry.Name} is still listed after the cleanup before the add."));
@@ -75,6 +77,7 @@ public sealed class BggWriteHttpClientLiveTests
 				phase = LiveFailureClassifier.RemoveStep;
 				Log($"step: remove (collection item id {collId.ToString(CultureInfo.InvariantCulture)})");
 				await client.RemoveFromCollectionAsync(collId, runToken);
+				removed.Add(collId);
 
 				if (await WaitUntilGoneAsync(reader, runToken))
 				{
@@ -88,25 +91,32 @@ public sealed class BggWriteHttpClientLiveTests
 		}
 		catch (Exception ex)
 		{
-			failures.Add(LiveFailureClassifier.Classify(ex, phase, runToken));
+			failures.Add(LiveFailureClassifier.Classify(ex, phase, runToken, writeHandler.TakeTimedOutStep()));
 		}
 
 		using var cleanupSource = new CancellationTokenSource(_cleanupLimit);
 		var cleanupToken = cleanupSource.Token;
 		try
 		{
-			Log("step: cleanup (after)");
-			var cleanupFailure = addSent && !confirmedGone
-				? await SweepForLateListingAsync(reader, client, cleanupToken)
-				: await RemoveListedOnceAsync(reader, client, cleanupToken);
-			if (cleanupFailure is not null)
+			if (failures.Any(failure => failure.Step == LiveFailureClassifier.LoginStep))
 			{
-				failures.Add(cleanupFailure);
+				Log("step: cleanup (after) skipped, because the login failed and a run logs in once");
+			}
+			else
+			{
+				Log("step: cleanup (after)");
+				var cleanupFailure = addSent && !confirmedGone
+					? await SweepForLateListingAsync(reader, client, removed, cleanupToken)
+					: await RemoveListedOnceAsync(reader, client, removed, cleanupToken);
+				if (cleanupFailure is not null)
+				{
+					failures.Add(cleanupFailure);
+				}
 			}
 		}
 		catch (Exception ex)
 		{
-			failures.Add(LiveFailureClassifier.Classify(ex, LiveFailureClassifier.CleanupStep, cleanupToken));
+			failures.Add(LiveFailureClassifier.Classify(ex, LiveFailureClassifier.CleanupStep, cleanupToken, writeHandler.TakeTimedOutStep()));
 		}
 
 		if (failures.Count > 0)
@@ -154,9 +164,13 @@ public sealed class BggWriteHttpClientLiveTests
 	private static HttpClient CreateHttpClient(HttpMessageHandler handler) =>
 		new(handler, disposeHandler: false) { BaseAddress = _bggAddress, Timeout = TimeSpan.FromSeconds(30) };
 
-	private static async Task RemoveAllAsync(BggWriteHttpClient client, IReadOnlyList<long> collIds, CancellationToken cancellationToken)
+	private static async Task RemoveAllAsync(
+		BggWriteHttpClient client,
+		IReadOnlyList<long> collIds,
+		HashSet<long> removed,
+		CancellationToken cancellationToken)
 	{
-		foreach (var collId in collIds)
+		foreach (var collId in collIds.Where(removed.Add))
 		{
 			await client.RemoveFromCollectionAsync(collId, cancellationToken);
 		}
@@ -183,9 +197,10 @@ public sealed class BggWriteHttpClientLiveTests
 	private static async Task<LiveFailure?> RemoveListedOnceAsync(
 		LiveBggCollectionReader reader,
 		BggWriteHttpClient client,
+		HashSet<long> removed,
 		CancellationToken cancellationToken)
 	{
-		await RemoveAllAsync(client, await reader.ListCollectionItemIdsAsync(_liveBggId, cancellationToken), cancellationToken);
+		await RemoveAllAsync(client, await reader.ListCollectionItemIdsAsync(_liveBggId, cancellationToken), removed, cancellationToken);
 		return null;
 	}
 
@@ -193,6 +208,7 @@ public sealed class BggWriteHttpClientLiveTests
 	private static async Task<LiveFailure?> SweepForLateListingAsync(
 		LiveBggCollectionReader reader,
 		BggWriteHttpClient client,
+		HashSet<long> removed,
 		CancellationToken cancellationToken)
 	{
 		IReadOnlyList<long> last = [];
@@ -204,7 +220,7 @@ public sealed class BggWriteHttpClientLiveTests
 			}
 
 			last = await reader.ListCollectionItemIdsAsync(_liveBggId, cancellationToken);
-			await RemoveAllAsync(client, last, cancellationToken);
+			await RemoveAllAsync(client, last, removed, cancellationToken);
 		}
 
 		if (last.Count == 0)
@@ -221,7 +237,7 @@ public sealed class BggWriteHttpClientLiveTests
 				return null;
 			}
 
-			await RemoveAllAsync(client, listed, cancellationToken);
+			await RemoveAllAsync(client, listed, removed, cancellationToken);
 		}
 
 		return new LiveFailure(LiveFailureClassifier.CleanupStep, LiveFailureKind.StillListed, "The game was still listed after the cleanup.");
