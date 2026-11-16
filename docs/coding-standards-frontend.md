@@ -43,7 +43,7 @@ frontend/
 
 - ES modules only. Use named exports. Use no globals other than the documented
   `window` config.
-- Tabs for indentation, single quotes, semicolons. (`bgg-writer` has its own rules.)
+- Tabs for indentation, single quotes, semicolons.
 - Use `const` by default. Use `let` only when the binding changes. Never use `var`.
 - Look up DOM elements once at module top, as the existing modules do. Do not repeat
   `document.getElementById` inside hot paths.

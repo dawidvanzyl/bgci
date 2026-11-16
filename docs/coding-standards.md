@@ -1,7 +1,7 @@
 # Coding Standards — Shared Workflow Spec (v1.0)
 
 Global workflow rules for the BoardGame Collection Insights (bgci) project. They apply
-across the backend, the frontend and `bgg-writer`, unless a stack-specific standard
+across the backend, the frontend and the E2E suite, unless a stack-specific standard
 constrains them. Shared Standards outrank all stack standards (§4).
 
 ---
@@ -66,7 +66,7 @@ Format: `{type}({scope}): {short description}`.
 
 - **Allowed types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`.
 - **Scope** must match an existing folder or module name exactly, for example `api`,
-  `game-collection`, `bgg-integration`, `frontend`, `bgg-writer`, `e2e`, `docs`. Do not
+  `game-collection`, `bgg-integration`, `frontend`, `e2e`, `docs`. Do not
   invent scopes, synonyms or abbreviations.
 - **Breaking changes** carry `!`, for example `feat(api)!: change game response
   contract`.
@@ -95,7 +95,7 @@ search result` · `refactor(frontend): split modal rendering`.
 
 ## 4. Documentation Hierarchy
 
-Precedence: **Shared Standards** (highest) → **Backend / Frontend / bgg-writer / Design
+Precedence: **Shared Standards** (highest) → **Backend / Frontend / End-to-end / Design
 Standards**.
 
 - Shared governs the branching model, commit structure, PR lifecycle, merge rules,
@@ -104,7 +104,6 @@ Standards**.
   domain and application architecture, data access and backend tests.
 - Frontend (`coding-standards-frontend.md`) governs the Vite and ES-module frontend and
   its tests.
-- bgg-writer (`coding-standards-bgg-writer.md`) governs the Node.js sidecar.
 - End-to-end (`coding-standards-e2e.md`) governs the Playwright suite, the QA stack and the
   mock BGG server.
 - Design (`design-standards.md`) governs visual style, components and wording.
