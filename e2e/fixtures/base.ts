@@ -21,7 +21,7 @@ export const test = base.extend<Fixtures>({
 	},
 
 	// Every test starts with an empty collection and a reset mock BGG.
-	// Games go first, so the writer calls their removal makes are cleared by the reset.
+	// Games go first, so the writes their removal makes are cleared by the reset.
 	cleanState: [
 		async ({ request, mockBgg }, use) => {
 			await removeAllGames(request);

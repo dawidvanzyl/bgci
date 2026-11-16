@@ -13,6 +13,7 @@ export const warningText = {
 };
 
 export const catanBggId = 13;
+export const azulBggId = 230802;
 export const seafarersBggId = 325;
 
 const tolerance = 1;
@@ -23,12 +24,21 @@ export async function addCatanFromBgg(collection: CollectionPage): Promise<void>
 	await expect(collection.card('Catan')).toBeVisible();
 }
 
-/** Adds Catan from BGG while the writer works, and waits until mock BGG has recorded the add. */
+/** Adds Catan from BGG while BGG accepts writes, and waits until mock BGG has recorded the add. */
 export async function seedCatanWithWriterCall(collection: CollectionPage, mockBgg: MockBgg): Promise<void> {
 	await addCatanFromBgg(collection);
 	await expect
-		.poll(async () => (await mockBgg.writerCalls()).map((call) => `${call.action}:${call.bggId}`))
+		.poll(async () => (await mockBgg.acceptedWrites()).map((write) => `${write.action}:${write.bggId}`))
 		.toEqual([`add:${catanBggId}`]);
+}
+
+/** Adds Azul from BGG while BGG accepts writes, and waits until mock BGG has recorded the add. */
+export async function seedAzulWithWriterCall(collection: CollectionPage, mockBgg: MockBgg): Promise<void> {
+	await collection.importFromBgg('azul', 'Azul');
+	await expect(collection.card('Azul')).toBeVisible();
+	await expect
+		.poll(async () => (await mockBgg.acceptedWrites()).map((write) => `${write.action}:${write.bggId}`))
+		.toEqual([`add:${azulBggId}`]);
 }
 
 /** Opens Catan's Expansions tab and adds Catan: Seafarers from the known BGG expansions. */
