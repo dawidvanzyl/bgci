@@ -50,7 +50,7 @@ change) or it doesn't (an `AUDIT:` note). Anything you can't settle from a sourc
 
 Read both plans, including plan-dev's `## Notes`, against the issue, the epic (if
 any), the mockup any **Design reference:** names, `answers_file`, and the standards docs
-(`docs/coding-standards.md`, the backend, frontend, bgg-writer and e2e variants for the
+(`docs/coding-standards.md`, the backend, frontend and e2e variants for the
 story's scope, and `docs/design-standards.md` where the story changes the UI).
 
 An owner answer is authoritative: a requirement answer settles what is required, an

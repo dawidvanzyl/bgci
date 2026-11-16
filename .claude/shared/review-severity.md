@@ -35,7 +35,6 @@ Rules:
 - Backend (`src/` touched): `docs/coding-standards-backend.md` and `src/.editorconfig`.
 - Frontend (`frontend/` touched): `docs/coding-standards-frontend.md` and
   `frontend/.editorconfig`.
-- bgg-writer (`node/bgg-writer/` touched): `docs/coding-standards-bgg-writer.md`.
 - E2E (`e2e/` touched): `docs/coding-standards-e2e.md`.
 - Frontend diff that adds or changes a button, form, modal, label or confirmation text:
   also `docs/design-standards.md`. Apply its Section 8 checklist. A "no" on any item is a

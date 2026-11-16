@@ -190,7 +190,7 @@ nothing.
 - Update `README.md` if behaviour, setup or usage changed.
 - Run and fix until clean **the full set in `.claude/shared/automated-checks.md`** for
   the scopes you touched — backend build, format and tests, and frontend lint,
-  format:check, build and test, and the bgg-writer and e2e static checks. Read the
+  format:check, build and test, and the e2e static checks. Read the
   commands from that file, not from memory; it matches `ci-pr.yml`, so a local pass means
   what a CI pass means. Backend tests run on the **whole solution** (`src/bgci.slnx`),
   never a single project — cross-cutting tests live in other projects. This is the one place the

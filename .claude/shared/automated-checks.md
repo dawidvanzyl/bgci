@@ -9,7 +9,6 @@ here. Never inline a copy, or callers drift.
 Run every check for the scopes in the diff:
 - anything under `src/` is **backend**
 - anything under `frontend/` is **frontend**
-- anything under `node/bgg-writer/` is **bgg-writer**
 - anything under `e2e/` is **e2e**
 
 Record pass or fail for each check. Do not install dependencies or tooling. If a command is
@@ -48,14 +47,6 @@ npm run test
 
 There is no `typecheck` script. The frontend is plain JavaScript.
 
-## bgg-writer
-
-Run these in `node/bgg-writer/`:
-
-```bash
-npm run lint
-```
-
 ## E2E (static checks)
 
 Run these in `e2e/`. They do not need the QA stack:
@@ -72,10 +63,10 @@ The specs themselves run against the QA stack. Run only the story's IT codes loc
 ## Comment labels
 
 Run on the diff's added lines only, case-sensitive, over `src`, `frontend/src`,
-`frontend/tests`, `node/bgg-writer/src` and `e2e`:
+`frontend/tests` and `e2e`:
 
 ```bash
-git diff origin/{base_branch}... -- src frontend/src frontend/tests node/bgg-writer/src e2e
+git diff origin/{base_branch}... -- src frontend/src frontend/tests e2e
 ```
 
 Pattern: `plan|ruling|this story|later story|\bAC\d+\b|\bR\d+\b|\bD\d+\b|\d+UC\d+|#\d{3}|review-\d`
@@ -96,7 +87,6 @@ List the results under **Automated checks:**. Omit lines for checks that did not
 - frontend npm run format:check: {passed/failed}
 - frontend npm run build: {passed/failed}
 - frontend npm run test: {passed/failed}
-- bgg-writer npm run lint: {passed/failed}
 - e2e npm run lint: {passed/failed}
 - e2e npm run format:check: {passed/failed}
 - e2e npm run typecheck: {passed/failed}

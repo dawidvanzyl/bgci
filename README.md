@@ -31,8 +31,8 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 │  Domain / Application /     │   │  Domain / Application /      │
 │  Infrastructure             │   │  Infrastructure              │
 │                             │   │                              │
-│  Owns the collection of     │   │  Owns communication with     │
-│  games and all mutations    │   │  the BGG XML API2            │
+│  Owns the collection of     │   │  Owns communication with BGG │
+│  games and all mutations    │   │  (XML API2 reads, web writes)│
 └─────────────────────────────┘   └──────────────────────────────┘
                     ▲                            │
                     │     Anti-Corruption Layer  │
@@ -144,6 +144,17 @@ Version 2.0.0 stores the collection in PostgreSQL instead of SQLite. This is a b
 - Games from BoardGameGeek return through sync.
 - Games you added manually are not carried over.
 - The old `bgci-data` volume is no longer used. Remove it with `docker volume rm bgci-data`.
+
+**Upgrading to 2.1.1**
+
+Version 2.1.1 removes the `bgg-writer` container. The API now writes to BGG itself.
+
+1. Keep or set `BGG_PASSWORD` in `.env`. The API now reads it.
+2. Replace `docker-compose.yml` with the file from the new release.
+3. Run `docker compose pull`. Every image in the compose file uses a `:latest` tag, and `docker compose up -d` does not fetch a newer `:latest` when a local copy exists. Without the pull, the old API image stays and still sends writes to the removed writer, so every BGG write fails.
+4. Run `docker compose up -d --remove-orphans`. This removes the old `bgg-writer` container.
+5. No data is lost. The `bgci-pgdata` volume is not changed.
+6. Optional: run `docker image rm ghcr.io/dawidvanzyl/bgci-writer` to free disk space.
 
 ---
 
