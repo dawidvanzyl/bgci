@@ -2,7 +2,7 @@ namespace BggIntegration.Infrastructure.Tests.Http;
 
 public sealed class SecretRedactor
 {
-	private const string Mask = "***";
+	private const string _mask = "***";
 
 	private readonly string[] _secrets;
 
@@ -20,7 +20,7 @@ public sealed class SecretRedactor
 	{
 		foreach (var secret in _secrets)
 		{
-			text = text.Replace(secret, Mask, StringComparison.Ordinal);
+			text = text.Replace(secret, _mask, StringComparison.Ordinal);
 		}
 
 		return text;

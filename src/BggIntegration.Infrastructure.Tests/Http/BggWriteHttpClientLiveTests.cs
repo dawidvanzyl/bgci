@@ -8,10 +8,10 @@ namespace BggIntegration.Infrastructure.Tests.Http;
 
 public sealed class BggWriteHttpClientLiveTests
 {
-	private const string OptInVariable = "BGG_LIVE_TEST";
-	private const int LiveBggId = 3179;
-	private const int PollListings = 6;
-	private const int ConfirmingListings = 3;
+	private const string _optInVariable = "BGG_LIVE_TEST";
+	private const int _liveBggId = 3179;
+	private const int _pollListings = 6;
+	private const int _confirmingListings = 3;
 
 	private static readonly Uri _bggAddress = new("https://boardgamegeek.com/");
 	private static readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(5);
@@ -22,7 +22,7 @@ public sealed class BggWriteHttpClientLiveTests
 	[Trait("Category", "LiveBgg")]
 	public async Task AddAndRemove_TestAccount_LeavesCollectionUnchanged()
 	{
-		Assert.SkipUnless(IsOptedIn(), $"Set {OptInVariable}=true to run the live BGG write test.");
+		Assert.SkipUnless(IsOptedIn(), $"Set {_optInVariable}=true to run the live BGG write test.");
 
 		var settings = LiveBggSettings.FromEnvironment();
 		var redactor = new SecretRedactor(settings.Password, settings.BearerToken);
@@ -55,7 +55,7 @@ public sealed class BggWriteHttpClientLiveTests
 		try
 		{
 			Log("step: cleanup (before)");
-			var leftover = await reader.ListCollectionItemIdsAsync(LiveBggId, runToken);
+			var leftover = await reader.ListCollectionItemIdsAsync(_liveBggId, runToken);
 			if (leftover.Count > 0)
 			{
 				await RemoveAllAsync(client, leftover, runToken);
@@ -70,7 +70,7 @@ public sealed class BggWriteHttpClientLiveTests
 				phase = LiveFailureClassifier.AddStep;
 				Log("step: add");
 				addSent = true;
-				var collId = await client.AddToCollectionAsync(LiveBggId, entry.Name, runToken);
+				var collId = await client.AddToCollectionAsync(_liveBggId, entry.Name, runToken);
 
 				phase = LiveFailureClassifier.RemoveStep;
 				Log($"step: remove (collection item id {collId.ToString(CultureInfo.InvariantCulture)})");
@@ -119,7 +119,7 @@ public sealed class BggWriteHttpClientLiveTests
 	}
 
 	private static bool IsOptedIn() =>
-		string.Equals(Environment.GetEnvironmentVariable(OptInVariable), "true", StringComparison.OrdinalIgnoreCase);
+		string.Equals(Environment.GetEnvironmentVariable(_optInVariable), "true", StringComparison.OrdinalIgnoreCase);
 
 	private static LiveGameEntry CheckGuards(LiveBggSettings settings, SecretRedactor redactor)
 	{
@@ -140,10 +140,10 @@ public sealed class BggWriteHttpClientLiveTests
 			Assert.Fail(redactor.Redact($"The live BGG write test refuses to run: the BGG username '{settings.Username}' is not in {LiveTestAllowlist.FileName}."));
 		}
 
-		var entry = LiveGameDataSet.Load(AppContext.BaseDirectory)?.Find(LiveBggId);
+		var entry = LiveGameDataSet.Load(AppContext.BaseDirectory)?.Find(_liveBggId);
 		if (entry is null || !entry.LiveWritable)
 		{
-			Assert.Fail($"The live BGG write test refuses to run: {LiveGameDataSet.FileName} has no liveWritable entry with id {LiveBggId}.");
+			Assert.Fail($"The live BGG write test refuses to run: {LiveGameDataSet.FileName} has no liveWritable entry with id {_liveBggId}.");
 		}
 
 		return entry;
@@ -164,14 +164,14 @@ public sealed class BggWriteHttpClientLiveTests
 
 	private static async Task<bool> WaitUntilGoneAsync(LiveBggCollectionReader reader, CancellationToken cancellationToken)
 	{
-		for (var listing = 1; listing <= PollListings; listing++)
+		for (var listing = 1; listing <= _pollListings; listing++)
 		{
 			if (listing > 1)
 			{
 				await Task.Delay(_pollInterval, cancellationToken);
 			}
 
-			if ((await reader.ListCollectionItemIdsAsync(LiveBggId, cancellationToken)).Count == 0)
+			if ((await reader.ListCollectionItemIdsAsync(_liveBggId, cancellationToken)).Count == 0)
 			{
 				return true;
 			}
@@ -185,7 +185,7 @@ public sealed class BggWriteHttpClientLiveTests
 		BggWriteHttpClient client,
 		CancellationToken cancellationToken)
 	{
-		await RemoveAllAsync(client, await reader.ListCollectionItemIdsAsync(LiveBggId, cancellationToken), cancellationToken);
+		await RemoveAllAsync(client, await reader.ListCollectionItemIdsAsync(_liveBggId, cancellationToken), cancellationToken);
 		return null;
 	}
 
@@ -196,14 +196,14 @@ public sealed class BggWriteHttpClientLiveTests
 		CancellationToken cancellationToken)
 	{
 		IReadOnlyList<long> last = [];
-		for (var listing = 1; listing <= PollListings; listing++)
+		for (var listing = 1; listing <= _pollListings; listing++)
 		{
 			if (listing > 1)
 			{
 				await Task.Delay(_pollInterval, cancellationToken);
 			}
 
-			last = await reader.ListCollectionItemIdsAsync(LiveBggId, cancellationToken);
+			last = await reader.ListCollectionItemIdsAsync(_liveBggId, cancellationToken);
 			await RemoveAllAsync(client, last, cancellationToken);
 		}
 
@@ -212,10 +212,10 @@ public sealed class BggWriteHttpClientLiveTests
 			return null;
 		}
 
-		for (var confirming = 1; confirming <= ConfirmingListings; confirming++)
+		for (var confirming = 1; confirming <= _confirmingListings; confirming++)
 		{
 			await Task.Delay(_pollInterval, cancellationToken);
-			var listed = await reader.ListCollectionItemIdsAsync(LiveBggId, cancellationToken);
+			var listed = await reader.ListCollectionItemIdsAsync(_liveBggId, cancellationToken);
 			if (listed.Count == 0)
 			{
 				return null;

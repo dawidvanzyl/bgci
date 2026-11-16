@@ -14,55 +14,27 @@ public static partial class LiveFailureClassifier
 	[GeneratedRegex(@"with status 5\d\d")]
 	private static partial Regex ServerErrorPattern();
 
-	public static LiveFailure Classify(Exception exception, string phase, CancellationToken governingToken)
+	public static LiveFailure Classify(Exception exception, string phase, CancellationToken governingToken) => exception switch
 	{
-		if (exception is OperationCanceledException)
-		{
-			return governingToken.IsCancellationRequested
-				? new LiveFailure(phase, LiveFailureKind.TimeLimit, "The time limit ran out.")
-				: new LiveFailure(phase, LiveFailureKind.Outage, "No answer from BGG.");
-		}
+		OperationCanceledException when governingToken.IsCancellationRequested =>
+			new LiveFailure(phase, LiveFailureKind.TimeLimit, "The time limit ran out."),
+		OperationCanceledException => new LiveFailure(phase, LiveFailureKind.Outage, "No answer from BGG."),
+		LiveReadException read => new LiveFailure(phase, read.Kind, read.Message),
+		BggWriteException write => new LiveFailure(StepFor(write, phase), KindOf(write), write.Message),
+		_ => new LiveFailure(phase, LiveFailureKind.ReadFailed, $"{exception.GetType().Name}: {exception.Message}"),
+	};
 
-		if (exception is LiveReadException read)
-		{
-			return new LiveFailure(phase, read.Kind, read.Message);
-		}
+	private static string StepFor(BggWriteException exception, string phase) =>
+		exception.Step == LoginStep || (phase == AddStep && exception.Step is AddStep or LookupStep)
+			? exception.Step
+			: phase;
 
-		if (exception is BggWriteException write)
-		{
-			return new LiveFailure(StepFor(write, phase), KindOf(write), write.Message);
-		}
-
-		return new LiveFailure(phase, LiveFailureKind.ReadFailed, $"{exception.GetType().Name}: {exception.Message}");
-	}
-
-	private static string StepFor(BggWriteException exception, string phase)
+	private static LiveFailureKind KindOf(BggWriteException exception) => exception switch
 	{
-		if (exception.Step == LoginStep)
-		{
-			return LoginStep;
-		}
-
-		return phase == AddStep && exception.Step is AddStep or LookupStep ? exception.Step : phase;
-	}
-
-	private static LiveFailureKind KindOf(BggWriteException exception)
-	{
-		if (exception.Message.Contains("Cloudflare challenge", StringComparison.Ordinal))
-		{
-			return LiveFailureKind.Challenge;
-		}
-
-		if (exception.InnerException is HttpRequestException || ServerErrorPattern().IsMatch(exception.Message))
-		{
-			return LiveFailureKind.Outage;
-		}
-
-		return exception.Step switch
-		{
-			LoginStep => LiveFailureKind.LoginRejected,
-			LookupStep => LiveFailureKind.LookupFailed,
-			_ => LiveFailureKind.WriteRefused,
-		};
-	}
+		_ when exception.Message.Contains("Cloudflare challenge", StringComparison.Ordinal) => LiveFailureKind.Challenge,
+		_ when exception.InnerException is HttpRequestException || ServerErrorPattern().IsMatch(exception.Message) => LiveFailureKind.Outage,
+		{ Step: LoginStep } => LiveFailureKind.LoginRejected,
+		{ Step: LookupStep } => LiveFailureKind.LookupFailed,
+		_ => LiveFailureKind.WriteRefused,
+	};
 }

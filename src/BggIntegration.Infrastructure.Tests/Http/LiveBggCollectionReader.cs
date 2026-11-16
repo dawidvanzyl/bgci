@@ -9,7 +9,7 @@ namespace BggIntegration.Infrastructure.Tests.Http;
 
 public sealed partial class LiveBggCollectionReader
 {
-	private const int Attempts = 5;
+	private const int _attempts = 5;
 
 	private readonly HttpClient _http;
 	private readonly string _username;
@@ -33,7 +33,7 @@ public sealed partial class LiveBggCollectionReader
 			Uri.EscapeDataString(_username),
 			bggId);
 
-		for (var attempt = 1; attempt <= Attempts; attempt++)
+		for (var attempt = 1; attempt <= _attempts; attempt++)
 		{
 			if (attempt > 1)
 			{
@@ -57,15 +57,12 @@ public sealed partial class LiveBggCollectionReader
 				continue;
 			}
 
-			if (status != HttpStatusCode.OK)
-			{
-				throw new LiveReadException(LiveFailureKind.ReadFailed, $"BGG answered the collection read with status {(int)status}.");
-			}
-
-			return ParseCollectionItemIds(body, bggId);
+			return status != HttpStatusCode.OK
+				? throw new LiveReadException(LiveFailureKind.ReadFailed, $"BGG answered the collection read with status {(int)status}.")
+				: ParseCollectionItemIds(body, bggId);
 		}
 
-		throw new LiveReadException(LiveFailureKind.ReadFailed, $"BGG still answered 202 to the collection read after {Attempts} attempts.");
+		throw new LiveReadException(LiveFailureKind.ReadFailed, $"BGG still answered 202 to the collection read after {_attempts} attempts.");
 	}
 
 	private static List<long> ParseCollectionItemIds(string body, int bggId)
