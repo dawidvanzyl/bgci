@@ -67,24 +67,6 @@ jobs:
           tags: ${{ steps.meta-web.outputs.tags }}
           labels: ${{ steps.meta-web.outputs.labels }}
 
-      - name: Extract metadata for Writer image
-        id: meta-writer
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/dawidvanzyl/bgci-writer
-          tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest
-
-      - name: Build and push Writer image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.writer
-          push: true
-          tags: ${{ steps.meta-writer.outputs.tags }}
-          labels: ${{ steps.meta-writer.outputs.labels }}
-
       - name: Stage release files
         if: startsWith(github.ref, 'refs/tags/')
         run: |

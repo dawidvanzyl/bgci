@@ -102,8 +102,7 @@ approach that fights them is what the critique will flag.
 `docs/coding-standards-frontend.md` and `frontend/.editorconfig` for frontend scope,
 `docs/design-standards.md` when the story adds or changes a button, form, modal, label or
 confirmation text (name the sections the plan relies on),
-`docs/coding-standards-bgg-writer.md` for `node/bgg-writer/` scope, and
-`docs/coding-standards-e2e.md` for e2e scope. Plan an approach that already
+and `docs/coding-standards-e2e.md` for e2e scope. Plan an approach that already
 conforms — a plan that fights a documented standard becomes a review finding and a
 rework cycle, which is exactly what planning ahead of the build is meant to prevent.
 The recurring ones (e.g. per-row repository calls inside a loop) belong in the plan as

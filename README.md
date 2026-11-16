@@ -1,6 +1,6 @@
 # BoardGame Collection Insights
 
-A personal board game collection tracker. Search [BoardGameGeek](https://boardgamegeek.com) to populate game details automatically, or add games manually. Runs entirely on your local machine via Docker: the main API, a PostgreSQL database and a `bgg-writer` sidecar.
+A personal board game collection tracker. Search [BoardGameGeek](https://boardgamegeek.com) to populate game details automatically, or add games manually. Runs entirely on your local machine via Docker: the API, a PostgreSQL database and the web server.
 
 ---
 
@@ -31,8 +31,8 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 │  Domain / Application /     │   │  Domain / Application /      │
 │  Infrastructure             │   │  Infrastructure              │
 │                             │   │                              │
-│  Owns the collection of     │   │  Owns communication with     │
-│  games and all mutations    │   │  the BGG XML API2            │
+│  Owns the collection of     │   │  Owns communication with BGG │
+│  games and all mutations    │   │  (XML API2 reads, web writes)│
 └─────────────────────────────┘   └──────────────────────────────┘
                     ▲                            │
                     │     Anti-Corruption Layer  │
@@ -47,7 +47,6 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 |---|---|
 | Frontend | Vanilla JS ES modules, HTML, CSS — bundled by Vite |
 | API | ASP.NET Core Web API (.NET 10) |
-| BGG Write Layer | Node.js (plain HTTP) |
 | CQRS | MediatR |
 | Database | PostgreSQL via Dapper (stored functions) |
 | Web Server | nginx (reverse proxy + static files) |
@@ -65,7 +64,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
 ### To run without Docker (development)
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- [Node.js 20+](https://nodejs.org/) — required for both the Vite frontend dev server and `bgg-writer`
+- [Node.js 20+](https://nodejs.org/) — required for the Vite frontend dev server
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) — `dotnet test` needs it running, because the database tests start PostgreSQL through Testcontainers
 
 ---
@@ -98,7 +97,7 @@ DB_NAME=bgci                        # optional, database name
 DB_USER=bgci                        # optional, database user
 BGG_BEARER_TOKEN=your-token-here    # required for BGG search
 BGG_USERNAME=your-bgg-username      # required for collection sync
-BGG_PASSWORD=your-bgg-password      # required for collection write-back
+BGG_PASSWORD=your-bgg-password      # used by the API for collection write-back
 ```
 
 > `DB_PASSWORD` is required. The stack does not start without it. `DB_NAME` and `DB_USER` default to `bgci`.
@@ -106,8 +105,6 @@ BGG_PASSWORD=your-bgg-password      # required for collection write-back
 > `BGG_BEARER_TOKEN` requires a formal application at [boardgamegeek.com/applications](https://boardgamegeek.com/applications), which may take several weeks to be approved. **Without it, BGG search is disabled in the UI.**
 >
 > `BGG_USERNAME` and `BGG_PASSWORD` are optional — without them the app works as a standalone manual collection tracker with no BGG sync.
->
-> `BGG_WRITER_BASE_URL` is pre-configured in `docker-compose.yml` — no manual entry needed.
 
 **3. Start the application**
 
@@ -148,11 +145,22 @@ Version 2.0.0 stores the collection in PostgreSQL instead of SQLite. This is a b
 - Games you added manually are not carried over.
 - The old `bgci-data` volume is no longer used. Remove it with `docker volume rm bgci-data`.
 
+**Upgrading to 2.1.1**
+
+Version 2.1.1 removes the `bgg-writer` container. The API now writes to BGG itself.
+
+1. Keep or set `BGG_PASSWORD` in `.env`. The API now reads it.
+2. Replace `docker-compose.yml` with the file from the new release.
+3. Run `docker compose pull`. Every image in the compose file uses a `:latest` tag, and `docker compose up -d` does not fetch a newer `:latest` when a local copy exists. Without the pull, the old API image stays and still sends writes to the removed writer, so every BGG write fails.
+4. Run `docker compose up -d --remove-orphans`. This removes the old `bgg-writer` container.
+5. No data is lost. The `bgci-pgdata` volume is not changed.
+6. Optional: run `docker image rm ghcr.io/dawidvanzyl/bgci-writer` to free disk space.
+
 ---
 
 ### Running the QA stack (for developers)
 
-Requires Docker Desktop. The `qa` profile of the root `docker-compose.yml` builds the API and the web server from source and replaces BoardGameGeek and the `bgg-writer` sidecar with a mock server (`e2e/mock-bgg`). It also runs a PostgreSQL service that keeps its data in memory, so the database starts empty on every run. It is the stack the Playwright suite runs against; see `docs/coding-standards-e2e.md`.
+Requires Docker Desktop. The `qa` profile of the root `docker-compose.yml` builds the API and the web server from source and replaces BoardGameGeek with a mock server (`e2e/mock-bgg`). It also runs a PostgreSQL service that keeps its data in memory, so the database starts empty on every run. It is the stack the Playwright suite runs against; see `docs/coding-standards-e2e.md`.
 
 ```bash
 docker compose --env-file .env.qa --profile qa up --build -d
@@ -174,7 +182,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 
 ### Running the dev stack (for developers)
 
-The `dev` profile of the root `docker-compose.yml` builds the database, `bgg-writer`, the API and the web server from source and runs them against the real BoardGameGeek. Use a test BGG account.
+The `dev` profile of the root `docker-compose.yml` builds the database, the API and the web server from source and runs them against the real BoardGameGeek. Use a test BGG account.
 
 ```bash
 cp .env.dev.example .env.dev
@@ -201,6 +209,8 @@ dotnet run
 
 The API starts on `http://localhost:5074` by default. Start the dev database first (see "Running the dev stack"; start only `bgci-dev-db`). Point the API at it with `Database:Host=localhost`, `Database:Port=15202` (`DEV_DB_PORT`), `Database:Name=bgci`, `Database:User=bgci` and `Database:Password=bgci`, the values in `.env.dev.example`. Put them in the `Database` section of your local `src/Api/appsettings.Development.json`. That file is git-ignored, so each developer keeps their own copy.
 
+For BGG collection writes the API reads `Bgg:Username`, `Bgg:Password` and `Bgg:BearerToken`. Put them in the `Bgg` section of the same git-ignored `appsettings.Development.json`.
+
 ### Frontend
 
 The frontend is built with [Vite](https://vite.dev/). Run the Vite dev server alongside the API — it proxies all `/api` requests to the .NET backend automatically, so no additional configuration is needed.
@@ -214,26 +224,6 @@ npm run dev
 The app is available at `http://localhost:5173`.
 
 > **Note:** `public/config.js` is no longer used for local development. The Vite dev server's built-in proxy handles API routing. The `config.js` mechanism is still supported if needed — create `frontend/public/config.js` (gitignored) with `window.API_OVERRIDE = 'http://localhost:5074/api'`.
-
-### bgg-writer
-
-```bash
-cd node/bgg-writer
-cp .env.example .env
-# fill in BGG_PASSWORD and BGG_BEARER_TOKEN in .env
-npm install
-node src/index.js
-```
-
-The .NET API's `appsettings.Development.json` already points `BggWriter:BaseUrl` at `http://localhost:3001` — no additional configuration needed.
-
-To attach a Node.js debugger (VS Code or similar):
-
-```bash
-node --inspect src/index.js
-```
-
-Then attach via the VS Code "Node.js: Attach" launch configuration on `localhost:9229`.
 
 ---
 
@@ -249,7 +239,6 @@ Then attach via the VS Code "Node.js: Attach" launch configuration on `localhost
 | `Bgg:BearerToken` | BGG API bearer token. Without it, BGG search is disabled. Requires approval at [boardgamegeek.com/applications](https://boardgamegeek.com/applications). | *(empty)* |
 | `Bgg:Username` | BGG username for collection sync. | *(empty)* |
 | `Bgg:Password` | BGG password. The API logs in with it to add and remove games in your BGG collection. Without it, BGG search and collection writes are disabled. | *(empty)* |
-| `BggWriter:BaseUrl` | Internal URL of the `bgg-writer` sidecar. Pre-configured in `docker-compose.yml`. | *(empty)* |
 
 **`appsettings.json`** (production / Docker):
 ```json
@@ -311,16 +300,19 @@ BGG-sourced games display an **Info** button instead of Edit. Clicking it opens 
 
 When `BGG_USERNAME` is configured, a **↻ Sync BGG** button appears in the header. Clicking it triggers an immediate differential sync against your BGG collection (same logic as the automatic background sync). The background sync still runs on startup and every 6 hours regardless.
 
-### Collection Writes — bgg-writer
+### Collection Writes
 
-**Why it exists**
+BGG has no public API for writing to a collection. The BGG website writes through its own calls, and the API sends the same calls. The API holds the BGG password (`Bgg:Password`, or `BGG_PASSWORD` in Docker). The calls are recorded in [docs/bgg-website-calls-reference.md](docs/bgg-website-calls-reference.md).
 
-BGG has no public API for writing to a collection. The BGG website writes through its own calls, and the writer sends the same calls. The .NET API does not hold the BGG password, so the writer is a separate service that holds `BGG_PASSWORD`.
+How it works:
 
-**How it works**
-
-`bgg-writer` uses plain HTTP requests from Node.js. It does not use a browser. It signs in once with the BGG JSON login API (`/login/api/v1`) and keeps the session cookies. It adds a game with `POST /api/collectionitem` and removes one with `DELETE /api/collectionitem/{collId}`. After an add, it looks up the new `collId` with the BGG XML API, using `BGG_BEARER_TOKEN`. If BGG rejects a write with 401 or 403, the writer signs in again once and retries. If BGG answers with a Cloudflare challenge page, the writer fails with an error that names the step. One writer instance serves one account.
-
-**Architecture**
-
-`bgg-writer` runs as a separate Docker container alongside the main API. It is only reachable by `bgci-api` on the internal Docker network — no port is exposed externally. It holds `BGG_PASSWORD` directly; the main .NET API never sees it.
+- The API signs in with `POST /login/api/v1`, using `Bgg:Username` and `Bgg:Password`. It keeps the session cookies in memory, so a restart needs a new login.
+- It adds a game with `POST /api/collectionitem` and removes one with `DELETE /api/collectionitem/{collId}`.
+- An add needs `Bgg:BearerToken`. With a blank token, the add fails before any request to BGG.
+- After an add, the API finds the `collId` with the BGG XML API and the bearer token. It retries while BGG answers 202.
+- If BGG answers 401 or 403, the API signs in again once and repeats the write.
+- If BGG answers with a Cloudflare challenge page, the write fails and the error names the step.
+- One write has a limit of 60 seconds.
+- If a write fails, the local change stays and the app shows the BGG write warning.
+- With no username or password, the write is skipped.
+- One API instance serves one account.
