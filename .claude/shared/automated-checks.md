@@ -26,7 +26,7 @@ These are the same commands `ci-pr.yml` runs, so a local pass means what a CI pa
 ```bash
 dotnet build src/bgci.slnx
 dotnet format src/bgci.slnx --verify-no-changes --severity error
-dotnet test src/bgci.slnx
+dotnet test src/bgci.slnx --filter "Category!=LiveBgg"
 ```
 
 - The format check uses `--severity error` because the existing code has naming warnings
