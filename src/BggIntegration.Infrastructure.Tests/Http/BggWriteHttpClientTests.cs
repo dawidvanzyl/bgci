@@ -284,6 +284,20 @@ public sealed class BggWriteHttpClientTests
 		}
 	}
 
+	[Fact]
+	[Trait("AC", "100UC12")]
+	public async Task Failure_SecretCrossesTheSummaryCut_MessageHoldsNoPartOfIt()
+	{
+		var padding = new string('x', 195);
+		_handler.Script("add", Answer(HttpStatusCode.InternalServerError, padding + _password));
+
+		var exception = await Should.ThrowAsync<BggWriteException>(
+			() => CreateClient().AddToCollectionAsync(13, "Wingspan", Token));
+
+		exception.Message.ShouldNotContain(_password[..3]);
+		exception.Message.ShouldContain("***");
+	}
+
 	private static void AssertHoldsNoSecret(string text, string[] secrets)
 	{
 		foreach (var secret in secrets)

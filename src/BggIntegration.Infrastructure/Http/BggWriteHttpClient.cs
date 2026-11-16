@@ -315,7 +315,7 @@ public sealed partial class BggWriteHttpClient : IBggWriteClient
 		}
 	}
 
-	private string Describe(string body, string? cookie) => Redact(Summarise(body), cookie);
+	private string Describe(string body, string? cookie) => Redact(Summarise(Redact(body, cookie)), cookie);
 
 	private static string Summarise(string body)
 	{
