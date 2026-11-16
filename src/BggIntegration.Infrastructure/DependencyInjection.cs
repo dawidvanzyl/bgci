@@ -6,6 +6,7 @@ using BggIntegration.Infrastructure.Http;
 using GameCollection.Application.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Net.Http.Headers;
 
 namespace BggIntegration.Infrastructure;
@@ -17,7 +18,6 @@ public static class DependencyInjection
 		IConfiguration configuration)
 	{
 		services.Configure<BggSettings>(configuration.GetSection("Bgg"));
-		services.Configure<BggWriterSettings>(configuration.GetSection("BggWriter"));
 
 		var bearerToken = configuration["Bgg:BearerToken"];
 		var bggBaseAddress = ResolveBggBaseAddress(configuration["Bgg:BaseUrl"]);
@@ -35,17 +35,19 @@ public static class DependencyInjection
 		})
 		.AddStandardResilienceHandler();
 
-		var bggWriterBaseUrl = configuration["BggWriter:BaseUrl"];
-
-		services.AddHttpClient<IBggWriterClient, BggWriterHttpClient>(client =>
+		services.AddHttpClient<IBggWriteClient, BggWriteHttpClient>(client =>
 		{
-			client.Timeout = TimeSpan.FromSeconds(60);
-
-			if (!string.IsNullOrWhiteSpace(bggWriterBaseUrl))
-			{
-				client.BaseAddress = new Uri(bggWriterBaseUrl.TrimEnd('/'));
-			}
+			client.BaseAddress = bggBaseAddress;
+			client.Timeout = TimeSpan.FromSeconds(30);
+		})
+		.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+		{
+			UseCookies = false,
+			AllowAutoRedirect = false,
 		});
+
+		services.AddSingleton<BggSession>();
+		services.TryAddSingleton(TimeProvider.System);
 
 		// Dedicated lightweight named HttpClient for availability probing — no Polly retry pipeline
 		// so failures are detected immediately rather than after multiple backoff attempts.
