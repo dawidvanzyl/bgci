@@ -316,3 +316,56 @@ How it works:
 - If a write fails, the local change stays and the app shows the BGG write warning.
 - With no username or password, the write is skipped.
 - One API instance serves one account.
+
+### Live BGG write test
+
+A mock of BGG serves every normal test. The live test is the one check against the real BGG. It builds the write client and runs one full cycle with a test account: log in, add Action Test (BGG id 3179), find the collection item id, remove the game, and confirm that the collection no longer lists it. It needs no API process, database or frontend.
+
+The normal test run and CI do not run it. It carries the trait `Category=LiveBgg`, CI excludes that trait, and the test skips itself unless `BGG_LIVE_TEST` is `true`. A plain `dotnet test` therefore never calls BGG.
+
+Run it by hand with the test account. Set four environment variables, then run the filter.
+
+```bash
+export BGG_LIVE_TEST=true
+export BGG_LIVE_USERNAME=<test account username>
+export BGG_LIVE_PASSWORD=<test account password>
+export BGG_LIVE_BEARER_TOKEN=<bearer token>
+dotnet test src/BggIntegration.Infrastructure.Tests --filter "Category=LiveBgg"
+```
+
+```powershell
+$env:BGG_LIVE_TEST = "true"
+$env:BGG_LIVE_USERNAME = "<test account username>"
+$env:BGG_LIVE_PASSWORD = "<test account password>"
+$env:BGG_LIVE_BEARER_TOKEN = "<bearer token>"
+dotnet test src/BggIntegration.Infrastructure.Tests --filter "Category=LiveBgg"
+```
+
+Safety rules:
+
+- The test refuses to run, before any BGG call, when the username is not in `test-data/bgg-live-test-accounts.json`. That file must hold only the test account and never your own account.
+- A missing username, password or bearer token is a failure with a message that names the variable.
+- The test writes only games that `test-data/bgg-games.json` marks `liveWritable`.
+- The test account must not own Action Test outside the test, because the cleanup removes it. The test removes a leftover before the add and removes the game again after the run, passed or failed.
+- A manual run must not overlap the nightly run, because both use the same account.
+
+The nightly run:
+
+- The workflow `.github/workflows/bgg-live.yml` runs every night at 03:23 UTC on `master`. It also starts by hand on `master` or a `milestone/*` branch. It never starts from a pull request.
+- It runs in the `bgg-test` environment, which is limited to `master` and `milestone/*`. That environment holds the secrets `BGG_USERNAME`, `BGG_PASSWORD` and `BGG_BEARER_TOKEN`.
+- One run at a time uses the test account. A second run waits.
+- A failed test fails the run, and GitHub notifies the owner.
+- GitHub runs a schedule on the default branch only. It turns the schedule off after 60 days with no repository activity.
+
+How to read a failure: the message reads `BGG live write failed at step '{step}': {kind}`. The step is `login`, `add`, `collection item id lookup`, `remove` or `cleanup`. The kind is one of these.
+
+| Kind | Meaning |
+|---|---|
+| `Challenge` | BGG answered with a Cloudflare page. A GitHub runner has a datacenter IP. This does not mean that a write broke. |
+| `Outage` | BGG answered 5xx or did not answer. |
+| `LoginRejected` | BGG refused the login. |
+| `WriteRefused` | BGG refused the add or the remove. |
+| `LookupFailed` | BGG listed no collection item id after the add. |
+| `ReadFailed` | The collection read gave an unusable answer, for example 401 for a bad bearer token. |
+| `StillListed` | The collection still lists the game after the remove or the cleanup. |
+| `TimeLimit` | The run or the cleanup ran out of time. |

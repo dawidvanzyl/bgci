@@ -76,6 +76,28 @@
 			"liveWritable": true
 		},
 		{
+			"id": 3179,
+			"name": "Action Test",
+			"year": 2001,
+			"description": "A small game that the live BGG write test adds and removes.",
+			"minPlayers": 2,
+			"maxPlayers": 4,
+			"playTime": 30,
+			"minPlayTime": 20,
+			"maxPlayTime": 30,
+			"minAge": 8,
+			"rating": 6.0,
+			"weight": 1.5,
+			"categories": [],
+			"mechanics": [],
+			"designers": [],
+			"artists": [],
+			"publishers": [],
+			"subdomains": [],
+			"expansions": [],
+			"liveWritable": true
+		},
+		{
 			"id": 325,
 			"name": "Catan: Seafarers",
 			"year": 1997,

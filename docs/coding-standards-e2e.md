@@ -12,7 +12,8 @@ Conventions for the Playwright suite in `e2e/`.
 
 ```text
 test-data/
-└── bgg-games.json         # The standard game data set, shared with the live suite
+├── bgg-games.json         # The standard game data set, shared with the live suite
+└── bgg-live-test-accounts.json  # Usernames the live BGG write test may use
 e2e/
 ├── mock-bgg/              # Mock of BGG: the XML API, the login and the collection write calls
 ├── playwright.config.ts
