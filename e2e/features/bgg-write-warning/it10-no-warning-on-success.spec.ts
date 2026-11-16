@@ -16,16 +16,16 @@ test.describe('BGG write warning — no warning when BGG writes succeed', { tag:
 		await addCatanFromBgg(collection);
 
 		await expect
-			.poll(async () => (await mockBgg.writerCalls()).map((call) => `${call.action}:${call.bggId}`))
+			.poll(async () => (await mockBgg.acceptedWrites()).map((call) => `${call.action}:${call.bggId}`))
 			.toEqual([`add:${catanBggId}`]);
 		await expectPageWarningHidden(collection);
-		const [added] = await mockBgg.writerCalls();
+		const [added] = await mockBgg.acceptedWrites();
 
 		await collection.remove('Catan');
 		await expect(collection.card('Catan')).toHaveCount(0);
 
 		await expect
-			.poll(async () => (await mockBgg.writerCalls()).map((call) => `${call.action}:${call.collId}`))
+			.poll(async () => (await mockBgg.acceptedWrites()).map((call) => `${call.action}:${call.collId}`))
 			.toEqual([`add:${added.collId}`, `remove:${added.collId}`]);
 		await expectPageWarningHidden(collection);
 	});
@@ -46,9 +46,9 @@ test.describe('BGG write warning — no warning when BGG writes succeed', { tag:
 		await expect(collection.expansionWarning.root).toHaveCount(0);
 		await expectPageWarningHidden(collection);
 		await expect
-			.poll(async () => (await mockBgg.writerCalls()).map((call) => call.action))
+			.poll(async () => (await mockBgg.acceptedWrites()).map((call) => call.action))
 			.toEqual(['add', 'add', 'remove']);
-		const calls = await mockBgg.writerCalls();
+		const calls = await mockBgg.acceptedWrites();
 		expect(calls[1].bggId).toBe(seafarersBggId);
 	});
 });

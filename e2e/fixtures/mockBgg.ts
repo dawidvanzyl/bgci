@@ -1,8 +1,16 @@
-export interface WriterCall {
+/** A write that mock BGG accepted. The username comes from the login of the session. */
+export interface BggWrite {
 	action: 'add' | 'remove';
 	username: string;
 	bggId?: number;
 	collId: number;
+}
+
+export interface BggReport {
+	writes: BggWrite[];
+	acceptedLogins: number;
+	rejectedLogins: number;
+	rejectedWrites: number;
 }
 
 export interface MockCollectionItem {
@@ -70,18 +78,31 @@ export class MockBgg {
 		await this.post('/__control/availability', { available });
 	}
 
-	/** While failing, the writer's add and remove calls answer 500 and are not recorded. `reset()` clears it. */
-	async setWriterFailing(failing: boolean): Promise<void> {
-		await this.post('/__control/writer', { failing });
+	/**
+	 * While rejected, every login gets a 400 and every add and remove gets a 401, whatever session it carries.
+	 * `reset()` turns it off.
+	 */
+	async setLoginsRejected(rejected: boolean): Promise<void> {
+		await this.post('/__control/reject-logins', { rejected });
+	}
+
+	/** Expires every session issued so far. The next add or remove with one gets a 401. A new login works. */
+	async expireSessions(): Promise<void> {
+		await this.post('/__control/expire-sessions', {});
 	}
 
 	async setCollection(items: MockCollectionItem[]): Promise<void> {
 		await this.post('/__control/collection', { items });
 	}
 
-	async writerCalls(): Promise<WriterCall[]> {
+	async report(): Promise<BggReport> {
 		const response = await fetch(`${this.baseUrl}/__control/calls`);
-		return ((await response.json()) as { writer: WriterCall[] }).writer;
+		return (await response.json()) as BggReport;
+	}
+
+	/** The adds and removes that mock BGG accepted, in order. */
+	async acceptedWrites(): Promise<BggWrite[]> {
+		return (await this.report()).writes;
 	}
 
 	/** Calls the BGG thing endpoint and returns every item in the response. */

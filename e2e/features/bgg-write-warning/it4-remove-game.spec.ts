@@ -7,7 +7,7 @@ test.describe('BGG write warning — failed remove of a game', { tag: ['@72IT4']
 		const collection = new CollectionPage(page);
 		await collection.goto();
 		await seedCatanWithWriterCall(collection, mockBgg);
-		await mockBgg.setWriterFailing(true);
+		await mockBgg.setLoginsRejected(true);
 
 		await collection.remove('Catan');
 
@@ -24,7 +24,7 @@ test.describe('BGG write warning — failed remove of a game', { tag: ['@72IT4']
 		const collection = new CollectionPage(page);
 		await collection.goto();
 		await seedCatanWithWriterCall(collection, mockBgg);
-		await mockBgg.setWriterFailing(true);
+		await mockBgg.setLoginsRejected(true);
 		await collection.remove('Catan');
 		await expect(collection.card('Catan')).toHaveCount(0);
 
@@ -32,7 +32,7 @@ test.describe('BGG write warning — failed remove of a game', { tag: ['@72IT4']
 
 		await expect(collection.card('Catan')).toHaveCount(0);
 		await expect(collection.emptyState).toBeVisible();
-		const removeCalls = (await mockBgg.writerCalls()).filter((call) => call.action === 'remove');
+		const removeCalls = (await mockBgg.acceptedWrites()).filter((call) => call.action === 'remove');
 		expect(removeCalls).toEqual([]);
 	});
 });

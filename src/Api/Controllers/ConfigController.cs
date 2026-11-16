@@ -1,6 +1,5 @@
 using BggIntegration.Application.Services;
 using BggIntegration.Domain.Models;
-using BggIntegration.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -11,26 +10,21 @@ namespace Api.Controllers;
 public class ConfigController : ControllerBase
 {
 	private readonly BggSettings _bggSettings;
-	private readonly BggWriterSettings _bggWriterSettings;
 	private readonly IBggAvailabilityService _bggAvailability;
 
 	public ConfigController(
 		IOptions<BggSettings> bggSettings,
-		IOptions<BggWriterSettings> bggWriterSettings,
 		IBggAvailabilityService bggAvailability)
 	{
 		_bggSettings = bggSettings.Value;
-		_bggWriterSettings = bggWriterSettings.Value;
 		_bggAvailability = bggAvailability;
 	}
 
 	[HttpGet]
 	public IActionResult Get()
 	{
-		// Search requires the writer sidecar because search results are only surfaced to be added.
-		// Without the writer, add would be unavailable, making search a dead-end.
-		// A bearer token alone is not sufficient.
-		var bggConfigured = !string.IsNullOrWhiteSpace(_bggSettings.BearerToken) && !string.IsNullOrWhiteSpace(_bggWriterSettings.BaseUrl);
+		// Search results exist only to be added, and an add needs the password.
+		var bggConfigured = !string.IsNullOrWhiteSpace(_bggSettings.BearerToken) && !string.IsNullOrWhiteSpace(_bggSettings.Password);
 		var bggReachable = _bggAvailability.IsAvailable;
 
 		var raw = Environment.GetEnvironmentVariable("APP_VERSION")?.Trim();

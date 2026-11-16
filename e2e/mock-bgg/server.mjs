@@ -1,6 +1,7 @@
-// Mock of the BGG XML API 2 and the bgg-writer sidecar, for the QA stack.
+// Mock of BoardGameGeek for the QA stack: the XML API 2, the login and the collection write calls.
 // It has no dependencies. Tests steer it through the /__control endpoints.
 import { readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { collectionXml, emptyItemsXml, searchXml, thingXml } from './xml.mjs';
 
@@ -28,12 +29,19 @@ const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL ?? `http://localhost:${PORT}
 const initialState = () => ({
 	available: true,
 	collection: [],
-	writerCalls: [],
-	writerFailing: false,
+	addedItems: [],
+	writes: [],
+	acceptedLogins: 0,
+	rejectedLogins: 0,
+	rejectedWrites: 0,
+	loginsRejected: false,
 	nextCollId: 1000,
 });
 
 let state = initialState();
+
+// Sessions outlive reset(), as they would on BGG. Only the expire control ends them.
+const sessions = new Map();
 
 const placeholderSvg = (label) =>
 	`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#22263a"/>` +
@@ -73,6 +81,10 @@ const handleXmlApi = (url, res) => {
 	}
 
 	if (endpoint === 'collection') {
+		const bggId = url.searchParams.get('id');
+		if (bggId !== null) {
+			return send(res, 200, collectionXml(state.addedItems.filter((i) => String(i.bggId) === bggId)), xml);
+		}
 		const wantsExpansions = url.searchParams.get('subtype') === 'boardgameexpansion';
 		const items = state.collection.filter((i) => Boolean(i.expansion) === wantsExpansions);
 		return send(res, 200, collectionXml(items), xml);
@@ -81,27 +93,68 @@ const handleXmlApi = (url, res) => {
 	return send(res, 404, { error: `Unknown BGG endpoint: ${endpoint}` });
 };
 
-const handleWriter = async (req, url, res) => {
-	const body = await readJson(req);
-
-	if (state.writerFailing) {
-		return send(res, 500, { error: 'bgg-writer is failing' });
-	}
-
-	if (url.pathname === '/collection/add') {
-		if (!body.username || !body.bggId) {
-			return send(res, 400, { error: 'username and bggId are required' });
+const cookieValue = (req, name) => {
+	for (const pair of (req.headers.cookie ?? '').split(';')) {
+		const [key, ...rest] = pair.trim().split('=');
+		if (key === name) {
+			return rest.join('=');
 		}
-		const collId = state.nextCollId++;
-		state.writerCalls.push({ action: 'add', username: body.username, bggId: body.bggId, collId });
-		return send(res, 200, { collId });
 	}
+	return undefined;
+};
 
-	if (!body.username || !body.collId) {
-		return send(res, 400, { error: 'username and collId are required' });
+/** The session of the request when mock BGG issued it, it is still valid and logins are accepted. */
+const validSession = (req) => {
+	const session = sessions.get(cookieValue(req, 'SessionID'));
+	return !state.loginsRejected && session && session.valid ? session : undefined;
+};
+
+const handleLogin = async (req, res) => {
+	const { credentials } = await readJson(req);
+	if (state.loginsRejected || !credentials?.username || !credentials?.password) {
+		state.rejectedLogins++;
+		return send(res, 400, { error: 'Login rejected' });
 	}
-	state.writerCalls.push({ action: 'remove', username: body.username, collId: body.collId });
-	return send(res, 200, {});
+	const sessionId = randomUUID();
+	sessions.set(sessionId, { username: credentials.username, valid: true });
+	state.acceptedLogins++;
+	res.writeHead(204, {
+		'Set-Cookie': [
+			`bggusername=${credentials.username}; Path=/`,
+			'bggpassword=mock-password-cookie; Path=/',
+			`SessionID=${sessionId}; Path=/`,
+		],
+	});
+	return res.end();
+};
+
+const handleAdd = async (req, res) => {
+	const body = await readJson(req);
+	const session = validSession(req);
+	if (!session) {
+		state.rejectedWrites++;
+		return send(res, 401, { error: 'Not logged in' });
+	}
+	const bggId = Number(body.item?.objectid);
+	if (!bggId) {
+		return send(res, 400, { error: 'objectid is required' });
+	}
+	const collId = state.nextCollId++;
+	state.addedItems.push({ bggId, collId, name: body.item.objectname ?? '' });
+	state.writes.push({ action: 'add', username: session.username, bggId, collId });
+	return send(res, 200, { message: 'Item saved' });
+};
+
+const handleRemove = (req, url, res) => {
+	const session = validSession(req);
+	if (!session) {
+		state.rejectedWrites++;
+		return send(res, 401, { error: 'Not logged in' });
+	}
+	const collId = Number(url.pathname.replace('/api/collectionitem/', ''));
+	state.addedItems = state.addedItems.filter((i) => i.collId !== collId);
+	state.writes.push({ action: 'remove', username: session.username, collId });
+	return send(res, 200, { message: 'Item removed from collection' });
 };
 
 const handleControl = async (req, url, res) => {
@@ -115,8 +168,15 @@ const handleControl = async (req, url, res) => {
 		return send(res, 200, {});
 	}
 
-	if (url.pathname === '/__control/writer') {
-		state.writerFailing = Boolean((await readJson(req)).failing);
+	if (url.pathname === '/__control/reject-logins') {
+		state.loginsRejected = Boolean((await readJson(req)).rejected);
+		return send(res, 200, {});
+	}
+
+	if (url.pathname === '/__control/expire-sessions') {
+		for (const session of sessions.values()) {
+			session.valid = false;
+		}
 		return send(res, 200, {});
 	}
 
@@ -126,7 +186,12 @@ const handleControl = async (req, url, res) => {
 	}
 
 	if (url.pathname === '/__control/calls') {
-		return send(res, 200, { writer: state.writerCalls });
+		return send(res, 200, {
+			writes: state.writes,
+			acceptedLogins: state.acceptedLogins,
+			rejectedLogins: state.rejectedLogins,
+			rejectedWrites: state.rejectedWrites,
+		});
 	}
 
 	return send(res, 404, { error: 'Unknown control endpoint' });
@@ -149,8 +214,16 @@ createServer(async (req, res) => {
 			return handleXmlApi(url, res);
 		}
 
-		if (url.pathname.startsWith('/collection/') && req.method === 'POST') {
-			return await handleWriter(req, url, res);
+		if (url.pathname === '/login/api/v1' && req.method === 'POST') {
+			return await handleLogin(req, res);
+		}
+
+		if (url.pathname === '/api/collectionitem' && req.method === 'POST') {
+			return await handleAdd(req, res);
+		}
+
+		if (url.pathname.startsWith('/api/collectionitem/') && req.method === 'DELETE') {
+			return handleRemove(req, url, res);
 		}
 
 		if (url.pathname.startsWith('/__control/')) {

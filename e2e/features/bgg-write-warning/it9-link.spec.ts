@@ -10,7 +10,7 @@ import { CollectionPage } from '../../pages/CollectionPage';
 
 test.describe('BGG write warning — the Open on BGG link', { tag: ['@72IT9'] }, () => {
 	test('S1 — game warning link', async ({ page, mockBgg }) => {
-		await mockBgg.setWriterFailing(true);
+		await mockBgg.setLoginsRejected(true);
 		const collection = new CollectionPage(page);
 		await collection.goto();
 		await addCatanFromBgg(collection);
@@ -29,7 +29,7 @@ test.describe('BGG write warning — the Open on BGG link', { tag: ['@72IT9'] },
 		const collection = new CollectionPage(page);
 		await collection.goto();
 		await seedCatanWithWriterCall(collection, mockBgg);
-		await mockBgg.setWriterFailing(true);
+		await mockBgg.setLoginsRejected(true);
 		await addSeafarersToCatan(collection);
 		await expect(collection.expansionWarning.root).toBeVisible();
 

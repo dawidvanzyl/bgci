@@ -7,26 +7,28 @@ using Microsoft.Extensions.Options;
 namespace BggIntegration.Infrastructure;
 
 /// <summary>
-/// Adapts IBggWriterClient write operations to the IBggCollectionWriter interface,
-/// resolving the configured username internally so GameCollection.Application stays
+/// Adapts IBggWriteClient write operations to the IBggCollectionWriter interface,
+/// resolving the configured credentials internally so GameCollection.Application stays
 /// free of BGG concerns.
 /// </summary>
 public class BggCollectionWriterAdapter : IBggCollectionWriter
 {
-	private readonly IBggWriterClient _bggWriterClient;
+	private static readonly TimeSpan _writeTimeLimit = TimeSpan.FromSeconds(60);
+
+	private readonly IBggWriteClient _bggWriteClient;
 	private readonly BggSettings _settings;
-	private readonly BggWriterSettings _writerSettings;
+	private readonly TimeProvider _timeProvider;
 	private readonly ILogger<BggCollectionWriterAdapter> _logger;
 
 	public BggCollectionWriterAdapter(
-		IBggWriterClient bggWriterClient,
+		IBggWriteClient bggWriteClient,
 		IOptions<BggSettings> settings,
-		IOptions<BggWriterSettings> writerSettings,
+		TimeProvider timeProvider,
 		ILogger<BggCollectionWriterAdapter> logger)
 	{
-		_bggWriterClient = bggWriterClient;
+		_bggWriteClient = bggWriteClient;
 		_settings = settings.Value;
-		_writerSettings = writerSettings.Value;
+		_timeProvider = timeProvider;
 		_logger = logger;
 	}
 
@@ -39,10 +41,12 @@ public class BggCollectionWriterAdapter : IBggCollectionWriter
 
 		try
 		{
-			var collId = await _bggWriterClient.AddToCollectionAsync(_settings.Username, bggId, name, cancellationToken);
+			using var timeLimit = new CancellationTokenSource(_writeTimeLimit, _timeProvider);
+			using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeLimit.Token);
+			var collId = await _bggWriteClient.AddToCollectionAsync(bggId, name, linked.Token);
 			if (collId <= 0)
 			{
-				_logger.LogWarning("BGG writer returned no collection item id for bggId {BggId}.", bggId);
+				_logger.LogWarning("BGG returned no collection item id for bggId {BggId}.", bggId);
 				return new BggAddResult(BggWriteOutcome.Failed, null);
 			}
 
@@ -50,7 +54,7 @@ public class BggCollectionWriterAdapter : IBggCollectionWriter
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
 		{
-			// A BGG failure or writer timeout is an outcome; only a cancelled request propagates
+			// A BGG failure or the time limit is an outcome; only a request the caller cancelled propagates
 			_logger.LogWarning(ex, "Failed to add bggId {BggId} to BGG collection for user {Username}.", bggId, _settings.Username);
 			return new BggAddResult(BggWriteOutcome.Failed, null);
 		}
@@ -71,17 +75,19 @@ public class BggCollectionWriterAdapter : IBggCollectionWriter
 
 		try
 		{
-			await _bggWriterClient.RemoveFromCollectionAsync(_settings.Username, bggCollId.Value, cancellationToken);
+			using var timeLimit = new CancellationTokenSource(_writeTimeLimit, _timeProvider);
+			using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeLimit.Token);
+			await _bggWriteClient.RemoveFromCollectionAsync(bggCollId.Value, linked.Token);
 			return BggWriteOutcome.Succeeded;
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
 		{
-			// A BGG failure or writer timeout is an outcome; only a cancelled request propagates
+			// A BGG failure or the time limit is an outcome; only a request the caller cancelled propagates
 			_logger.LogWarning(ex, "Failed to remove collId {CollId} from BGG collection.", bggCollId);
 			return BggWriteOutcome.Failed;
 		}
 	}
 
 	private bool IsConfigured() =>
-		!string.IsNullOrWhiteSpace(_settings.Username) && !string.IsNullOrWhiteSpace(_writerSettings.BaseUrl);
+		!string.IsNullOrWhiteSpace(_settings.Username) && !string.IsNullOrWhiteSpace(_settings.Password);
 }

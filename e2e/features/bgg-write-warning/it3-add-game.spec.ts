@@ -4,7 +4,7 @@ import { CollectionPage } from '../../pages/CollectionPage';
 
 test.describe('BGG write warning — failed add of a game from a BGG search', { tag: ['@72IT3'] }, () => {
 	test('S1 — failed BGG add of a game shows the page warning', async ({ page, mockBgg }) => {
-		await mockBgg.setWriterFailing(true);
+		await mockBgg.setLoginsRejected(true);
 		const collection = new CollectionPage(page);
 		await collection.goto();
 
@@ -19,7 +19,7 @@ test.describe('BGG write warning — failed add of a game from a BGG search', { 
 	});
 
 	test('S2 — the add is saved even though the BGG add failed', async ({ page, mockBgg }) => {
-		await mockBgg.setWriterFailing(true);
+		await mockBgg.setLoginsRejected(true);
 		const collection = new CollectionPage(page);
 		await collection.goto();
 		await addCatanFromBgg(collection);
@@ -27,6 +27,6 @@ test.describe('BGG write warning — failed add of a game from a BGG search', { 
 		await collection.reload();
 
 		await expect(collection.card('Catan')).toBeVisible();
-		expect(await mockBgg.writerCalls()).toEqual([]);
+		expect(await mockBgg.acceptedWrites()).toEqual([]);
 	});
 });
