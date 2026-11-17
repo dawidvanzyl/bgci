@@ -10,7 +10,7 @@ import { CollectionPage } from '../../pages/CollectionPage';
 
 test.describe('BGG write warning — the warning stays until the user dismisses it', { tag: ['@72IT8'] }, () => {
 	test('S1 — the page warning stays through other actions until dismissed', async ({ page, mockBgg }) => {
-		await mockBgg.setWriterFailing(true);
+		await mockBgg.setLoginsRejected(true);
 		const collection = new CollectionPage(page);
 		await collection.goto();
 		await addCatanFromBgg(collection);
@@ -36,7 +36,7 @@ test.describe('BGG write warning — the warning stays until the user dismisses 
 		const collection = new CollectionPage(page);
 		await collection.goto();
 		await seedCatanWithWriterCall(collection, mockBgg);
-		await mockBgg.setWriterFailing(true);
+		await mockBgg.setLoginsRejected(true);
 		await addSeafarersToCatan(collection);
 		await expect(collection.expansionWarning.root).toBeVisible();
 

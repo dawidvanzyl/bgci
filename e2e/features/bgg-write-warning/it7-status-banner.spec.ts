@@ -19,7 +19,7 @@ test.describe('BGG write warning — remove while BGG is unavailable', { tag: ['
 		await expect(collection.statusBanner).toHaveText(
 			'BGG is currently unavailable — your collection is loaded from cache'
 		);
-		await mockBgg.setWriterFailing(true);
+		await mockBgg.setLoginsRejected(true);
 
 		await collection.remove('Catan');
 

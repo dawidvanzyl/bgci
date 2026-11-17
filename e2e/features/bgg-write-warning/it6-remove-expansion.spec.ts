@@ -17,9 +17,9 @@ test.describe('BGG write warning — failed remove of an expansion', { tag: ['@7
 		await seedCatanWithWriterCall(collection, mockBgg);
 		await addSeafarersToCatan(collection);
 		await expect
-			.poll(async () => (await mockBgg.writerCalls()).map((call) => `${call.action}:${call.bggId}`))
+			.poll(async () => (await mockBgg.acceptedWrites()).map((call) => `${call.action}:${call.bggId}`))
 			.toEqual([`add:${catanBggId}`, `add:${seafarersBggId}`]);
-		await mockBgg.setWriterFailing(true);
+		await mockBgg.setLoginsRejected(true);
 
 		await collection.removeExpansion('Catan: Seafarers');
 

@@ -1,9 +1,6 @@
 {
 	"folders": [
 		{
-			"path": "node/bgg-writer"
-		},
-		{
 			"path": "frontend"
 		}
 	]

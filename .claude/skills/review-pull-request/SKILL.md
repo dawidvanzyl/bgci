@@ -108,7 +108,7 @@ Scopes: any path under `src/` is backend, any path under `frontend/` is frontend
 
 ### 4) Automated checks: confirm CI, run nothing
 
-`ci-pr.yml` runs every backend, frontend, bgg-writer and Playwright check on every push to a PR, so
+`ci-pr.yml` runs every backend, frontend and Playwright check on every push to a PR, so
 re-running them locally proves nothing new and wastes the quota. You **confirm** CI;
 you never run the checks.
 

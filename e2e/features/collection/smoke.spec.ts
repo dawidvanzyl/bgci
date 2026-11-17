@@ -32,7 +32,7 @@ test.describe('Collection smoke', { tag: '@smoke' }, () => {
 
 		await expect(collection.card('Catan')).toBeVisible();
 		await expect
-			.poll(async () => (await mockBgg.writerCalls()).filter((call) => call.action === 'add'))
+			.poll(async () => (await mockBgg.acceptedWrites()).filter((call) => call.action === 'add'))
 			.toEqual([expect.objectContaining({ username: 'qa-user', bggId: 13 })]);
 	});
 });

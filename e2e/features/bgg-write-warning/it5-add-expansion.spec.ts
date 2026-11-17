@@ -13,7 +13,7 @@ test.describe('BGG write warning — failed add of an expansion from BGG', { tag
 		const collection = new CollectionPage(page);
 		await collection.goto();
 		await seedCatanWithWriterCall(collection, mockBgg);
-		await mockBgg.setWriterFailing(true);
+		await mockBgg.setLoginsRejected(true);
 
 		await addSeafarersToCatan(collection);
 
@@ -30,7 +30,7 @@ test.describe('BGG write warning — failed add of an expansion from BGG', { tag
 		const collection = new CollectionPage(page);
 		await collection.goto();
 		await seedCatanWithWriterCall(collection, mockBgg);
-		await mockBgg.setWriterFailing(true);
+		await mockBgg.setLoginsRejected(true);
 		await addSeafarersToCatan(collection);
 		await expect(collection.expansionWarning.root).toBeVisible();
 		await collection.closeModal();

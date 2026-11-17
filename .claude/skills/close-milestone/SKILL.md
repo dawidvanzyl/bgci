@@ -128,7 +128,7 @@ Capture the PR number from the output.
 4. The fix's push re-runs CI. Go back to 1.
 
 **CI is the regression gate, so never proceed while it's red.** You run nothing yourself:
-`ci-pr.yml` covers the backend, frontend, bgg-writer and full Playwright suite on every push.
+`ci-pr.yml` covers the backend, frontend and full Playwright suite on every push.
 Never disable, skip or loosen a check to get a green result.
 
 ### 6) Hand off

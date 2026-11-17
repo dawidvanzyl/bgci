@@ -6,12 +6,12 @@
 #
 # The qa profile is the stack the Playwright suite runs against. Its PostgreSQL service keeps
 # its data in memory, so every `up` starts with an empty database, and the profile replaces
-# BoardGameGeek and the bgg-writer sidecar with e2e/mock-bgg. Every value has a default, so
+# BoardGameGeek with e2e/mock-bgg. Every value has a default, so
 # --env-file is optional for qa:
 #   docker compose --env-file .env.qa --profile qa up --build -d
 #   docker compose --env-file .env.qa --profile qa down -v
 #
-# The dev profile runs the real stack against BoardGameGeek: database, bgg-writer, API and
+# The dev profile runs the real stack against BoardGameGeek: database, API and
 # web. It needs BGG_USERNAME, BGG_PASSWORD and BGG_BEARER_TOKEN in .env.dev. Its database
 # lives in a named volume until the profile is taken down with -v. To run only the database,
 # for running the API from source, name the service:
@@ -24,9 +24,9 @@
 #
 # Host ports. Each stack has its own block of 100, below the Windows dynamic port range
 # (49152 and up), so no port here clashes with Docker's random ports:
-#   prod  15000 web (published, BGCI_WEB_PORT), 15001 api, 15002 db, 15003 writer
+#   prod  15000 web (published, BGCI_WEB_PORT), 15001 api, 15002 db
 #   qa    15100 web (published), 15101 api, 15102 db, 15103 mock BGG (published)
-#   dev   15200 web (published), 15201 api, 15202 db (published, 127.0.0.1 only), 15203 writer
+#   dev   15200 web (published), 15201 api, 15202 db (published, 127.0.0.1 only)
 name: bgci-qa
 
 x-postgres: &postgres
@@ -85,10 +85,10 @@ services:
       Database__Name: ${DB_NAME:-bgci}
       Database__User: ${DB_USER:-bgci}
       Database__Password: ${DB_PASSWORD:-bgci}
-      Bgg__BaseUrl: http://mock-bgg:4010/xmlapi2/
+      Bgg__BaseUrl: http://mock-bgg:4010/
       Bgg__BearerToken: qa-token
       Bgg__Username: qa-user
-      BggWriter__BaseUrl: http://mock-bgg:4010
+      Bgg__Password: qa-password
       APP_VERSION: qa
     depends_on:
       mock-bgg:
@@ -119,18 +119,6 @@ services:
     volumes:
       - bgci-dev-data:/var/lib/postgresql/data
 
-  bgg-writer:
-    image: bgci-dev-writer
-    build:
-      context: .
-      dockerfile: Dockerfile.writer
-    profiles: [dev]
-    networks: [dev]
-    environment:
-      BGG_PASSWORD: ${BGG_PASSWORD:-}
-      BGG_BEARER_TOKEN: ${BGG_BEARER_TOKEN:-}
-      PORT: "3001"
-
   # nginx.conf proxies /api/ to http://bgci-api:8080, so the dev API takes that name as an
   # alias on the dev network. The qa API uses it on the qa network.
   bgci-dev-api:
@@ -151,11 +139,9 @@ services:
       Database__Password: ${DB_PASSWORD:-bgci}
       Bgg__BearerToken: ${BGG_BEARER_TOKEN:-}
       Bgg__Username: ${BGG_USERNAME:-}
-      BggWriter__BaseUrl: http://bgg-writer:3001
+      Bgg__Password: ${BGG_PASSWORD:-}
       APP_VERSION: dev
     depends_on:
-      bgg-writer:
-        condition: service_started
       bgci-dev-db:
         condition: service_healthy
 

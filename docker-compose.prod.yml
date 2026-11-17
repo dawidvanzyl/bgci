@@ -41,23 +41,10 @@ services:
       - Database__Password=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - Bgg__BearerToken=${BGG_BEARER_TOKEN:-}
       - Bgg__Username=${BGG_USERNAME:-}
-      - BggWriter__BaseUrl=http://bgg-writer:3001
+      - Bgg__Password=${BGG_PASSWORD:-}
     depends_on:
-      bgg-writer:
-        condition: service_started
       bgci-db:
         condition: service_healthy
-    networks:
-      - bgci-net
-
-  bgg-writer:
-    image: ghcr.io/dawidvanzyl/bgci-writer:latest
-    container_name: bgg-writer
-    restart: unless-stopped
-    environment:
-      - BGG_PASSWORD=${BGG_PASSWORD:-}
-      - BGG_BEARER_TOKEN=${BGG_BEARER_TOKEN:-}
-      - PORT=3001
     networks:
       - bgci-net
 

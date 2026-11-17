@@ -12,9 +12,10 @@ Conventions for the Playwright suite in `e2e/`.
 
 ```text
 test-data/
-└── bgg-games.json         # The standard game data set, shared with the live suite
+├── bgg-games.json         # The standard game data set, shared with the live suite
+└── bgg-live-test-accounts.json  # Usernames the live BGG write test may use
 e2e/
-├── mock-bgg/              # Mock of the BGG XML API and the bgg-writer sidecar
+├── mock-bgg/              # Mock of BGG: the XML API, the login and the collection write calls
 ├── playwright.config.ts
 ├── global-setup.ts        # Waits until the stack is up and the API sees the mock BGG
 ├── fixtures/              # base.ts (test + auto fixtures), mockBgg.ts (mock control client)
@@ -49,10 +50,10 @@ docker compose --profile qa down -v
 
 ## 3. Mock BGG
 
-`mock-bgg` replaces both BoardGameGeek and the `bgg-writer` sidecar. The API reaches it
-through `Bgg__BaseUrl` and `BggWriter__BaseUrl`. Tests never call the real BGG.
+`mock-bgg` replaces BoardGameGeek. The API reaches it through `Bgg__BaseUrl`, the site root.
+The API logs in with `Bgg__Username` and `Bgg__Password`. Tests never call the real BGG.
 
-- It serves `search`, `thing` and `collection` as BGG XML, built from the standard game data set.
+- It serves `xmlapi2/search`, `xmlapi2/thing` and `xmlapi2/collection` as BGG XML, built from the standard game data set.
   The data set is `test-data/bgg-games.json` at the repository root. Mock BGG and the live suite
   both read this one file. Neither keeps a game list of its own.
 - The file is one JSON object with one key, `games`, an array of entries. An entry has these fields.
@@ -91,11 +92,17 @@ through `Bgg__BaseUrl` and `BggWriter__BaseUrl`. Tests never call the real BGG.
 - The mock BGG image holds a copy of the data set made at build time. After a change to the file, run
   `docker compose --profile qa up --build -d` so the image gets it. The build reads the file through
   a second build context, so it needs Docker Compose 2.17 or later.
-- It records `bgg-writer` calls. Read them with `mockBgg.writerCalls()`.
+- It also serves the BGG write calls: the login (`login/api/v1`), the add (`api/collectionitem`) and the
+  remove (`api/collectionitem/{collId}`). A login gives a session, and an add or remove needs a live session.
+  An add does not change the collection that the sync reads. Only the collection item id lookup
+  (a `collection` request with `id`) sees the items that adds created.
+- Read what it did with `mockBgg.report()`: the accepted writes, the accepted and rejected logins, and
+  the rejected writes. `mockBgg.acceptedWrites()` returns only the accepted adds and removes, in order.
 - Steer it from a spec through the `mockBgg` fixture: `setAvailable(false)`,
-  `setCollection([...])`, `setWriterFailing(true)` / `setWriterFailing(false)`, `reset()`.
-  `setWriterFailing(true)` makes the writer answer every add and remove with a 500. `reset()` restores
-  writer success.
+  `setCollection([...])`, `setLoginsRejected(true)`, `expireSessions()`, `reset()`.
+  `setLoginsRejected(true)` makes every login answer 400 and every add and remove answer 401.
+  `expireSessions()` makes the next add or remove with an old session answer 401, while a new login works.
+  `reset()` clears both controls.
 - The `cleanState` auto fixture empties the collection and resets the mock before every test.
   A spec never depends on data from another spec.
 

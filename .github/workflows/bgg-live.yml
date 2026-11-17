@@ -1,0 +1,48 @@
+name: BGG live write
+
+on:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bgg-test-account
+  cancel-in-progress: false
+
+jobs:
+  live:
+    name: Live BGG write test
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/milestone/')
+    environment: bgg-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run the live BGG write test
+        run: >-
+          dotnet test src/BggIntegration.Infrastructure.Tests/BggIntegration.Infrastructure.Tests.csproj
+          --configuration Release
+          --filter "Category=LiveBgg"
+          --logger "console;verbosity=detailed"
+          --logger "trx;LogFileName=bgg-live.trx"
+          --results-directory "${{ runner.temp }}/bgg-live"
+        env:
+          BGG_LIVE_TEST: "true"
+          BGG_LIVE_USERNAME: ${{ secrets.BGG_USERNAME }}
+          BGG_LIVE_PASSWORD: ${{ secrets.BGG_PASSWORD }}
+          BGG_LIVE_BEARER_TOKEN: ${{ secrets.BGG_BEARER_TOKEN }}
+
+      - name: Check that the live test ran
+        if: always()
+        run: grep -Eq '<Counters [^>]*executed="1"' "${{ runner.temp }}/bgg-live/bgg-live.trx"

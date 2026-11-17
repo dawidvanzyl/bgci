@@ -2,7 +2,7 @@
 
 These are guidelines, not rigid rules. The goal is consistency and clarity. When in doubt, favour readability and explicitness over cleverness.
 
-> Workflow, branching, commit, PR and comment rules: `coding-standards.md`. Those rules outrank this document. Frontend: `coding-standards-frontend.md`. Node sidecar: `coding-standards-bgg-writer.md`.
+> Workflow, branching, commit, PR and comment rules: `coding-standards.md`. Those rules outrank this document. Frontend: `coding-standards-frontend.md`. BGG website calls the write client sends: `bgg-website-calls-reference.md`.
 
 ---
 
