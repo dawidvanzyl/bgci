@@ -39,8 +39,8 @@ jobs:
           --results-directory "${{ runner.temp }}/bgg-live"
         env:
           BGG_LIVE_TEST: "true"
-          BGG_LIVE_USERNAME: ${{ secrets.BGG_USERNAME }}
-          BGG_LIVE_PASSWORD: ${{ secrets.BGG_PASSWORD }}
+          BGG_LIVE_USERNAME: ${{ secrets.BGG_TEST_USERNAME }}
+          BGG_LIVE_PASSWORD: ${{ secrets.BGG_TEST_PASSWORD }}
           BGG_LIVE_BEARER_TOKEN: ${{ secrets.BGG_BEARER_TOKEN }}
 
       - name: Check that the live test ran

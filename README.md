@@ -352,7 +352,7 @@ Safety rules:
 The nightly run:
 
 - The workflow `.github/workflows/bgg-live.yml` runs every night at 03:23 UTC on `master`. It also starts by hand on `master` or a `milestone/*` branch. It never starts from a pull request.
-- It runs in the `bgg-test` environment, which is limited to `master` and `milestone/*`. That environment holds the secrets `BGG_USERNAME`, `BGG_PASSWORD` and `BGG_BEARER_TOKEN`.
+- It runs in the `bgg-test` environment, which is limited to `master` and `milestone/*`. That environment holds the secrets `BGG_TEST_USERNAME`, `BGG_TEST_PASSWORD` and `BGG_BEARER_TOKEN`.
 - One run at a time uses the test account. A second run waits.
 - A failed test fails the run, and GitHub notifies the owner.
 - GitHub runs a schedule on the default branch only. It turns the schedule off after 60 days with no repository activity.
