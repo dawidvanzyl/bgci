@@ -1,8 +1,6 @@
 name: BGG live write
 
 on:
-  schedule:
-    - cron: '23 3 * * *'
   workflow_dispatch:
 
 permissions:
