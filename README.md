@@ -347,15 +347,14 @@ Safety rules:
 - A missing username, password or bearer token is a failure with a message that names the variable.
 - The test writes only games that `test-data/bgg-games.json` marks `liveWritable`.
 - The test account must not own Action Test outside the test, because the cleanup removes it. The test removes a leftover before the add and removes the game again after the run, passed or failed.
-- A manual run must not overlap the nightly run, because both use the same account.
+- A manual run must not overlap a workflow run, because both use the same account.
 
-The nightly run:
+The workflow run:
 
-- The workflow `.github/workflows/bgg-live.yml` runs every night at 03:23 UTC on `master`. It also starts by hand on `master` or a `milestone/*` branch. It never starts from a pull request.
+- The workflow `.github/workflows/bgg-live.yml` has no schedule. It starts only by hand, on `master` or a `milestone/*` branch. It never starts from a pull request.
 - It runs in the `bgg-test` environment, which is limited to `master` and `milestone/*`. That environment holds the secrets `BGG_TEST_USERNAME`, `BGG_TEST_PASSWORD` and `BGG_BEARER_TOKEN`.
 - One run at a time uses the test account. A second run waits.
 - A failed test fails the run, and GitHub notifies the owner.
-- GitHub runs a schedule on the default branch only. It turns the schedule off after 60 days with no repository activity.
 
 How to read a failure: the message reads `BGG live write failed at step '{step}': {kind}`. The step is `login`, `add`, `collection item id lookup`, `remove` or `cleanup`. The kind is one of these.
 
