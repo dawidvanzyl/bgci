@@ -3,8 +3,6 @@ import { MockBgg } from './mockBgg';
 
 const mockUrl = process.env.E2E_MOCK_URL ?? `http://localhost:${process.env.QA_MOCK_PORT ?? 15103}`;
 
-export const jobsUrl = process.env.E2E_JOBS_URL ?? `http://localhost:${process.env.QA_JOBS_DASHBOARD_PORT ?? 15104}`;
-
 async function removeAllGames(request: APIRequestContext): Promise<void> {
 	const games = (await (await request.get('/api/games')).json()) as { id: string }[];
 	for (const game of games) {
