@@ -13,5 +13,7 @@
   <Project Path="GameCollection.Infrastructure.Tests/GameCollection.Infrastructure.Tests.csproj" />
   <Project Path="GameCollection.Infrastructure/GameCollection.Infrastructure.csproj" />
   <Project Path="GameCollection.Testing/GameCollection.Testing.csproj" />
+  <Project Path="Jobs.Infrastructure/Jobs.Infrastructure.csproj" />
+  <Project Path="Jobs/Jobs.csproj" />
   <Project Path="Shared.Testing/Shared.Testing.csproj" />
 </Solution>

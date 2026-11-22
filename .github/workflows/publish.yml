@@ -67,6 +67,24 @@ jobs:
           tags: ${{ steps.meta-web.outputs.tags }}
           labels: ${{ steps.meta-web.outputs.labels }}
 
+      - name: Extract metadata for Jobs image
+        id: meta-jobs
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/dawidvanzyl/bgci-jobs
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
+
+      - name: Build and push Jobs image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.jobs
+          push: true
+          tags: ${{ steps.meta-jobs.outputs.tags }}
+          labels: ${{ steps.meta-jobs.outputs.labels }}
+
       - name: Stage release files
         if: startsWith(github.ref, 'refs/tags/')
         run: |
