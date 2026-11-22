@@ -13,7 +13,8 @@ export class JobsDashboardPage {
 	}
 
 	navigationEntry(name: string): Locator {
-		return this.navigation.getByRole('link', { name, exact: true });
+		const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		return this.navigation.getByRole('link', { name: new RegExp(`^${escaped}\\b`) });
 	}
 
 	/** Waits until the jobs service answers with a success status, so the jobs service has finished starting. */
