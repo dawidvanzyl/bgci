@@ -41,6 +41,8 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
                          translation happens here
 ```
 
+The jobs service is a second .NET host that runs Hangfire and serves the Hangfire dashboard. It keeps its jobs in its own PostgreSQL database, separate from the collection database.
+
 ### Tech Stack
 
 | Layer | Technology |
@@ -95,12 +97,15 @@ Open `.env` and fill in your values:
 DB_PASSWORD=choose-a-password       # required, password of the PostgreSQL database
 DB_NAME=bgci                        # optional, database name
 DB_USER=bgci                        # optional, database user
+JOBS_DB_PASSWORD=choose-a-password  # required, password of the jobs database
+JOBS_DB_NAME=bgci_jobs              # optional, jobs database name
+JOBS_DB_USER=bgci_jobs              # optional, jobs database user
 BGG_BEARER_TOKEN=your-token-here    # required for BGG search
 BGG_USERNAME=your-bgg-username      # required for collection sync
 BGG_PASSWORD=your-bgg-password      # used by the API for collection write-back
 ```
 
-> `DB_PASSWORD` is required. The stack does not start without it. `DB_NAME` and `DB_USER` default to `bgci`.
+> `DB_PASSWORD` and `JOBS_DB_PASSWORD` are required. The stack does not start without them. `DB_NAME` and `DB_USER` default to `bgci`. `JOBS_DB_NAME` and `JOBS_DB_USER` default to `bgci_jobs`.
 >
 > `BGG_BEARER_TOKEN` requires a formal application at [boardgamegeek.com/applications](https://boardgamegeek.com/applications), which may take several weeks to be approved. **Without it, BGG search is disabled in the UI.**
 >
@@ -122,6 +127,8 @@ docker compose ps
 
 Look for `0.0.0.0:15000->80/tcp` under `bgci-web`. Then open `http://localhost:15000` in your browser.
 
+The jobs dashboard is at `http://localhost:15003`. Set `BGCI_JOBS_DASHBOARD_PORT` in `.env` to use another port. This port listens on 127.0.0.1 only. The dashboard has no login, so only this machine can open it.
+
 **5. Stop the application**
 
 ```bash
@@ -130,7 +137,7 @@ docker compose down
 
 **Data persistence**
 
-Game data is stored in PostgreSQL, in a Docker volume named `bgci-pgdata`. Your collection persists across container restarts. To wipe all data:
+Game data is stored in PostgreSQL, in a Docker volume named `bgci-pgdata`. The jobs service keeps its jobs in a second PostgreSQL database, in a Docker volume named `bgci-jobs-pgdata`. Your collection persists across container restarts. To wipe all data:
 
 ```bash
 docker compose down -v
@@ -156,23 +163,33 @@ Version 2.1.1 removes the `bgg-writer` container. The API now writes to BGG itse
 5. No data is lost. The `bgci-pgdata` volume is not changed.
 6. Optional: run `docker image rm ghcr.io/dawidvanzyl/bgci-writer` to free disk space.
 
+**Upgrading from 2.1.1**
+
+The next version adds the jobs service and the jobs database.
+
+1. Set `JOBS_DB_PASSWORD` in `.env`. Compare `.env` with the new `env.example` for the other new values.
+2. Replace `docker-compose.yml` with the file from the new release.
+3. Run `docker compose pull`. Every image in the compose file uses a `:latest` tag, and `docker compose up -d` does not fetch a newer `:latest` when a local copy exists. Without the pull, the jobs image is fetched, but the other images stay on their old versions.
+4. Run `docker compose up -d`.
+5. No data is lost. The `bgci-pgdata` volume is not changed. Docker creates a new `bgci-jobs-pgdata` volume for the jobs database.
+
 ---
 
 ### Running the QA stack (for developers)
 
-Requires Docker Desktop. The `qa` profile of the root `docker-compose.yml` builds the API and the web server from source and replaces BoardGameGeek with a mock server (`e2e/mock-bgg`). It also runs a PostgreSQL service that keeps its data in memory, so the database starts empty on every run. It is the stack the Playwright suite runs against; see `docs/coding-standards-e2e.md`.
+Requires Docker Desktop. The `qa` profile of the root `docker-compose.yml` builds the API, the jobs service and the web server from source and replaces BoardGameGeek with a mock server (`e2e/mock-bgg`). It also runs two PostgreSQL services, one for the collection and one for the jobs service. Both keep their data in memory, so the databases start empty on every run. It is the stack the Playwright suite runs against; see `docs/coding-standards-e2e.md`.
 
 ```bash
 docker compose --env-file .env.qa --profile qa up --build -d
 ```
 
-Open `http://localhost:15100`. To change ports, copy `.env.qa.example` to `.env.qa` and edit it. Every value has a default, so `--env-file .env.qa` is optional.
+Open `http://localhost:15100`. The jobs dashboard is at `http://localhost:15104` (`QA_JOBS_DASHBOARD_PORT` changes the port). To change ports, copy `.env.qa.example` to `.env.qa` and edit it. Every value has a default, so `--env-file .env.qa` is optional.
 
 ```bash
 docker compose --env-file .env.qa --profile qa down -v
 ```
 
-To run the production stack from the published images, copy `.env.prod.example` to `.env.prod`, set `DB_PASSWORD` and your BGG credentials, and run:
+To run the production stack from the published images, copy `.env.prod.example` to `.env.prod`, set `DB_PASSWORD`, `JOBS_DB_PASSWORD` and your BGG credentials, and run:
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
@@ -182,7 +199,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 
 ### Running the dev stack (for developers)
 
-The `dev` profile of the root `docker-compose.yml` builds the database, the API and the web server from source and runs them against the real BoardGameGeek. Use a test BGG account.
+The `dev` profile of the root `docker-compose.yml` builds the database, the API, the jobs service, the jobs database and the web server from source and runs them against the real BoardGameGeek. Use a test BGG account.
 
 ```bash
 cp .env.dev.example .env.dev
@@ -191,6 +208,7 @@ docker compose --env-file .env.dev --profile dev up --build -d
 ```
 
 - Open `http://localhost:15200` (`DEV_WEB_PORT` changes the port).
+- The jobs dashboard is at `http://localhost:15203` (`DEV_JOBS_DASHBOARD_PORT` changes the port). It listens on 127.0.0.1 only.
 - To run only the database, for running the API from source, name the service: `docker compose --env-file .env.dev --profile dev up -d bgci-dev-db`. It listens on host port `DEV_DB_PORT` (default 15202), on the loopback address 127.0.0.1 only, so other machines on your network cannot reach it.
 - Its data stays in the `bgci-dev-data` volume until you run `docker compose --env-file .env.dev --profile dev down -v`.
 - It is separate from the QA stack, so both can run at the same time.
@@ -236,6 +254,11 @@ The app is available at `http://localhost:5173`.
 | `Database:Name` | Database name | `bgci` |
 | `Database:User` | Database user | `bgci` |
 | `Database:Password` | Database password | *(none, set `DB_PASSWORD`)* |
+| `JobsDatabase:Host` | Host name of the PostgreSQL server that holds the jobs database. The jobs service reads this key. | `bgci-jobs-db` in Docker |
+| `JobsDatabase:Port` | Port of the jobs database server. The jobs service reads this key. | `5432` |
+| `JobsDatabase:Name` | Jobs database name. The jobs service reads this key. | `bgci_jobs` |
+| `JobsDatabase:User` | Jobs database user. The jobs service reads this key. | `bgci_jobs` |
+| `JobsDatabase:Password` | Jobs database password. The jobs service reads this key. | *(none, set `JOBS_DB_PASSWORD`)* |
 | `Bgg:BearerToken` | BGG API bearer token. Without it, BGG search is disabled. Requires approval at [boardgamegeek.com/applications](https://boardgamegeek.com/applications). | *(empty)* |
 | `Bgg:Username` | BGG username for collection sync. | *(empty)* |
 | `Bgg:Password` | BGG password. The API logs in with it to add and remove games in your BGG collection. Without it, BGG search and collection writes are disabled. | *(empty)* |
