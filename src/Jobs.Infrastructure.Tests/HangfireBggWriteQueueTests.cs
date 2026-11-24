@@ -2,6 +2,7 @@ using GameCollection.Testing.Postgres;
 using Hangfire;
 using Hangfire.Common;
 using Hangfire.States;
+using Jobs.Application.Models;
 using Jobs.Infrastructure.Jobs;
 using Jobs.Infrastructure.Postgres;
 using Moq;
@@ -174,6 +175,21 @@ public sealed class HangfireBggWriteQueueTests
 
 		(await database.RequestsAsync()).ShouldBeEmpty();
 		_jobs.Verify(c => c.ChangeState("job-1", It.IsAny<IState>(), It.IsAny<string>()), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "114UC2")]
+	public async Task GetPendingRemoveBggIdsAsync_QueuedRemovesOfTwoAccounts_ReturnsOnlyTheOwnerBggId()
+	{
+		var database = await JobsTestDatabase.CreateAsync(_postgres);
+		var cancellationToken = TestContext.Current.CancellationToken;
+		await Queue(database).QueueRemoveAsync(Guid.NewGuid(), 230802, null, cancellationToken);
+		await database.Repository.CreateAsync(
+			Guid.NewGuid(), BggWriteKind.Remove, 13, Guid.NewGuid(), string.Empty, null, "test", "remove:other", DateTimeOffset.UtcNow, cancellationToken);
+
+		var ids = await Queue(database).GetPendingRemoveBggIdsAsync(cancellationToken);
+
+		ids.ShouldBe([230802]);
 	}
 
 	private HangfireBggWriteQueue Queue(JobsTestDatabase database) =>

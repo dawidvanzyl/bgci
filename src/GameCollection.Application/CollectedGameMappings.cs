@@ -40,9 +40,9 @@ public static class CollectedGameMappings
 
 	public static string ToText(this BggStatus status) => status switch
 	{
-		BggStatus.Pending => "pending",
-		BggStatus.Sent => "sent",
-		BggStatus.Failed => "failed",
+		BggStatus.Pending => BggStatusNames.Pending,
+		BggStatus.Sent => BggStatusNames.Sent,
+		BggStatus.Failed => BggStatusNames.Failed,
 		_ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
 	};
 }

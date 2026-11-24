@@ -1,5 +1,6 @@
 using BggIntegration.Domain.Interfaces;
 using GameCollection.Application.Commands;
+using GameCollection.Application.DTOs;
 using GameCollection.Application.Queries;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -43,7 +44,13 @@ public class BggSyncService
 	{
 		_logger.LogInformation("BGG sync starting for user {Username}.", username);
 
-		// 1. Fetch BGG base collection and expansion collection
+		var allGames = await _mediator.Send(new GetAllGamesQuery(), cancellationToken);
+		var localBggGamesByBggId = allGames
+			.Where(g => g.BggId.HasValue)
+			.ToDictionary(g => g.BggId!.Value);
+
+		var pendingRemoveBggIds = (await _mediator.Send(new GetPendingBggRemovesQuery(), cancellationToken)).ToHashSet();
+
 		var bggCollection = await _bggClient.GetCollectionAsync(username, cancellationToken);
 		var bggCollectionById = bggCollection.ToDictionary(c => c.BggId);
 
@@ -52,22 +59,23 @@ public class BggSyncService
 
 		var allBggIds = bggCollectionById.Keys.Concat(bggExpansionCollectionById.Keys).ToHashSet();
 
-		// 2. Fetch all local games that have a bgg_id
-		var allGames = await _mediator.Send(new GetAllGamesQuery(), cancellationToken);
-		var localBggGames = allGames
-			.Where(g => g.BggId.HasValue)
+		var toAddBase = bggCollectionById.Keys
+			.Except(localBggGamesByBggId.Keys)
+			.Except(pendingRemoveBggIds)
 			.ToList();
-		var localBggGamesByBggId = localBggGames.ToDictionary(g => g.BggId!.Value);
-
-		// 3. Compute diffs
-		var toAddBase = bggCollectionById.Keys.Except(localBggGamesByBggId.Keys).ToList();
-		var toAddExpansion = bggExpansionCollectionById.Keys.Except(localBggGamesByBggId.Keys).ToList();
-		var toDelete = localBggGamesByBggId.Keys.Except(allBggIds).ToList();
+		var toAddExpansion = bggExpansionCollectionById.Keys
+			.Except(localBggGamesByBggId.Keys)
+			.Except(pendingRemoveBggIds)
+			.ToList();
+		var toDelete = localBggGamesByBggId
+			.Where(entry => entry.Value.BggStatus == BggStatusNames.Sent)
+			.Select(entry => entry.Key)
+			.Except(allBggIds)
+			.ToList();
 
 		var added = 0;
 		var deleted = 0;
 
-		// 4. Add base games in BGG but not in the collection
 		foreach (var bggId in toAddBase)
 		{
 			try
@@ -114,7 +122,6 @@ public class BggSyncService
 			}
 		}
 
-		// 5. Add expansions in BGG but not in the collection
 		if (toAddExpansion.Count > 0)
 		{
 			// Refresh local games to pick up any base games just added in this sync run
@@ -188,13 +195,12 @@ public class BggSyncService
 			}
 		}
 
-		// 6. Delete games in the collection that are no longer in BGG collection (base or expansion)
 		foreach (var bggId in toDelete)
 		{
 			try
 			{
 				var localGame = localBggGamesByBggId[bggId];
-				await _mediator.Send(new DeleteGameCommand(localGame.Id), cancellationToken);
+				await _mediator.Send(new DeleteGameCommand(localGame.Id, SkipBggWrite: true), cancellationToken);
 				deleted++;
 			}
 			catch (Exception ex)

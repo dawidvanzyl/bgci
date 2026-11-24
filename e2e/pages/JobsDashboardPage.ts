@@ -24,6 +24,21 @@ export class JobsDashboardPage {
 		await this.page.waitForURL(new RegExp(`/jobs/enqueued/${queue}$`));
 	}
 
+	/**
+	 * The number of jobs with the display name that are Enqueued in the queue or Processing now.
+	 * Hangfire lists a queue on the Enqueued page only while it holds a job, so a missing link counts as no job.
+	 */
+	async activeJobCount(queue: string, name: JobName): Promise<number> {
+		await this.page.goto(`${jobsUrl}/jobs/enqueued`);
+		let enqueued = 0;
+		if ((await this.page.getByRole('link', { name: queue, exact: true }).count()) > 0) {
+			await this.openEnqueuedQueue(queue);
+			enqueued = await this.jobRows(name).count();
+		}
+		await this.openProcessing();
+		return enqueued + (await this.jobRows(name).count());
+	}
+
 	/** The rows of the job list that is open, for the jobs with the display name. */
 	jobRows(name: JobName): Locator {
 		return this.page.locator('tr.js-jobs-list-row', { hasText: name });

@@ -42,6 +42,9 @@ public sealed class HangfireBggWriteQueue : IBggWriteQueue
 			requestId => _jobs.Create<IBggRemoveJob>(j => j.RunAsync(requestId, null, CancellationToken.None), new EnqueuedState(BggQueue.Name)),
 			cancellationToken);
 
+	public Task<IReadOnlyList<int>> GetPendingRemoveBggIdsAsync(CancellationToken cancellationToken = default) =>
+		_requests.GetPendingRemoveBggIdsAsync(BggAccounts.Owner, cancellationToken);
+
 	private async Task QueueAsync(
 		BggWriteKind kind,
 		int bggId,

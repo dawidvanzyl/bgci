@@ -62,6 +62,20 @@ public sealed class DeleteGameCommandHandlerTests : IClassFixture<GameCollection
 	}
 
 	[Fact]
+	[Trait("AC", "114UC3")]
+	public async Task Handle_BggGameWithSkipBggWrite_DeletesItAndNeverQueues()
+	{
+		var game = CollectedGameFactory.CreateFromBgg();
+		_context.Repositories.HasStored(game);
+
+		await _handler.Handle(new DeleteGameCommand(game.Id.Value, SkipBggWrite: true), CancellationToken.None);
+
+		VerifyDeleted(game.Id);
+		_context.Services.BggWriteQueueMock
+			.Verify(q => q.QueueRemoveAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
+	}
+
+	[Fact]
 	public async Task Handle_QueueFails_GameStaysDeletedAndTheExceptionPropagates()
 	{
 		var game = CollectedGameFactory.CreateFromBgg();
