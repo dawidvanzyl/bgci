@@ -53,6 +53,21 @@ public sealed class AddGameFromBggCommandHandlerTests : IClassFixture<GameCollec
 	}
 
 	[Fact]
+	[Trait("AC", "111UC4")]
+	public async Task Handle_QueueFailsAfterTheRequestIsAborted_StillDeletesTheNewGameWithoutTheRequestToken()
+	{
+		using var aborted = new CancellationTokenSource();
+		_context.Services.QueueAddThrows(new OperationCanceledException(aborted.Token));
+		await aborted.CancelAsync();
+
+		await Should.ThrowAsync<OperationCanceledException>(
+			() => _handler.Handle(AddGameFromBggCommandFactory.Create(), aborted.Token));
+
+		_context.Repositories.CollectedGameRepositoryMock
+			.Verify(r => r.DeleteAsync(SavedGame().Id, CancellationToken.None), Times.Once);
+	}
+
+	[Fact]
 	[Trait("AC", "111UC14")]
 	public async Task Handle_SkipBggWrite_SavesSentGameWithTheGivenCollIdAndNeverQueues()
 	{

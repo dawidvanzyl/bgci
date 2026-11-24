@@ -26,6 +26,14 @@ internal sealed class JobsTestDatabase
 		return new JobsTestDatabase(connectionString);
 	}
 
+	public async Task ExecuteAsync(string sql)
+	{
+		await using var connection = new NpgsqlConnection(ConnectionString);
+		await connection.OpenAsync();
+		await using var command = new NpgsqlCommand(sql, connection);
+		await command.ExecuteNonQueryAsync();
+	}
+
 	public async Task<IReadOnlyList<RequestRow>> RequestsAsync()
 	{
 		await using var connection = new NpgsqlConnection(ConnectionString);

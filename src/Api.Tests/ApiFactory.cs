@@ -1,3 +1,6 @@
+using GameCollection.Infrastructure.Postgres;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,14 +17,19 @@ internal sealed class ApiFactory : WebApplicationFactory<Program>
 
 	public ApiFactory(string databaseConnectionString, string jobsDatabaseConnectionString)
 	{
+		PostgresClientSettings.Apply();
 		_database = new NpgsqlConnectionStringBuilder(databaseConnectionString);
 		_jobsDatabase = new NpgsqlConnectionStringBuilder(jobsDatabaseConnectionString);
+		GlobalConfiguration.Configuration.UsePostgreSqlStorage(
+			options => options.UseNpgsqlConnection(jobsDatabaseConnectionString),
+			new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = true, SchemaName = "hangfire" });
 	}
 
 	protected override void ConfigureWebHost(IWebHostBuilder builder)
 	{
 		Apply(builder, "Database", _database);
 		Apply(builder, "JobsDatabase", _jobsDatabase);
+		builder.UseSetting("Jobs:HangfireSchemaWaitSeconds", "1");
 
 		builder.ConfigureServices(services => services.RemoveAll<IHostedService>());
 	}

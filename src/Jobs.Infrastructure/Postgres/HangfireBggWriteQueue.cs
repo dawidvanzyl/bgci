@@ -74,10 +74,19 @@ public sealed class HangfireBggWriteQueue : IBggWriteQueue
 		}
 		catch
 		{
-			await _requests.DeleteAsync(requestId, cancellationToken);
+			await _requests.DeleteAsync(requestId, CancellationToken.None);
 			throw;
 		}
 
-		await _requests.SetJobAsync(requestId, jobId, cancellationToken);
+		try
+		{
+			await _requests.SetJobAsync(requestId, jobId, cancellationToken);
+		}
+		catch
+		{
+			_jobs.Delete(jobId);
+			await _requests.DeleteAsync(requestId, CancellationToken.None);
+			throw;
+		}
 	}
 }

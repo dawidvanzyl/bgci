@@ -15,7 +15,8 @@ public static class DependencyInjection
 {
 	public static IServiceCollection AddJobsInfrastructure(
 		this IServiceCollection services,
-		IConfiguration configuration)
+		IConfiguration configuration,
+		bool installHangfireSchema)
 	{
 		var connectionString = BuildConnectionString(configuration);
 		var queuePollInterval = ReadSeconds(configuration, "Jobs:QueuePollIntervalSeconds");
@@ -26,7 +27,7 @@ public static class DependencyInjection
 			.UseRecommendedSerializerSettings()
 			.UsePostgreSqlStorage(
 				options => options.UseNpgsqlConnection(connectionString),
-				CreateStorageOptions(queuePollInterval))
+				CreateStorageOptions(queuePollInterval, installHangfireSchema))
 			.UseFilter(new JobHistoryRetentionFilter()));
 
 		services.TryAddSingleton(TimeProvider.System);
@@ -36,16 +37,18 @@ public static class DependencyInjection
 		services.AddScoped<IBggWriteRequestReset>(provider => provider.GetRequiredService<PostgresBggWriteRequestRepository>());
 		services.AddScoped<IBggWriteQueue, HangfireBggWriteQueue>();
 
-		services.AddSingleton(new JobsDatabaseMigrator(new DatabaseMigrationRunner(
+		services.AddSingleton(new JobsDatabaseMigrator(
 			connectionString,
-			MigrationScripts.LoadEmbedded(typeof(DependencyInjection).Assembly, "Jobs.Infrastructure.Postgres.Scripts."))));
+			new DatabaseMigrationRunner(
+				connectionString,
+				MigrationScripts.LoadEmbedded(typeof(DependencyInjection).Assembly, "Jobs.Infrastructure.Postgres.Scripts."))));
 
 		return services;
 	}
 
-	private static PostgreSqlStorageOptions CreateStorageOptions(TimeSpan? queuePollInterval)
+	private static PostgreSqlStorageOptions CreateStorageOptions(TimeSpan? queuePollInterval, bool installHangfireSchema)
 	{
-		var options = new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = true, SchemaName = "hangfire" };
+		var options = new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = installHangfireSchema, SchemaName = "hangfire" };
 		if (queuePollInterval is { } interval)
 		{
 			options.QueuePollInterval = interval;

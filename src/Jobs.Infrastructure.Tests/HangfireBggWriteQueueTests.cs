@@ -144,6 +144,38 @@ public sealed class HangfireBggWriteQueueTests
 		(await database.RequestsAsync()).Select(r => r.Kind).ShouldBe(["add", "remove"]);
 	}
 
+	[Fact]
+	[Trait("AC", "111UC4")]
+	public async Task QueueAddAsync_RequestAbortedWhileTheJobFails_StillRemovesTheRequestRow()
+	{
+		var database = await JobsTestDatabase.CreateAsync(_postgres);
+		using var aborted = new CancellationTokenSource();
+		_jobs.Setup(c => c.Create(It.IsAny<Job>(), It.IsAny<IState>()))
+			.Callback(() => aborted.Cancel())
+			.Throws(new InvalidOperationException("storage down"));
+
+		await Should.ThrowAsync<InvalidOperationException>(
+			() => Queue(database).QueueAddAsync(Guid.NewGuid(), 230802, "Azul", aborted.Token));
+
+		(await database.RequestsAsync()).ShouldBeEmpty();
+	}
+
+	[Fact]
+	[Trait("AC", "111UC4")]
+	public async Task QueueAddAsync_RecordingTheJobIdFails_DeletesTheJobAndTheRequestAndRethrows()
+	{
+		var database = await JobsTestDatabase.CreateAsync(_postgres);
+		_jobs.Setup(c => c.Create(It.IsAny<Job>(), It.IsAny<IState>()))
+			.Callback(() => database.ExecuteAsync("drop function set_bgg_write_request_job(uuid, text)").GetAwaiter().GetResult())
+			.Returns("job-1");
+
+		await Should.ThrowAsync<Exception>(
+			() => Queue(database).QueueAddAsync(Guid.NewGuid(), 230802, "Azul", TestContext.Current.CancellationToken));
+
+		(await database.RequestsAsync()).ShouldBeEmpty();
+		_jobs.Verify(c => c.ChangeState("job-1", It.IsAny<IState>(), It.IsAny<string>()), Times.Once);
+	}
+
 	private HangfireBggWriteQueue Queue(JobsTestDatabase database) =>
 		new(database.Repository, _jobs.Object, TimeProvider.System);
 

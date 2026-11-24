@@ -74,7 +74,7 @@ public class AddGameFromBggCommandHandler : IRequestHandler<AddGameFromBggComman
 		}
 		catch
 		{
-			await _repository.DeleteAsync(game.Id, cancellationToken);
+			await _repository.DeleteAsync(game.Id, CancellationToken.None);
 			throw;
 		}
 	}

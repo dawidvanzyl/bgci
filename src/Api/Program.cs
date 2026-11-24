@@ -27,7 +27,7 @@ builder.Services.AddMediatR(cfg =>
 // Infrastructure (background services registered inside AddBggIntegrationInfrastructure)
 builder.Services.AddGameCollectionInfrastructure(builder.Configuration);
 builder.Services.AddBggIntegrationInfrastructure(builder.Configuration);
-builder.Services.AddJobsInfrastructure(builder.Configuration);
+builder.Services.AddJobsInfrastructure(builder.Configuration, installHangfireSchema: false);
 
 // CORS — allow the nginx-served frontend
 builder.Services.AddCors(options =>
@@ -41,6 +41,9 @@ var app = builder.Build();
 // Run DB migrations at startup
 await app.Services.GetRequiredService<DatabaseMigrationRunner>().RunAsync(app.Lifetime.ApplicationStopping);
 await app.Services.GetRequiredService<JobsDatabaseMigrator>().RunAsync(app.Lifetime.ApplicationStopping);
+var schemaWait = TimeSpan.FromSeconds(app.Configuration.GetValue("Jobs:HangfireSchemaWaitSeconds", 60));
+if (!await app.Services.GetRequiredService<JobsDatabaseMigrator>().WaitForHangfireSchemaAsync(schemaWait, app.Lifetime.ApplicationStopping))
+	app.Logger.LogWarning("The Hangfire schema does not exist yet. Queued BGG writes fail until the jobs service has installed it.");
 
 app.UseCors();
 app.MapControllers();

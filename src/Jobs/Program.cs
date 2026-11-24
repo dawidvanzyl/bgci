@@ -16,7 +16,7 @@ builder.Services.AddMediatR(cfg =>
 });
 
 builder.Services.AddGameCollectionInfrastructure(builder.Configuration);
-builder.Services.AddJobsInfrastructure(builder.Configuration);
+builder.Services.AddJobsInfrastructure(builder.Configuration, installHangfireSchema: true);
 builder.Services.AddJobsWorker(builder.Configuration);
 
 var app = builder.Build();
