@@ -58,7 +58,8 @@ test.describe(
 			await collection.expansionSearchResultRow(catanSeafarersName).click();
 
 			const warning = collection.expansionSearchWarning;
-			await expect(warning).toBeVisible();
+			// The API retries its BGG preview call for about 8 seconds before it answers with the error.
+			await expect(warning).toBeVisible({ timeout: 15_000 });
 			await expect(warning).toHaveText('Failed to fetch BGG data for expansion.');
 			const warningBox = await collection.box(warning);
 			const rowBox = await collection.box(collection.expansionSearchRow);
