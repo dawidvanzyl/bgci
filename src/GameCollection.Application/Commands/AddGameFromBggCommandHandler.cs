@@ -20,6 +20,9 @@ public class AddGameFromBggCommandHandler : IRequestHandler<AddGameFromBggComman
 
 	public async Task<AddGameFromBggResult> Handle(AddGameFromBggCommand request, CancellationToken cancellationToken)
 	{
+		if (!request.SkipBggWrite && await _bggWriteQueue.HasUnresolvedRemoveAsync(request.BggId, cancellationToken))
+			throw new BggRemoveNotFinishedException(request.BggId);
+
 		var game = CollectedGame.Create(
 			name: new GameName(request.Name),
 			year: request.Year,

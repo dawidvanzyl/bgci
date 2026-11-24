@@ -78,14 +78,46 @@ public sealed class PostgresBggWriteRequestRepository : IBggWriteRequestReposito
 		return ids.ToList();
 	}
 
-	public async Task<int> RecordAttemptAsync(Guid requestId, DateTimeOffset at, CancellationToken cancellationToken = default)
+	public async Task<int?> StartAttemptAsync(Guid requestId, DateTimeOffset at, CancellationToken cancellationToken = default)
 	{
 		await using var connection = new NpgsqlConnection(_connectionString);
 		var parameters = new DynamicParameters();
 		parameters.Add("p_id", requestId);
 		parameters.Add("p_at", at);
-		return await connection.ExecuteScalarAsync<int?>(Call("record_bgg_write_attempt", parameters, cancellationToken))
-			?? throw new InvalidOperationException($"BGG write request {requestId} no longer exists.");
+		return await connection.ExecuteScalarAsync<int?>(Call("start_bgg_write_attempt", parameters, cancellationToken));
+	}
+
+	public async Task<bool> HasUnfinishedEarlierRequestAsync(Guid requestId, CancellationToken cancellationToken = default)
+	{
+		await using var connection = new NpgsqlConnection(_connectionString);
+		var parameters = new DynamicParameters();
+		parameters.Add("p_id", requestId);
+		return await connection.ExecuteScalarAsync<bool>(Call("has_unfinished_earlier_bgg_write_request", parameters, cancellationToken));
+	}
+
+	public async Task<bool> HasUnresolvedRemoveAsync(string account, int bggId, CancellationToken cancellationToken = default)
+	{
+		await using var connection = new NpgsqlConnection(_connectionString);
+		var parameters = new DynamicParameters();
+		parameters.Add("p_account", account);
+		parameters.Add("p_bgg_id", bggId);
+		return await connection.ExecuteScalarAsync<bool>(Call("has_unresolved_bgg_remove", parameters, cancellationToken));
+	}
+
+	public async Task<int?> CancelUnfinishedAddAsync(
+		Guid gameId,
+		string account,
+		string jobType,
+		DateTimeOffset at,
+		CancellationToken cancellationToken = default)
+	{
+		await using var connection = new NpgsqlConnection(_connectionString);
+		var parameters = new DynamicParameters();
+		parameters.Add("p_game_id", gameId);
+		parameters.Add("p_account", account);
+		parameters.Add("p_job_type", jobType);
+		parameters.Add("p_at", at);
+		return await connection.ExecuteScalarAsync<int?>(Call("cancel_unfinished_bgg_add", parameters, cancellationToken));
 	}
 
 	public async Task CompleteAsync(BggWriteCompletion completion, CancellationToken cancellationToken = default)
@@ -127,6 +159,7 @@ public sealed class PostgresBggWriteRequestRepository : IBggWriteRequestReposito
 		BggWriteRequestStatus.Queued => "queued",
 		BggWriteRequestStatus.Sent => "sent",
 		BggWriteRequestStatus.Failed => "failed",
+		BggWriteRequestStatus.Cancelled => "cancelled",
 		_ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
 	};
 
@@ -149,6 +182,7 @@ public sealed class PostgresBggWriteRequestRepository : IBggWriteRequestReposito
 				"queued" => BggWriteRequestStatus.Queued,
 				"sent" => BggWriteRequestStatus.Sent,
 				"failed" => BggWriteRequestStatus.Failed,
+				"cancelled" => BggWriteRequestStatus.Cancelled,
 				_ => throw new InvalidOperationException($"Unknown BGG write status '{row.Status}'.")
 			},
 			row.Attempts);

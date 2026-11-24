@@ -1,5 +1,14 @@
 import { allGames, deleteTargetId, setDeleteTargetId } from './state.js';
-import { setButtonLoading, clearButtonLoading, showInlineError, intOrNull, floatOrNull, esc } from './helpers.js';
+import {
+	setButtonLoading,
+	clearButtonLoading,
+	showInlineError,
+	showInlineWarning,
+	intOrNull,
+	floatOrNull,
+	esc,
+} from './helpers.js';
+import { BggAddRefusedError, refusedAddMessage } from './bggRefusal.js';
 import { saveGame, saveGameFromBgg, deleteGame } from './api.js';
 import { renderExpansionsTab } from './expansions.js';
 
@@ -14,6 +23,7 @@ const modalTabs = document.getElementById('modal-tabs');
 const modalInfoHero = document.getElementById('modal-info-hero');
 const expansionsContent = document.getElementById('expansions-tab-content');
 const gameInfoPanel = document.getElementById('game-info-panel');
+const formActions = gameForm.querySelector('.form-actions');
 
 // Current game / tab state
 let _currentGame = null;
@@ -392,7 +402,11 @@ export async function handleFormSubmit(e, { onSaved } = {}) {
 		closeModal();
 		if (onSaved) await onSaved();
 	} catch (err) {
-		showInlineError(saveBtn, err.message);
+		if (err instanceof BggAddRefusedError) {
+			showInlineWarning(formActions, refusedAddMessage(err.gameName, { expansion: false }), { spaced: true });
+		} else {
+			showInlineError(saveBtn, err.message);
+		}
 	} finally {
 		clearButtonLoading(saveBtn);
 	}

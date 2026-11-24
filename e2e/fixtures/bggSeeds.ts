@@ -20,6 +20,8 @@ export const seafarersItem: MockCollectionItem = {
 	expansion: true,
 };
 
+export const catanSeafarersName = 'Catan: Seafarers';
+
 export const jobTimeoutMs = 30_000;
 
 export type BggStatus = 'pending' | 'sent' | 'failed';
@@ -81,6 +83,25 @@ export async function seedFailedGame(
 	await addFromBgg(collection, query, name);
 	await waitForBggStatus(request, name, 'failed');
 	await dashboard.waitUntilFailed('BGG add');
+}
+
+/**
+ * Failed remove: Catan is sent, the next three writes fail, the game is removed, and the wait ends when a BGG remove
+ * job is in the Failed list. That state is terminal, so no further attempt follows it.
+ */
+export async function seedFailedRemove(
+	collection: CollectionPage,
+	request: APIRequestContext,
+	mockBgg: MockBgg,
+	dashboard: JobsDashboardPage,
+	query: string,
+	name: string
+): Promise<void> {
+	await collection.goto();
+	await seedSentGame(collection, request, query, name);
+	await mockBgg.failNextWrites(3);
+	await collection.remove(name);
+	await dashboard.waitUntilFailed('BGG remove');
 }
 
 /** Failed expansion: as a failed game, but the expansion is added from the Known BGG expansions of the open Info dialog. */

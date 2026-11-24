@@ -136,6 +136,7 @@ public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
 
 - **Domain exceptions** (e.g. `ArgumentException`) are thrown from Value Object constructors and aggregate methods when an invariant is violated. These represent programming errors or invalid input, not recoverable application states.
 - **`KeyNotFoundException`** is thrown from handlers when a requested entity does not exist. Controllers catch this and return `404 Not Found`.
+- **A command refused by a business rule** throws an application exception. The controller maps it to `409 Conflict` with a fixed reason code in the body, never the exception message.
 - Controllers are responsible for translating exceptions into appropriate HTTP responses. Raw exception messages must never be returned to the client in production.
 - Do not swallow exceptions silently. If an exception is caught and not rethrown, there must be a comment explaining why.
 - Avoid empty `catch` blocks.

@@ -1,5 +1,7 @@
 using Dapper;
 using GameCollection.Testing.Postgres;
+using Hangfire.PostgreSql;
+using Hangfire.PostgreSql.Factories;
 using Jobs.Infrastructure.Postgres;
 using Npgsql;
 using Shared.Persistence.Migrations;
@@ -21,9 +23,32 @@ internal sealed class JobsTestDatabase
 	public static async Task<JobsTestDatabase> CreateAsync(PostgresContainerFixture postgres)
 	{
 		var connectionString = await postgres.CreateDatabaseAsync();
+		InstallHangfireSchema(connectionString);
 		var scripts = MigrationScripts.LoadEmbedded(typeof(DependencyInjection).Assembly, "Jobs.Infrastructure.Postgres.Scripts.");
 		await new DatabaseMigrationRunner(connectionString, scripts).RunAsync();
 		return new JobsTestDatabase(connectionString);
+	}
+
+	public Task InsertHangfireJobAsync(long id, string stateName) =>
+		ExecuteAsync(
+			$$"""
+			insert into hangfire.job (id, invocationdata, arguments, createdat, statename)
+			overriding system value
+			values ({{id}}, '{}'::jsonb, '[]'::jsonb, now(), '{{stateName}}')
+			""");
+
+	public Task SetHangfireJobStateAsync(long id, string stateName) =>
+		ExecuteAsync($"update hangfire.job set statename = '{stateName}' where id = {id}");
+
+	public Task DeleteHangfireJobAsync(long id) =>
+		ExecuteAsync($"delete from hangfire.job where id = {id}");
+
+	private static void InstallHangfireSchema(string connectionString)
+	{
+		var options = new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = true };
+		using var connection = new NpgsqlConnection(connectionString);
+		connection.Open();
+		_ = new PostgreSqlStorage(new ExistingNpgsqlConnectionFactory(connection, options), options);
 	}
 
 	public async Task ExecuteAsync(string sql)

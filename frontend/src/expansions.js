@@ -1,6 +1,7 @@
 import { allGames, expansionSearchTimer, setExpansionSearchTimer, bggReachable } from './state.js';
 import { fetchBggExpansions, saveExpansion, saveExpansionFromBgg, deleteGame, searchBgg } from './api.js';
-import { esc, setButtonLoading, clearButtonLoading, showInlineError } from './helpers.js';
+import { esc, setButtonLoading, clearButtonLoading, showInlineError, showInlineWarning } from './helpers.js';
+import { BggAddRefusedError, refusedAddMessage, addErrorMessage } from './bggRefusal.js';
 import { bggBadgeHtml } from './bggStatus.js';
 
 export async function renderExpansionsTab(game, { onRefresh } = {}) {
@@ -78,7 +79,11 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 				if (onRefresh) await onRefresh();
 				await renderExpansionsTab(game, { onRefresh });
 			} catch (err) {
-				showInlineError(knownAddBtn, err.message);
+				if (err instanceof BggAddRefusedError) {
+					showInlineWarning(knownRow, refusedAddMessage(err.gameName, { expansion: true }));
+				} else {
+					showInlineError(knownAddBtn, err.message);
+				}
 			} finally {
 				clearButtonLoading(knownAddBtn);
 			}
@@ -165,7 +170,7 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 			} catch (err) {
 				searchInput.disabled = false;
 				searchStatus.hidden = true;
-				alert(err.message);
+				showInlineWarning(searchRow, addErrorMessage(err, { expansion: true }));
 			}
 		});
 	}

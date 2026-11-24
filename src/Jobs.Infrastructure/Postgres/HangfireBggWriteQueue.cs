@@ -1,6 +1,7 @@
 using GameCollection.Application.Abstractions;
 using Hangfire;
 using Hangfire.States;
+using Jobs.Application.Commands;
 using Jobs.Application.Models;
 using Jobs.Infrastructure.Jobs;
 
@@ -32,8 +33,18 @@ public sealed class HangfireBggWriteQueue : IBggWriteQueue
 			requestId => _jobs.Create<IBggAddJob>(j => j.RunAsync(requestId, null, CancellationToken.None), new EnqueuedState(BggQueue.Name)),
 			cancellationToken);
 
-	public Task QueueRemoveAsync(Guid gameId, int bggId, long? bggCollId, CancellationToken cancellationToken = default) =>
-		QueueAsync(
+	public async Task QueueRemoveAsync(Guid gameId, int bggId, long? bggCollId, CancellationToken cancellationToken = default)
+	{
+		var cancelledAttempts = await _requests.CancelUnfinishedAddAsync(
+			gameId,
+			BggAccounts.Owner,
+			RunBggAddCommandHandler.JobType,
+			_timeProvider.GetUtcNow(),
+			cancellationToken);
+		if (cancelledAttempts == 0)
+			return;
+
+		await QueueAsync(
 			BggWriteKind.Remove,
 			bggId,
 			gameId,
@@ -41,6 +52,10 @@ public sealed class HangfireBggWriteQueue : IBggWriteQueue
 			bggCollId,
 			requestId => _jobs.Create<IBggRemoveJob>(j => j.RunAsync(requestId, null, CancellationToken.None), new EnqueuedState(BggQueue.Name)),
 			cancellationToken);
+	}
+
+	public Task<bool> HasUnresolvedRemoveAsync(int bggId, CancellationToken cancellationToken = default) =>
+		_requests.HasUnresolvedRemoveAsync(BggAccounts.Owner, bggId, cancellationToken);
 
 	public Task<IReadOnlyList<int>> GetPendingRemoveBggIdsAsync(CancellationToken cancellationToken = default) =>
 		_requests.GetPendingRemoveBggIdsAsync(BggAccounts.Owner, cancellationToken);

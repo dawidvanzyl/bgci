@@ -4,5 +4,6 @@ public enum BggWriteRequestStatus
 {
 	Queued,
 	Sent,
-	Failed
+	Failed,
+	Cancelled
 }

@@ -40,8 +40,15 @@ public sealed class JobsTestContext
 				.Setup(r => r.GetAsync(request.Id, It.IsAny<CancellationToken>()))
 				.ReturnsAsync(request);
 			BggWriteRequestRepositoryMock
-				.Setup(r => r.RecordAttemptAsync(request.Id, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+				.Setup(r => r.StartAttemptAsync(request.Id, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
 				.ReturnsAsync(request.Attempts + 1);
+		}
+
+		public void HasUnfinishedEarlierRequest(Guid requestId, bool value)
+		{
+			BggWriteRequestRepositoryMock
+				.Setup(r => r.HasUnfinishedEarlierRequestAsync(requestId, It.IsAny<CancellationToken>()))
+				.ReturnsAsync(value);
 		}
 
 		public IReadOnlyList<BggWriteCompletion> Completions() =>

@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Jobs.Application.Commands;
 
-public class RunBggRemoveCommandHandler : IRequestHandler<RunBggRemoveCommand>
+public class RunBggRemoveCommandHandler : IRequestHandler<RunBggRemoveCommand, BggJobOutcome>
 {
 	public const string JobType = "BGG remove";
 
@@ -22,18 +22,26 @@ public class RunBggRemoveCommandHandler : IRequestHandler<RunBggRemoveCommand>
 		_timeProvider = timeProvider;
 	}
 
-	public async Task Handle(RunBggRemoveCommand command, CancellationToken cancellationToken)
+	public async Task<BggJobOutcome> Handle(RunBggRemoveCommand command, CancellationToken cancellationToken)
 	{
 		var request = await _requests.GetAsync(command.RequestId, cancellationToken);
-		if (request is null || request.Status == BggWriteRequestStatus.Sent)
-			return;
+		if (request is null || request.Status is BggWriteRequestStatus.Sent or BggWriteRequestStatus.Cancelled)
+			return BggJobOutcome.Finished;
+
+		if (await _requests.HasUnfinishedEarlierRequestAsync(request.Id, cancellationToken))
+			return BggJobOutcome.WaitingForEarlierRequest;
 
 		var startedAt = _timeProvider.GetUtcNow();
 		var attempts = request.Attempts;
 		try
 		{
-			attempts = await _requests.RecordAttemptAsync(request.Id, startedAt, cancellationToken);
+			var started = await _requests.StartAttemptAsync(request.Id, startedAt, cancellationToken);
+			if (started is null)
+				return BggJobOutcome.Finished;
+
+			attempts = started.Value;
 			await RemoveAsync(request, attempts, startedAt, cancellationToken);
+			return BggJobOutcome.Finished;
 		}
 		catch (Exception ex) when (BggJobPolicy.IsFinalAttempt(command.RetryCount) && !IsCancelled(ex, cancellationToken))
 		{
@@ -46,10 +54,16 @@ public class RunBggRemoveCommandHandler : IRequestHandler<RunBggRemoveCommand>
 
 	private async Task RemoveAsync(BggWriteRequest request, int attempts, DateTimeOffset startedAt, CancellationToken cancellationToken)
 	{
-		var collectionItemId = request.CollectionItemId
-			?? await _writer.FindCollectionItemIdAsync(request.BggId, cancellationToken)
-			?? throw new BggItemNotFoundException(request.BggId);
+		var listedItemId = await _writer.FindCollectionItemIdAsync(request.BggId, cancellationToken);
+		if (listedItemId is null)
+		{
+			await _requests.CompleteAsync(
+				BggWriteCompletions.Sent(request, JobType, request.CollectionItemId, "already gone from the BGG collection", attempts, startedAt, _timeProvider.GetUtcNow()),
+				cancellationToken);
+			return;
+		}
 
+		var collectionItemId = request.CollectionItemId ?? listedItemId.Value;
 		await _writer.RemoveAsync(collectionItemId, cancellationToken);
 		await _requests.CompleteAsync(
 			BggWriteCompletions.Sent(request, JobType, collectionItemId, $"removed collection item {collectionItemId}", attempts, startedAt, _timeProvider.GetUtcNow()),

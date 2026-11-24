@@ -36,6 +36,7 @@ public static class DependencyInjection
 		});
 
 		ReplaceRetryPolicy(configuration);
+		AddWaitFilter(ReadSeconds(configuration, "Jobs:WaitForEarlierRequestSeconds") ?? TimeSpan.FromSeconds(15));
 
 		services.AddAntiforgery();
 
@@ -94,6 +95,16 @@ public static class DependencyInjection
 		}
 
 		GlobalJobFilters.Filters.Add(BggRetryPolicy.Create(configuration));
+	}
+
+	private static void AddWaitFilter(TimeSpan delay)
+	{
+		foreach (var filter in GlobalJobFilters.Filters.Where(f => f.Instance is WaitForEarlierRequestFilter).ToList())
+		{
+			GlobalJobFilters.Filters.Remove(filter.Instance);
+		}
+
+		GlobalJobFilters.Filters.Add(new WaitForEarlierRequestFilter(delay));
 	}
 
 	private static TimeSpan? ReadSeconds(IConfiguration configuration, string key)

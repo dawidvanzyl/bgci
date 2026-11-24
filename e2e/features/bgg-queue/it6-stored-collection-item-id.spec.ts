@@ -14,7 +14,7 @@ test.describe('Queue BGG writes — a remove uses the id that the add stored', {
 		await collection.goto();
 		await seedSentGame(collection, request, 'catan', 'Catan');
 		const collId = await acceptedAddCollId(mockBgg, catanBggId);
-		await mockBgg.setCollectionLookup(false);
+		await mockBgg.setLookupCollIdOffset(7000);
 
 		await collection.remove('Catan');
 

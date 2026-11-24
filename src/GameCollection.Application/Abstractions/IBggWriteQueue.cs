@@ -6,6 +6,8 @@ namespace GameCollection.Application.Abstractions;
 /// It also reads the state of the queue: the BGG ids that have a remove not yet finished.
 /// The implementation creates the write request and its job together or not at all,
 /// and throws when it cannot.
+/// <see cref="QueueRemoveAsync"/> cancels the unfinished add of the same game, and queues a remove
+/// only when that add may have reached BGG.
 /// </summary>
 public interface IBggWriteQueue
 {
@@ -14,4 +16,6 @@ public interface IBggWriteQueue
 	Task QueueRemoveAsync(Guid gameId, int bggId, long? bggCollId, CancellationToken cancellationToken = default);
 
 	Task<IReadOnlyList<int>> GetPendingRemoveBggIdsAsync(CancellationToken cancellationToken = default);
+
+	Task<bool> HasUnresolvedRemoveAsync(int bggId, CancellationToken cancellationToken = default);
 }

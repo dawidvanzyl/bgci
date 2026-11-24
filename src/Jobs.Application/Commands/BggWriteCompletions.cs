@@ -24,6 +24,15 @@ internal static class BggWriteCompletions
 		DateTimeOffset endedAt) =>
 		Build(request, jobType, BggWriteRequestStatus.Failed, null, null, error, attempts, startedAt, endedAt);
 
+	public static BggWriteCompletion Cancelled(
+		BggWriteRequest request,
+		string jobType,
+		string result,
+		int attempts,
+		DateTimeOffset startedAt,
+		DateTimeOffset endedAt) =>
+		Build(request, jobType, BggWriteRequestStatus.Cancelled, null, result, null, attempts, startedAt, endedAt);
+
 	private static BggWriteCompletion Build(
 		BggWriteRequest request,
 		string jobType,

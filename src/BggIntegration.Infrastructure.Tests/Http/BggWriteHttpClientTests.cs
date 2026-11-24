@@ -224,14 +224,27 @@ public sealed class BggWriteHttpClientTests
 	}
 
 	[Fact]
-	[Trait("AC", "111UC7")]
-	public async Task FindCollectionItemIdAsync_ItemNotListed_ReturnsNullAfterFiveLookups()
+	[Trait("AC", "112UC4")]
+	public async Task FindCollectionItemIdAsync_ItemNotListed_ReturnsNullAfterOneLookup()
 	{
-		_handler.Script("lookup", Enumerable.Repeat(Answer(HttpStatusCode.OK, "<items totalitems=\"0\"/>"), 10).ToArray());
+		_handler.Script("lookup", Answer(HttpStatusCode.OK, "<items totalitems=\"0\"/>"));
 
-		var collId = await AdvanceUntilCompleteAsync(CreateClient().FindCollectionItemIdAsync(13, Token));
+		var collId = await CreateClient().FindCollectionItemIdAsync(13, Token);
 
 		collId.ShouldBeNull();
+		_handler.Count("lookup").ShouldBe(1);
+	}
+
+	[Fact]
+	[Trait("AC", "112UC4")]
+	public async Task FindCollectionItemIdAsync_LookupNeverReady_FailsWithTheLookupStep()
+	{
+		_handler.Script("lookup", Enumerable.Repeat(Answer(HttpStatusCode.Accepted), 10).ToArray());
+
+		var exception = await Should.ThrowAsync<BggWriteException>(
+			() => AdvanceUntilCompleteAsync(CreateClient().FindCollectionItemIdAsync(13, Token)));
+
+		exception.Step.ShouldBe(_lookupStep);
 		_handler.Count("lookup").ShouldBe(5);
 	}
 

@@ -1,5 +1,6 @@
 using Hangfire.Server;
 using Jobs.Application.Commands;
+using Jobs.Application.Models;
 using Jobs.Infrastructure.Jobs;
 using MediatR;
 
@@ -20,7 +21,9 @@ public sealed class BggAddJob : IBggAddJob
 	{
 		using (_runningJobs.Enter())
 		{
-			await _mediator.Send(new RunBggAddCommand(requestId, RetryCount.Of(context)), cancellationToken);
+			var outcome = await _mediator.Send(new RunBggAddCommand(requestId, RetryCount.Of(context)), cancellationToken);
+			if (outcome == BggJobOutcome.WaitingForEarlierRequest)
+				throw new WaitForEarlierRequestException(requestId);
 		}
 	}
 }
