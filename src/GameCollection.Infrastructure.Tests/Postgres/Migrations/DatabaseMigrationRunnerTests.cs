@@ -1,4 +1,4 @@
-using GameCollection.Infrastructure.Postgres.Migrations;
+using Shared.Persistence.Migrations;
 using GameCollection.Testing.Postgres;
 using Npgsql;
 using Shouldly;
@@ -12,7 +12,7 @@ public sealed class DatabaseMigrationRunnerTests
 	private const string _functionJournal = "migration_function_journal";
 	private const string _seedJournal = "migration_seed_journal";
 
-	private static readonly MigrationScripts _embedded = MigrationScripts.LoadEmbedded();
+	private static readonly MigrationScripts _embedded = EmbeddedMigrationScripts.Load();
 
 	private readonly PostgresContainerFixture _postgres;
 
@@ -44,15 +44,15 @@ public sealed class DatabaseMigrationRunnerTests
 			Schema =
 			[
 				.. _embedded.Schema,
-				Script("0003_alter_order_probe.sql", "alter table order_probe add column note text;"),
-				Script("0002_create_order_probe.sql", "create table order_probe (id integer);")
+				Script("0101_alter_order_probe.sql", "alter table order_probe add column note text;"),
+				Script("0100_create_order_probe.sql", "create table order_probe (id integer);")
 			]
 		};
 
 		await RunAsync(database, scripts);
 
 		(await database.JournalAsync(_schemaJournal)).ShouldBe(
-			["0001_create_collected_games.sql", "0002_create_order_probe.sql", "0003_alter_order_probe.sql"]);
+			[.. _embedded.Schema.Select(script => script.Name), "0100_create_order_probe.sql", "0101_alter_order_probe.sql"]);
 	}
 
 	[Fact]
@@ -62,7 +62,7 @@ public sealed class DatabaseMigrationRunnerTests
 		var database = await NewDatabaseAsync();
 		var scripts = _embedded with
 		{
-			Schema = [.. _embedded.Schema, Script("0002_create_run_order_probe.sql", "create table run_order_probe (id bigint);")],
+			Schema = [.. _embedded.Schema, Script("0100_create_run_order_probe.sql", "create table run_order_probe (id bigint);")],
 			Functions =
 			[
 				Script(
@@ -96,6 +96,7 @@ public sealed class DatabaseMigrationRunnerTests
 			Column("best_player_count_min", "integer", "int4", true),
 			Column("bgg_coll_id", "bigint", "int8", true),
 			Column("bgg_id", "integer", "int4", true),
+			Column("bgg_status", "text", "text", true),
 			Column("bgg_rating", "numeric", "numeric", true),
 			Column("bgg_weight", "numeric", "numeric", true),
 			Column("categories", "ARRAY", "_text", false),
@@ -174,7 +175,7 @@ public sealed class DatabaseMigrationRunnerTests
 
 		var withDrop = _embedded with
 		{
-			Schema = [.. _embedded.Schema, Script("0002_drop_probe_retired.sql", "drop function if exists probe_retired();")]
+			Schema = [.. _embedded.Schema, Script("0100_drop_probe_retired.sql", "drop function if exists probe_retired();")]
 		};
 		await RunAsync(database, withDrop);
 
@@ -191,18 +192,18 @@ public sealed class DatabaseMigrationRunnerTests
 			Schema =
 			[
 				.. _embedded.Schema,
-				Script("0002_create_failure_probe.sql", "create table failure_probe (id integer); select 1/0;"),
-				Script("0003_create_after_failure.sql", "create table after_failure (id integer);")
+				Script("0100_create_failure_probe.sql", "create table failure_probe (id integer); select 1/0;"),
+				Script("0101_create_after_failure.sql", "create table after_failure (id integer);")
 			],
 			Functions = [ProbeAnswer(1)]
 		};
 
 		var exception = await Should.ThrowAsync<DatabaseMigrationException>(() => RunAsync(database, scripts));
 
-		exception.ScriptName.ShouldBe("0002_create_failure_probe.sql");
-		exception.Message.ShouldContain("0002_create_failure_probe.sql");
+		exception.ScriptName.ShouldBe("0100_create_failure_probe.sql");
+		exception.Message.ShouldContain("0100_create_failure_probe.sql");
 		exception.InnerException.ShouldBeOfType<PostgresException>().SqlState.ShouldBe("22012");
-		(await database.JournalAsync(_schemaJournal)).ShouldBe(["0001_create_collected_games.sql"]);
+		(await database.JournalAsync(_schemaJournal)).ShouldBe(_embedded.Schema.Select(script => script.Name).Order(StringComparer.Ordinal));
 		(await database.TableExistsAsync("failure_probe")).ShouldBeFalse();
 		(await database.TableExistsAsync("after_failure")).ShouldBeFalse();
 		(await database.FunctionExistsAsync("probe_answer")).ShouldBeFalse();
@@ -239,7 +240,7 @@ public sealed class DatabaseMigrationRunnerTests
 		var database = await NewDatabaseAsync();
 		var scripts = _embedded with
 		{
-			Schema = [.. _embedded.Schema, Script("0002_create_seed_probe.sql", "create table seed_probe (name text primary key);")],
+			Schema = [.. _embedded.Schema, Script("0100_create_seed_probe.sql", "create table seed_probe (name text primary key);")],
 			Seeds = [Script("seed_probe_alpha.sql", "insert into seed_probe (name) values ('alpha') on conflict do nothing;")]
 		};
 
@@ -275,15 +276,42 @@ public sealed class DatabaseMigrationRunnerTests
 			Schema =
 			[
 				.. _embedded.Schema,
-				Script("0002_add_shelf_location.sql", "alter table collected_games add column shelf_location text;")
+				Script("0100_add_shelf_location.sql", "alter table collected_games add column shelf_location text;")
 			]
 		};
 
 		await RunAsync(database, newer);
 
 		(await database.ColumnsAsync("collected_games")).ShouldContain(column => column.Name == "shelf_location");
-		(await database.JournalAsync(_schemaJournal)).Last().ShouldBe("0002_add_shelf_location.sql");
+		(await database.JournalAsync(_schemaJournal)).Last().ShouldBe("0100_add_shelf_location.sql");
 		(await database.SnapshotGamesAsync("shelf_location")).ShouldBe(snapshot);
+	}
+
+	[Fact]
+	[Trait("AC", "111UC13")]
+	public async Task RunAsync_ExistingGames_MarksBggSourcedGamesSentAndLeavesManualGamesNull()
+	{
+		var database = await NewDatabaseAsync();
+		await RunAsync(database, _embedded with { Schema = _embedded.Schema.Take(1).ToList(), Functions = [], Seeds = [] });
+		await database.InsertGamesAsync(withBggStatus: false);
+		await database.ExecuteAsync(
+			$"insert into collected_games (id, name, bgg_id, added_at, updated_at) values ('{Guid.NewGuid()}', 'Game D', 7, now(), now())");
+
+		await RunAsync(database, _embedded);
+
+		(await database.QueryScalarAsync<int>("select count(*)::int from collected_games where bgg_id is not null and bgg_status = 'sent'")).ShouldBe(2);
+		(await database.QueryScalarAsync<int>("select count(*)::int from collected_games where bgg_id is null and bgg_status is null")).ShouldBe(2);
+	}
+
+	[Fact]
+	[Trait("AC", "111UC13")]
+	public async Task RunAsync_GameWithBggIdAndNoStatus_IsRejected()
+	{
+		var database = await NewDatabaseAsync();
+		await RunAsync(database, _embedded);
+
+		await Should.ThrowAsync<PostgresException>(() => database.ExecuteAsync(
+			$"insert into collected_games (id, name, bgg_id, added_at, updated_at) values ('{Guid.NewGuid()}', 'Game E', 7, now(), now())"));
 	}
 
 	private static MigrationScript Script(string name, string contents) => new(name, contents);

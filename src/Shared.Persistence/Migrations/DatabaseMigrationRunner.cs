@@ -2,7 +2,7 @@ using DbUp;
 using DbUp.Engine;
 using DbUp.Postgresql;
 
-namespace GameCollection.Infrastructure.Postgres.Migrations;
+namespace Shared.Persistence.Migrations;
 
 public sealed class DatabaseMigrationRunner
 {

@@ -38,33 +38,19 @@ public sealed class GameCollectionTestContext
 
 	public sealed class ServiceMocks
 	{
-		public Mock<IBggCollectionWriter> BggCollectionWriterMock { get; } = new();
+		public Mock<IBggWriteQueue> BggWriteQueueMock { get; } = new();
 
-		public void BggAddReturns(BggAddResult result)
+		public void QueueAddThrows(Exception exception)
 		{
-			BggCollectionWriterMock
-				.Setup(w => w.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-				.ReturnsAsync(result);
-		}
-
-		public void BggAddThrows(Exception exception)
-		{
-			BggCollectionWriterMock
-				.Setup(w => w.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			BggWriteQueueMock
+				.Setup(q => q.QueueAddAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 				.ThrowsAsync(exception);
 		}
 
-		public void BggRemoveReturns(BggWriteOutcome outcome)
+		public void QueueRemoveThrows(Exception exception)
 		{
-			BggCollectionWriterMock
-				.Setup(w => w.RemoveFromCollectionAsync(It.IsAny<long?>(), It.IsAny<CancellationToken>()))
-				.ReturnsAsync(outcome);
-		}
-
-		public void BggRemoveThrows(Exception exception)
-		{
-			BggCollectionWriterMock
-				.Setup(w => w.RemoveFromCollectionAsync(It.IsAny<long?>(), It.IsAny<CancellationToken>()))
+			BggWriteQueueMock
+				.Setup(q => q.QueueRemoveAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()))
 				.ThrowsAsync(exception);
 		}
 	}

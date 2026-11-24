@@ -1,26 +1,21 @@
 using System.Reflection;
 
-namespace GameCollection.Infrastructure.Postgres.Migrations;
+namespace Shared.Persistence.Migrations;
 
 public sealed record MigrationScripts(
 	IReadOnlyList<MigrationScript> Schema,
 	IReadOnlyList<MigrationScript> Functions,
 	IReadOnlyList<MigrationScript> Seeds)
 {
-	private const string _resourcePrefix = "GameCollection.Infrastructure.Postgres.Scripts.";
+	public static MigrationScripts LoadEmbedded(Assembly assembly, string resourcePrefix) =>
+		new(
+			Load(assembly, resourcePrefix, "Schema"),
+			Load(assembly, resourcePrefix, "Functions"),
+			Load(assembly, resourcePrefix, "Seeds"));
 
-	public static MigrationScripts LoadEmbedded()
+	private static List<MigrationScript> Load(Assembly assembly, string resourcePrefix, string category)
 	{
-		var assembly = typeof(MigrationScripts).Assembly;
-		return new MigrationScripts(
-			Load(assembly, "Schema"),
-			Load(assembly, "Functions"),
-			Load(assembly, "Seeds"));
-	}
-
-	private static List<MigrationScript> Load(Assembly assembly, string category)
-	{
-		var prefix = $"{_resourcePrefix}{category}.";
+		var prefix = $"{resourcePrefix}{category}.";
 		return assembly.GetManifestResourceNames()
 			.Where(name => name.StartsWith(prefix, StringComparison.Ordinal))
 			.Select(name => new MigrationScript(name[prefix.Length..], ReadResource(assembly, name)))

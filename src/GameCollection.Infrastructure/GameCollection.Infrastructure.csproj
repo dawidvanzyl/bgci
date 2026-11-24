@@ -2,11 +2,11 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\GameCollection.Domain\GameCollection.Domain.csproj" />
+		<ProjectReference Include="..\Shared.Persistence\Shared.Persistence.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Dapper" Version="2.1.72" />
-		<PackageReference Include="dbup-postgresql" Version="6.1.5" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.4" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.4" />
 		<PackageReference Include="Npgsql" Version="9.0.4" />

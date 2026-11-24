@@ -1,4 +1,4 @@
-namespace GameCollection.Infrastructure.Postgres.Migrations;
+namespace Shared.Persistence.Migrations;
 
 public sealed class DatabaseMigrationException : Exception
 {

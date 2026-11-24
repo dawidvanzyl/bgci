@@ -42,7 +42,7 @@ public sealed class GameCollectionTestFixture
 
 	private static void RegisterServices(ServiceCollection services, GameCollectionTestContext context)
 	{
-		services.AddTransient(_ => context.Services.BggCollectionWriterMock.Object);
+		services.AddTransient(_ => context.Services.BggWriteQueueMock.Object);
 	}
 
 	private static void RegisterHandlers(ServiceCollection services)
@@ -51,6 +51,8 @@ public sealed class GameCollectionTestFixture
 		services.AddTransient<AddGameManuallyCommandHandler>();
 		services.AddTransient<DeleteGameCommandHandler>();
 		services.AddTransient<UpdateGameCommandHandler>();
+		services.AddTransient<MarkGameBggSentCommandHandler>();
+		services.AddTransient<MarkGameBggFailedCommandHandler>();
 		services.AddTransient<GetAllGamesQueryHandler>();
 		services.AddTransient<GetGameByIdQueryHandler>();
 	}

@@ -1,7 +1,7 @@
 using DbUp.Engine;
 using System.Data;
 
-namespace GameCollection.Infrastructure.Postgres.Migrations;
+namespace Shared.Persistence.Migrations;
 
 internal sealed class RunAlwaysJournal : IJournal
 {

@@ -35,6 +35,7 @@ public class CollectedGame
 	public IReadOnlyList<string> Subdomains => _subdomains.AsReadOnly();
 	public BggGameId? BggId { get; private set; }
 	public long? BggCollId { get; private set; }
+	public BggStatus? BggStatus { get; private set; }
 	public GameId? ParentGameId { get; private set; }
 	public int ExpansionCount { get; private set; }
 	public DateTime AddedAt { get; private set; }
@@ -71,8 +72,12 @@ public class CollectedGame
 		IEnumerable<string>? subdomains = null,
 		BggGameId? bggId = null,
 		long? bggCollId = null,
-		GameId? parentGameId = null)
+		GameId? parentGameId = null,
+		BggStatus? bggStatus = null)
 	{
+		if (bggId is null != bggStatus is null)
+			throw new ArgumentException("A game has a BGG status exactly when it has a BGG id.", nameof(bggStatus));
+
 		var game = new CollectedGame
 		{
 			Id = GameId.New(),
@@ -91,6 +96,7 @@ public class CollectedGame
 			CoverImageUrl = coverImageUrl,
 			BggId = bggId,
 			BggCollId = bggCollId,
+			BggStatus = bggStatus,
 			ParentGameId = parentGameId,
 			AddedAt = DateTime.UtcNow,
 			UpdatedAt = DateTime.UtcNow
@@ -176,6 +182,26 @@ public class CollectedGame
 		_domainEvents.Add(new GameDetailsUpdated(Id, Name));
 	}
 
+	public void MarkBggSent(long bggCollId)
+	{
+		EnsureBggSourced();
+		ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(bggCollId, 0);
+		BggCollId = bggCollId;
+		BggStatus = ValueObjects.BggStatus.Sent;
+	}
+
+	public void MarkBggFailed()
+	{
+		EnsureBggSourced();
+		BggStatus = ValueObjects.BggStatus.Failed;
+	}
+
+	private void EnsureBggSourced()
+	{
+		if (!IsBggSourced)
+			throw new InvalidOperationException("Only a game from BGG has a BGG status.");
+	}
+
 	public void ClearDomainEvents() => _domainEvents.Clear();
 
 	// Called by the repository after reconstitution to populate the computed count.
@@ -205,6 +231,7 @@ public class CollectedGame
 		IEnumerable<string> subdomains,
 		BggGameId? bggId,
 		long? bggCollId,
+		BggStatus? bggStatus,
 		GameId? parentGameId,
 		DateTime addedAt,
 		DateTime updatedAt)
@@ -227,6 +254,7 @@ public class CollectedGame
 			CoverImageUrl = coverImageUrl,
 			BggId = bggId,
 			BggCollId = bggCollId,
+			BggStatus = bggStatus,
 			ParentGameId = parentGameId,
 			AddedAt = addedAt,
 			UpdatedAt = updatedAt
