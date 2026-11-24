@@ -15,7 +15,7 @@ RETURNS void
 LANGUAGE sql
 AS $body$
 	UPDATE bgg_write_requests
-	SET status = p_status,
+	SET status = CASE WHEN status = 'cancelled' THEN status ELSE p_status END,
 		collection_item_id = COALESCE(p_collection_item_id, collection_item_id),
 		updated_at = p_ended_at
 	WHERE id = p_id;

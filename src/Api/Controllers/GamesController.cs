@@ -1,4 +1,6 @@
 using Api.Requests;
+using Api.Responses;
+using GameCollection.Application;
 using GameCollection.Application.Commands;
 using GameCollection.Application.DTOs;
 using GameCollection.Application.Queries;
@@ -72,8 +74,15 @@ public class GamesController : ControllerBase
 			request.BggId,
 			SkipBggWrite: false,
 			ParentGameId: request.ParentGameId);
-		var result = await _mediator.Send(command, cancellationToken);
-		return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+		try
+		{
+			var result = await _mediator.Send(command, cancellationToken);
+			return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+		}
+		catch (BggRemoveNotFinishedException)
+		{
+			return Conflict(new AddGameFromBggRefusal(AddGameFromBggRefusal.BggRemoveNotFinished));
+		}
 	}
 
 	[HttpPut("{id:guid}")]

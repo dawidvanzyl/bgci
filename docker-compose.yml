@@ -147,6 +147,7 @@ services:
       Jobs__RetryDelaysSeconds__1: "2"
       Jobs__QueuePollIntervalSeconds: "1"
       Jobs__SchedulePollingIntervalSeconds: "1"
+      Jobs__WaitForEarlierRequestSeconds: "1"
     ports:
       - "127.0.0.1:${QA_JOBS_DASHBOARD_PORT:-15104}:8080"
     depends_on:
