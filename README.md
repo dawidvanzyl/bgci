@@ -260,6 +260,7 @@ The app is available at `http://localhost:5173`.
 | `JobsDatabase:Name` | Jobs database name. The API and the jobs service read this key. | `bgci_jobs` |
 | `JobsDatabase:User` | Jobs database user. The API and the jobs service read this key. | `bgci_jobs` |
 | `JobsDatabase:Password` | Jobs database password. The API and the jobs service read this key. | *(none, set `JOBS_DB_PASSWORD`)* |
+| `Jobs:HangfireSchemaWaitSeconds` | How long the API waits at start for the jobs service to install the Hangfire schema. The API logs a warning and starts when the time ends. | `60` |
 | `Bgg:BearerToken` | BGG API bearer token. Without it, BGG search is disabled. Requires approval at [boardgamegeek.com/applications](https://boardgamegeek.com/applications). | *(empty)* |
 | `Bgg:Username` | BGG username for collection sync. | *(empty)* |
 | `Bgg:Password` | BGG password. The jobs service logs in with it to add and remove games in your BGG collection. Without it, those writes fail. | *(empty)* |

@@ -2,6 +2,7 @@ using GameCollection.Testing.Postgres;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Jobs.Infrastructure.Postgres;
+using Npgsql;
 using Shared.Persistence.Migrations;
 using Shouldly;
 using Xunit;
@@ -22,6 +23,25 @@ public sealed class JobsDatabaseMigratorTests
 	public async Task WaitForHangfireSchemaAsync_NoJobsServiceInstallsIt_ReturnsFalseAfterTheLimit()
 	{
 		var connectionString = await _postgres.CreateDatabaseAsync();
+
+		var found = await Migrator(connectionString).WaitForHangfireSchemaAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
+
+		found.ShouldBeFalse();
+	}
+
+	[Fact]
+	[Trait("AC", "111UC1")]
+	public async Task WaitForHangfireSchemaAsync_InstallerHasOnlyPartlyFinished_ReturnsFalseAfterTheLimit()
+	{
+		var connectionString = await _postgres.CreateDatabaseAsync();
+		await using (var connection = new NpgsqlConnection(connectionString))
+		{
+			await connection.OpenAsync(TestContext.Current.CancellationToken);
+			await using var command = new NpgsqlCommand(
+				"create schema hangfire; create table hangfire.job (id bigint); create table hangfire.schema (version int); insert into hangfire.schema values (3)",
+				connection);
+			await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
+		}
 
 		var found = await Migrator(connectionString).WaitForHangfireSchemaAsync(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
 
