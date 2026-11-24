@@ -51,8 +51,8 @@ docker compose --profile qa down -v
 
 ## 3. Mock BGG
 
-`mock-bgg` replaces BoardGameGeek. The API reaches it through `Bgg__BaseUrl`, the site root.
-The API logs in with `Bgg__Username` and `Bgg__Password`. Tests never call the real BGG.
+`mock-bgg` replaces BoardGameGeek. The API and the jobs service reach it through `Bgg__BaseUrl`, the site root.
+The jobs service logs in with `Bgg__Username` and `Bgg__Password`. Tests never call the real BGG.
 
 - It serves `xmlapi2/search`, `xmlapi2/thing` and `xmlapi2/collection` as BGG XML, built from the standard game data set.
   The data set is `test-data/bgg-games.json` at the repository root. Mock BGG and the live suite
