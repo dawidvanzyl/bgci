@@ -57,7 +57,10 @@ export class JobsDashboardPage {
 
 	/** Opens the details of the first job with the display name in the list that is open. */
 	async openJob(name: JobName): Promise<void> {
-		await this.jobRows(name).first().getByRole('link', { name: /^\d+$/ }).click();
+		await this.jobRows(name)
+			.first()
+			.getByRole('link', { name: /^#?\d+$/ })
+			.click();
 		await this.page.waitForURL(/\/jobs\/details\/\d+/);
 	}
 
@@ -78,6 +81,10 @@ export class JobsDashboardPage {
 	/** Deletes the job whose details are open and accepts the confirmation. */
 	async deleteJob(): Promise<void> {
 		this.page.once('dialog', (dialog) => dialog.accept());
+		const deleted = this.page.waitForResponse((response) => response.url().includes('/jobs/actions/delete/'));
 		await this.page.getByRole('button', { name: /^\s*Delete/ }).click();
+		await deleted;
+		// Hangfire reloads the details page after the delete, and the reloaded history ends in Deleted.
+		await expect(this.stateCard('Deleted')).toBeVisible();
 	}
 }
