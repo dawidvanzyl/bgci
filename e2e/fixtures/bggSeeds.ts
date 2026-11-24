@@ -1,7 +1,7 @@
 import { expect, type APIRequestContext } from '@playwright/test';
 import type { CollectionPage } from '../pages/CollectionPage';
 import type { JobsDashboardPage } from '../pages/JobsDashboardPage';
-import type { BggAttempt, MockBgg } from './mockBgg';
+import type { BggAttempt, MockBgg, MockCollectionItem } from './mockBgg';
 
 export const catanBggId = 13;
 export const azulBggId = 230802;
@@ -9,6 +9,16 @@ export const actionTestBggId = 3179;
 export const seafarersBggId = 325;
 export const citiesAndKnightsBggId = 926;
 export const tradersAndBarbariansBggId = 27760;
+
+export const catanItem: MockCollectionItem = { bggId: catanBggId, collId: 5001, name: 'Catan', year: 1995 };
+export const azulItem: MockCollectionItem = { bggId: azulBggId, collId: 5001, name: 'Azul', year: 2017 };
+export const seafarersItem: MockCollectionItem = {
+	bggId: seafarersBggId,
+	collId: 5002,
+	name: 'Catan: Seafarers',
+	year: 1997,
+	expansion: true,
+};
 
 export const jobTimeoutMs = 30_000;
 
@@ -25,6 +35,12 @@ export async function waitForBggStatus(request: APIRequestContext, name: string,
 			{ message: `"${name}" gets the BGG status ${status}`, timeout: jobTimeoutMs }
 		)
 		.toBe(status);
+}
+
+/** Runs the sync and waits until the game is listed. The sync imports the game with the status sent. */
+export async function importBySync(collection: CollectionPage, name: string): Promise<void> {
+	await collection.sync();
+	await expect(collection.card(name)).toBeVisible();
 }
 
 /** Adds a game from a BGG search and waits until the card is listed. */
