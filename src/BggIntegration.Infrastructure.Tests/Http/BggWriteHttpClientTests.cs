@@ -195,6 +195,75 @@ public sealed class BggWriteHttpClientTests
 		_handler.Count("lookup").ShouldBe(5);
 	}
 
+	[Fact]
+	[Trait("AC", "111UC7")]
+	public async Task FindCollectionItemIdAsync_ItemListed_ReturnsItsIdWithoutLoginOrWrite()
+	{
+		_handler.Script("lookup", Lookup(13, 555));
+
+		var collId = await CreateClient().FindCollectionItemIdAsync(13, Token);
+
+		collId.ShouldBe(555);
+		_handler.Requests.Select(r => r.Route).ShouldBe(["lookup"]);
+		_handler.Of("lookup").Single().Headers["Authorization"].ShouldBe("Bearer qa-token");
+	}
+
+	[Fact]
+	[Trait("AC", "111UC7")]
+	public async Task FindCollectionItemIdAsync_LookupAcceptedThenListed_WaitsAndReturnsTheId()
+	{
+		_handler.Script("lookup", Answer(HttpStatusCode.Accepted), Lookup(13, 555));
+
+		var find = CreateClient().FindCollectionItemIdAsync(13, Token);
+		await WaitUntilAsync(() => _handler.Count("lookup") == 1);
+		await SettleAsync();
+		_time.Advance(TimeSpan.FromSeconds(4));
+
+		(await find).ShouldBe(555);
+		_handler.Count("lookup").ShouldBe(2);
+	}
+
+	[Fact]
+	[Trait("AC", "111UC7")]
+	public async Task FindCollectionItemIdAsync_ItemNotListed_ReturnsNullAfterFiveLookups()
+	{
+		_handler.Script("lookup", Enumerable.Repeat(Answer(HttpStatusCode.OK, "<items totalitems=\"0\"/>"), 10).ToArray());
+
+		var collId = await AdvanceUntilCompleteAsync(CreateClient().FindCollectionItemIdAsync(13, Token));
+
+		collId.ShouldBeNull();
+		_handler.Count("lookup").ShouldBe(5);
+	}
+
+	[Fact]
+	[Trait("AC", "111UC7")]
+	public async Task FindCollectionItemIdAsync_LookupAnswersError_FailsWithTheLookupStep()
+	{
+		_handler.Script("lookup", Json(HttpStatusCode.InternalServerError, "Boom"));
+
+		var exception = await Should.ThrowAsync<BggWriteException>(
+			() => CreateClient().FindCollectionItemIdAsync(13, Token));
+
+		exception.Step.ShouldBe(_lookupStep);
+	}
+
+	[Fact]
+	[Trait("AC", "111UC7")]
+	public async Task FindCollectionItemIdAsync_NoBearerToken_FailsBeforeAnyRequest()
+	{
+		var client = new BggWriteHttpClient(
+			new HttpClient(_handler) { BaseAddress = new Uri("http://bgg.test/") },
+			new BggSession(),
+			Options.Create(new BggSettings { Username = _username, Password = _password }),
+			_time,
+			_logger);
+
+		var exception = await Should.ThrowAsync<BggWriteException>(() => client.FindCollectionItemIdAsync(13, Token));
+
+		exception.Step.ShouldBe(_lookupStep);
+		_handler.Requests.ShouldBeEmpty();
+	}
+
 	[Theory]
 	[Trait("AC", "100UC10")]
 	[InlineData("add", HttpStatusCode.InternalServerError, "Boom")]
