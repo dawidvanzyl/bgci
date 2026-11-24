@@ -54,7 +54,7 @@ test.describe('Standard data set — mock BGG serves the games the data set defi
 		const expansion = bggGame(325);
 		expect(expansion.expansionOf).toBe(parent.id);
 		expect(parent.expansions.map((entry) => entry.id)).toContain(expansion.id);
-		expect(parent.expansions).toHaveLength(1);
+		expect(parent.expansions).toHaveLength(3);
 		const listed = parent.expansions[0];
 		const collection = new CollectionPage(page);
 		await collection.goto();
