@@ -62,10 +62,18 @@ services:
       - Database__Password=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - Bgg__BearerToken=${BGG_BEARER_TOKEN:-}
       - Bgg__Username=${BGG_USERNAME:-}
-      - Bgg__Password=${BGG_PASSWORD:-}
+      - JobsDatabase__Host=bgci-jobs-db
+      - JobsDatabase__Port=5432
+      - JobsDatabase__Name=${JOBS_DB_NAME:-bgci_jobs}
+      - JobsDatabase__User=${JOBS_DB_USER:-bgci_jobs}
+      - JobsDatabase__Password=${JOBS_DB_PASSWORD:?JOBS_DB_PASSWORD must be set in .env}
     depends_on:
       bgci-db:
         condition: service_healthy
+      bgci-jobs-db:
+        condition: service_healthy
+      bgci-jobs:
+        condition: service_started
     networks:
       - bgci-net
 
@@ -80,10 +88,20 @@ services:
       - JobsDatabase__Name=${JOBS_DB_NAME:-bgci_jobs}
       - JobsDatabase__User=${JOBS_DB_USER:-bgci_jobs}
       - JobsDatabase__Password=${JOBS_DB_PASSWORD:?JOBS_DB_PASSWORD must be set in .env}
+      - Database__Host=bgci-db
+      - Database__Port=5432
+      - Database__Name=${DB_NAME:-bgci}
+      - Database__User=${DB_USER:-bgci}
+      - Database__Password=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      - Bgg__BearerToken=${BGG_BEARER_TOKEN:-}
+      - Bgg__Username=${BGG_USERNAME:-}
+      - Bgg__Password=${BGG_PASSWORD:-}
     ports:
       - "127.0.0.1:${BGCI_JOBS_DASHBOARD_PORT:-15003}:8080"
     depends_on:
       bgci-jobs-db:
+        condition: service_healthy
+      bgci-db:
         condition: service_healthy
     networks:
       - bgci-net
