@@ -41,7 +41,7 @@ The backend follows **Domain-Driven Design** with two bounded contexts:
                          translation happens here
 ```
 
-The jobs service is a second .NET host that runs Hangfire and serves the Hangfire dashboard. It keeps its jobs in its own PostgreSQL database, separate from the collection database.
+The jobs service is a second .NET host that runs Hangfire, runs the BGG collection writes and serves the Hangfire dashboard. The API only queues the jobs. The service keeps its jobs in its own PostgreSQL database, separate from the collection database.
 
 ### Tech Stack
 
@@ -102,7 +102,7 @@ JOBS_DB_NAME=bgci_jobs              # optional, jobs database name
 JOBS_DB_USER=bgci_jobs              # optional, jobs database user
 BGG_BEARER_TOKEN=your-token-here    # required for BGG search
 BGG_USERNAME=your-bgg-username      # required for collection sync
-BGG_PASSWORD=your-bgg-password      # used by the API for collection write-back
+BGG_PASSWORD=your-bgg-password      # used by the jobs service for collection write-back
 ```
 
 > `DB_PASSWORD` and `JOBS_DB_PASSWORD` are required. The stack does not start without them. `DB_NAME` and `DB_USER` default to `bgci`. `JOBS_DB_NAME` and `JOBS_DB_USER` default to `bgci_jobs`.
@@ -168,6 +168,7 @@ Version 2.1.1 removes the `bgg-writer` container. The API now writes to BGG itse
 The next version adds the jobs service and the jobs database.
 
 1. Set `JOBS_DB_PASSWORD` in `.env`. Compare `.env` with the new `env.example` for the other new values.
+2. Keep `BGG_PASSWORD` in `.env`. The jobs service now reads it, and the API no longer does. A game you add from BoardGameGeek shows as pending until the jobs service adds it to your BGG collection. A game you remove leaves your collection at once, and the jobs service removes it from your BGG collection afterwards.
 2. Replace `docker-compose.yml` with the file from the new release.
 3. Run `docker compose pull`. Every image in the compose file uses a `:latest` tag, and `docker compose up -d` does not fetch a newer `:latest` when a local copy exists. Without the pull, the jobs image is fetched, but the other images stay on their old versions.
 4. Run `docker compose up -d`.
@@ -225,9 +226,9 @@ cd src/Api
 dotnet run
 ```
 
-The API starts on `http://localhost:5074` by default. Start the dev database first (see "Running the dev stack"; start only `bgci-dev-db`). Point the API at it with `Database:Host=localhost`, `Database:Port=15202` (`DEV_DB_PORT`), `Database:Name=bgci`, `Database:User=bgci` and `Database:Password=bgci`, the values in `.env.dev.example`. Put them in the `Database` section of your local `src/Api/appsettings.Development.json`. That file is git-ignored, so each developer keeps their own copy.
+The API starts on `http://localhost:5074` by default. Start the dev database first (see "Running the dev stack"; start only `bgci-dev-db`). The API also needs the jobs database: set `JobsDatabase:Host`, `JobsDatabase:Port`, `JobsDatabase:Name`, `JobsDatabase:User` and `JobsDatabase:Password` in the same file (the `JOBS_DB_*` values in `.env.dev.example`). Point the API at the collection database with `Database:Host=localhost`, `Database:Port=15202` (`DEV_DB_PORT`), `Database:Name=bgci`, `Database:User=bgci` and `Database:Password=bgci`, the values in `.env.dev.example`. Put them in the `Database` section of your local `src/Api/appsettings.Development.json`. That file is git-ignored, so each developer keeps their own copy.
 
-For BGG collection writes the API reads `Bgg:Username`, `Bgg:Password` and `Bgg:BearerToken`. Put them in the `Bgg` section of the same git-ignored `appsettings.Development.json`.
+The API queues BGG collection writes and does not send them. The jobs service sends them, and it reads `Bgg:Username`, `Bgg:Password` and `Bgg:BearerToken`. The API reads `Bgg:Username` and `Bgg:BearerToken` for search and sync.
 
 ### Frontend
 
@@ -254,14 +255,14 @@ The app is available at `http://localhost:5173`.
 | `Database:Name` | Database name | `bgci` |
 | `Database:User` | Database user | `bgci` |
 | `Database:Password` | Database password | *(none, set `DB_PASSWORD`)* |
-| `JobsDatabase:Host` | Host name of the PostgreSQL server that holds the jobs database. The jobs service reads this key. | `bgci-jobs-db` in Docker |
-| `JobsDatabase:Port` | Port of the jobs database server. The jobs service reads this key. | `5432` |
-| `JobsDatabase:Name` | Jobs database name. The jobs service reads this key. | `bgci_jobs` |
-| `JobsDatabase:User` | Jobs database user. The jobs service reads this key. | `bgci_jobs` |
-| `JobsDatabase:Password` | Jobs database password. The jobs service reads this key. | *(none, set `JOBS_DB_PASSWORD`)* |
+| `JobsDatabase:Host` | Host name of the PostgreSQL server that holds the jobs database. The API and the jobs service read this key. | `bgci-jobs-db` in Docker |
+| `JobsDatabase:Port` | Port of the jobs database server. The API and the jobs service read this key. | `5432` |
+| `JobsDatabase:Name` | Jobs database name. The API and the jobs service read this key. | `bgci_jobs` |
+| `JobsDatabase:User` | Jobs database user. The API and the jobs service read this key. | `bgci_jobs` |
+| `JobsDatabase:Password` | Jobs database password. The API and the jobs service read this key. | *(none, set `JOBS_DB_PASSWORD`)* |
 | `Bgg:BearerToken` | BGG API bearer token. Without it, BGG search is disabled. Requires approval at [boardgamegeek.com/applications](https://boardgamegeek.com/applications). | *(empty)* |
 | `Bgg:Username` | BGG username for collection sync. | *(empty)* |
-| `Bgg:Password` | BGG password. The API logs in with it to add and remove games in your BGG collection. Without it, BGG search and collection writes are disabled. | *(empty)* |
+| `Bgg:Password` | BGG password. The jobs service logs in with it to add and remove games in your BGG collection. Without it, those writes fail. | *(empty)* |
 
 **`appsettings.json`** (production / Docker):
 ```json
@@ -325,20 +326,22 @@ When `BGG_USERNAME` is configured, a **↻ Sync BGG** button appears in the head
 
 ### Collection Writes
 
-BGG has no public API for writing to a collection. The BGG website writes through its own calls, and the API sends the same calls. The API holds the BGG password (`Bgg:Password`, or `BGG_PASSWORD` in Docker). The calls are recorded in [docs/bgg-website-calls-reference.md](docs/bgg-website-calls-reference.md).
+BGG has no public API for writing to a collection. The BGG website writes through its own calls, and the jobs service sends the same calls. The jobs service holds the BGG password (`Bgg:Password`, or `BGG_PASSWORD` in Docker). The API holds no BGG password and never calls BGG to write. The calls are recorded in [docs/bgg-website-calls-reference.md](docs/bgg-website-calls-reference.md).
 
 How it works:
 
-- The API signs in with `POST /login/api/v1`, using `Bgg:Username` and `Bgg:Password`. It keeps the session cookies in memory, so a restart needs a new login.
+- When you add a game from BGG, the API saves it at once with the BGG status `pending` and queues an add job. When you remove a game, the API deletes it at once and queues a remove job. The jobs service runs one job at a time, in order. A failed job retries twice. After the third failed attempt the game shows the `Failed` mark, or the remove job stays in the Failed list of the jobs dashboard, where you can requeue it.
+- Every finished job writes one record to the `bgg_job_log` table of the jobs database.
+- The jobs service signs in with `POST /login/api/v1`, using `Bgg:Username` and `Bgg:Password`. It keeps the session cookies in memory, so a restart needs a new login.
 - It adds a game with `POST /api/collectionitem` and removes one with `DELETE /api/collectionitem/{collId}`.
 - An add needs `Bgg:BearerToken`. With a blank token, the add fails before any request to BGG.
-- After an add, the API finds the `collId` with the BGG XML API and the bearer token. It retries while BGG answers 202.
-- If BGG answers 401 or 403, the API signs in again once and repeats the write.
+- After an add, the jobs service finds the `collId` with the BGG XML API and the bearer token. It retries while BGG answers 202.
+- If BGG answers 401 or 403, the jobs service signs in again once and repeats the write.
 - If BGG answers with a Cloudflare challenge page, the write fails and the error names the step.
 - One write has a limit of 60 seconds.
-- If a write fails, the local change stays and the app shows the BGG write warning.
-- With no username or password, the write is skipped.
-- One API instance serves one account.
+- If a write fails, the local change stays. A failed add shows the `Failed` mark on the game.
+- With no username or password, the job fails.
+- One jobs service serves one account.
 
 ### Live BGG write test
 
