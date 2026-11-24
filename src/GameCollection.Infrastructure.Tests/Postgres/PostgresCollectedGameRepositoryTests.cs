@@ -1,9 +1,10 @@
 using GameCollection.Domain.Aggregates;
 using GameCollection.Domain.ValueObjects;
 using GameCollection.Infrastructure.Postgres;
-using GameCollection.Infrastructure.Postgres.Migrations;
+using GameCollection.Infrastructure.Tests.Postgres.Migrations;
 using GameCollection.Testing.Factories;
 using GameCollection.Testing.Postgres;
+using Shared.Persistence.Migrations;
 using Shouldly;
 using Xunit;
 
@@ -282,10 +283,68 @@ public sealed class PostgresCollectedGameRepositoryTests
 		all.ShouldBeEmpty();
 	}
 
+	[Fact]
+	[Trait("AC", "111UC15")]
+	public async Task GetAllAsync_GamesWithEveryStatus_RoundTripsTheStatus()
+	{
+		var repository = await NewRepositoryAsync();
+		var pending = CollectedGameFactory.CreateFromBgg("Pending game", bggId: 1, bggCollId: null, bggStatus: BggStatus.Pending);
+		var sent = CollectedGameFactory.CreateFromBgg("Sent game", bggId: 2);
+		var failed = CollectedGameFactory.CreateFromBgg("Failed game", bggId: 3, bggCollId: null, bggStatus: BggStatus.Failed);
+		var manual = CollectedGameFactory.CreateManual("Manual game");
+		foreach (var game in new[] { pending, sent, failed, manual })
+			await repository.AddAsync(game, TestContext.Current.CancellationToken);
+
+		var all = await repository.GetAllAsync(TestContext.Current.CancellationToken);
+
+		all.Single(g => g.Id == pending.Id).BggStatus.ShouldBe(BggStatus.Pending);
+		all.Single(g => g.Id == sent.Id).BggStatus.ShouldBe(BggStatus.Sent);
+		all.Single(g => g.Id == failed.Id).BggStatus.ShouldBe(BggStatus.Failed);
+		all.Single(g => g.Id == manual.Id).BggStatus.ShouldBeNull();
+	}
+
+	[Fact]
+	[Trait("AC", "111UC6")]
+	public async Task UpdateBggStatusAsync_PendingGame_StoresSentAndCollectionItemIdAndLeavesOtherValues()
+	{
+		var repository = await NewRepositoryAsync();
+		var game = CollectedGameFactory.CreateFromBgg("Catan", bggCollId: null, bggStatus: BggStatus.Pending);
+		await repository.AddAsync(game, TestContext.Current.CancellationToken);
+		var loaded = await repository.GetByIdAsync(game.Id, TestContext.Current.CancellationToken);
+		loaded.ShouldNotBeNull();
+
+		loaded.MarkBggSent(555);
+		await repository.UpdateBggStatusAsync(loaded, TestContext.Current.CancellationToken);
+		var stored = await repository.GetByIdAsync(game.Id, TestContext.Current.CancellationToken);
+
+		stored.ShouldNotBeNull();
+		stored.BggStatus.ShouldBe(BggStatus.Sent);
+		stored.BggCollId.ShouldBe(555);
+		stored.Name.Value.ShouldBe("Catan");
+		stored.UpdatedAt.ShouldBe(game.UpdatedAt, _timestampTolerance);
+	}
+
+	[Fact]
+	[Trait("AC", "111UC8")]
+	public async Task UpdateBggStatusAsync_FailedGame_StoresFailedAndKeepsTheCollectionItemId()
+	{
+		var repository = await NewRepositoryAsync();
+		var game = CollectedGameFactory.CreateFromBgg("Catan", bggCollId: 12, bggStatus: BggStatus.Pending);
+		await repository.AddAsync(game, TestContext.Current.CancellationToken);
+
+		game.MarkBggFailed();
+		await repository.UpdateBggStatusAsync(game, TestContext.Current.CancellationToken);
+		var stored = await repository.GetByIdAsync(game.Id, TestContext.Current.CancellationToken);
+
+		stored.ShouldNotBeNull();
+		stored.BggStatus.ShouldBe(BggStatus.Failed);
+		stored.BggCollId.ShouldBe(12);
+	}
+
 	private async Task<PostgresCollectedGameRepository> NewRepositoryAsync()
 	{
 		var connectionString = await _postgres.CreateDatabaseAsync();
-		await new DatabaseMigrationRunner(connectionString, MigrationScripts.LoadEmbedded()).RunAsync(TestContext.Current.CancellationToken);
+		await new DatabaseMigrationRunner(connectionString, EmbeddedMigrationScripts.Load()).RunAsync(TestContext.Current.CancellationToken);
 		return new PostgresCollectedGameRepository(connectionString);
 	}
 }

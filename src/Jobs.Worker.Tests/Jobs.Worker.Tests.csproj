@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Jobs.Testing\Jobs.Testing.csproj" />
+		<ProjectReference Include="..\Jobs.Worker\Jobs.Worker.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.11" />
+	</ItemGroup>
+</Project>

@@ -108,26 +108,31 @@ Rules:
 - An empty collection shows the `empty-state` message with a hint to search BGG or add a
   game manually.
 
-### 6.7 BGG write warning
+### 6.7 BGG status and inline warning
 
-Shown when a local add or removal completes but the matching BGG write fails. The
-local change stays. Mockup: `.design/bgg_failure_warnings_72.html`.
+The BGG badge shows the status of the BGG write for a game or expansion that came from BGG. A
+game or expansion added by hand has no BGG badge and no status. Mockup:
+`.design/bgg_write_status_02/Main.dc.html`.
 
-- Use the colours of the BGG status banner (`.bgg-status-banner`). Add no token and no
-  shadow.
-- Game add or removal: a full-width banner at the top of `main`. If the "BGG is currently
-  unavailable" banner also shows, stack the warning below it.
-- Expansion add or removal: the dialog stays open, so show the warning inside the
-  Expansions tab, above the `Add Expansion` section. Use the same colours, with a `10px`
-  radius and a border on all sides.
-- The warning has a `×` button (`title` and `aria-label` "Dismiss warning"). It stays
-  until the user dismisses it.
-- The text names the item, says what failed and says what the user can do. It ends with an
-  `Open on BGG` link to the item's BGG page. Use these texts:
-  - Add: `"{name}" was added to your collection, but adding it to BGG failed. Add it to your BGG collection yourself.`
-  - Remove: `"{name}" was removed from your collection, but removing it from BGG failed. Remove it from your BGG collection yourself.`
-  - For an expansion, start with `The expansion "{name}"` in place of `"{name}"`.
-- A game or expansion added by hand has no BGG write. It shows no warning.
+- The status mark sits inside the BGG badge, after the logo. `sent` has no mark. `pending`
+  shows the glyph `…` and the word `Pending` in the colours of a plain badge. `failed` shows
+  the glyph `!` and the word `Failed` in the colours of the BGG status banner. Never use the
+  danger colour. Add no token and no shadow.
+- The mark is 16px high, with a `6px` radius, bold 10px text and a 4px left margin.
+- The word shows on large cards, list rows, details cards and expansion rows. Small and
+  medium cards show the glyph only.
+- The badge `title` has two lines: the status sentence, then `View on BoardGameGeek`. The
+  `aria-label` is `BGG: {sentence}`. Sentences: `In your BGG collection`,
+  `Waiting to be added to your BGG collection`, `Adding to your BGG collection failed`.
+- Each owned expansion that came from BGG shows the same badge after its name and year and
+  before its rating. A click on the badge opens BGG and does not toggle the row.
+- When BGG is unavailable the badge keeps its disabled look, the mark dims with it, and the
+  `title` and `aria-label` are `BGG unavailable`.
+- After an add or a remove no banner and no toast shows. The game appears with `Pending`
+  or leaves the collection at once.
+- The amber inline warning box (`.bgg-write-warning--inline`, the colours of the BGG status
+  banner, `10px` radius, border on all sides) stays as a general inline warning above the
+  `Add Expansion` section. It has no BGG write text of its own.
 
 ## 7. Wording
 

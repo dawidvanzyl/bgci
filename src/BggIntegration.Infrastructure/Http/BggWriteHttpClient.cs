@@ -52,10 +52,7 @@ public sealed partial class BggWriteHttpClient : IBggWriteClient
 	public async Task<long> AddToCollectionAsync(int bggId, string name, CancellationToken cancellationToken = default)
 	{
 		// Checked before any request, so a missing token cannot leave an item on BGG with no collection item id
-		if (string.IsNullOrWhiteSpace(_settings.BearerToken))
-		{
-			throw new BggWriteException(LookupStep, "BGG collection item id lookup needs a bearer token.");
-		}
+		EnsureBearerToken();
 
 		var cookie = await WriteWithSessionAsync(
 			AddStep,
@@ -63,7 +60,16 @@ public sealed partial class BggWriteHttpClient : IBggWriteClient
 			"Item saved",
 			cancellationToken);
 
-		return await LookUpCollectionItemIdAsync(bggId, cookie, cancellationToken);
+		return await LookUpCollectionItemIdAsync(bggId, cookie, cancellationToken)
+			?? throw new BggWriteException(
+				LookupStep,
+				$"BGG {LookupStep} found no collection item id for bggId {bggId} after add.");
+	}
+
+	public async Task<long?> FindCollectionItemIdAsync(int bggId, CancellationToken cancellationToken = default)
+	{
+		EnsureBearerToken();
+		return await LookUpCollectionItemIdAsync(bggId, null, cancellationToken);
 	}
 
 	public async Task RemoveFromCollectionAsync(long collId, CancellationToken cancellationToken = default)
@@ -152,7 +158,15 @@ public sealed partial class BggWriteHttpClient : IBggWriteClient
 		}
 	}
 
-	private async Task<long> LookUpCollectionItemIdAsync(int bggId, string cookie, CancellationToken cancellationToken)
+	private void EnsureBearerToken()
+	{
+		if (string.IsNullOrWhiteSpace(_settings.BearerToken))
+		{
+			throw new BggWriteException(LookupStep, "BGG collection item id lookup needs a bearer token.");
+		}
+	}
+
+	private async Task<long?> LookUpCollectionItemIdAsync(int bggId, string? cookie, CancellationToken cancellationToken)
 	{
 		var url = string.Format(
 			CultureInfo.InvariantCulture,
@@ -191,9 +205,7 @@ public sealed partial class BggWriteHttpClient : IBggWriteClient
 			}
 		}
 
-		throw new BggWriteException(
-			LookupStep,
-			$"BGG {LookupStep} found no collection item id for bggId {bggId} after add.");
+		return null;
 	}
 
 	private async Task<StepResult> SendAsync(string step, HttpRequestMessage request, CancellationToken cancellationToken)

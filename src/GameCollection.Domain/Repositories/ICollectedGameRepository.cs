@@ -13,5 +13,7 @@ public interface ICollectedGameRepository
 
 	Task UpdateAsync(CollectedGame game, CancellationToken cancellationToken = default);
 
+	Task UpdateBggStatusAsync(CollectedGame game, CancellationToken cancellationToken = default);
+
 	Task DeleteAsync(GameId id, CancellationToken cancellationToken = default);
 }

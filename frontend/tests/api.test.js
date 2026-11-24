@@ -38,25 +38,38 @@ describe('syncBgg', () => {
 });
 
 describe('saveGameFromBgg', () => {
-	it('resolves with the body when the BGG write failed', { tags: ['90UC7'] }, async () => {
-		const body = { id: 'abc', bggWrite: 'failed' };
+	it('resolves with the id and the pending status and no write result', { tags: ['111UC19'] }, async () => {
+		const body = { id: 'abc', bggStatus: 'pending' };
 		vi.stubGlobal(
 			'fetch',
 			vi.fn(async () => ({ ok: true, status: 201, json: async () => body }))
 		);
 
-		await expect(saveGameFromBgg({ name: 'Wingspan', bggId: 266192 })).resolves.toEqual(body);
+		const result = await saveGameFromBgg({ name: 'Wingspan', bggId: 266192 });
+
+		expect(result).toEqual({ id: 'abc', bggStatus: 'pending' });
+		expect(result).not.toHaveProperty('bggWrite');
 	});
 });
 
 describe('deleteGame', () => {
-	it('resolves with the body when the BGG write failed', { tags: ['90UC8'] }, async () => {
-		const body = { bggWrite: 'failed' };
-		const fetchStub = vi.fn(async () => ({ ok: true, status: 200, json: async () => body }));
+	it('resolves with no value when the API answers no content', { tags: ['111UC19'] }, async () => {
+		const fetchStub = vi.fn(async () => ({ ok: true, status: 204, text: async () => '' }));
 		vi.stubGlobal('fetch', fetchStub);
 
-		await expect(deleteGame('abc')).resolves.toEqual(body);
+		await expect(deleteGame('abc')).resolves.toBeUndefined();
 
 		expect(fetchStub).toHaveBeenCalledWith('/api/games/abc', { method: 'DELETE' });
+	});
+
+	it('rejects with the response text when the API answers with an error', { tags: ['111UC19'] }, async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => ({ ok: false, status: 404, text: async () => 'not found' }))
+		);
+
+		const error = await deleteGame('abc').catch((err) => err);
+
+		expect(error.message).toBe('not found');
 	});
 });

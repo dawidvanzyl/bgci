@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 export interface GameDetails {
 	name: string;
@@ -60,22 +60,7 @@ export interface Box {
 	width: number;
 }
 
-/** The parts of a BGG write warning, found inside its root element. */
-export class WriteWarning {
-	readonly text: Locator;
-	readonly link: Locator;
-	readonly dismissButton: Locator;
-
-	constructor(readonly root: Locator) {
-		this.text = root.locator('.bgg-write-warning-text');
-		this.link = root.getByRole('link', { name: 'Open on BGG' });
-		this.dismissButton = root.getByRole('button', { name: 'Dismiss warning' });
-	}
-
-	async dismiss(): Promise<void> {
-		await this.dismissButton.click();
-	}
-}
+export type ViewMode = 'Large icons' | 'Medium icons' | 'Small icons' | 'List' | 'Details';
 
 export class CollectionPage {
 	readonly emptyState: Locator;
@@ -86,8 +71,6 @@ export class CollectionPage {
 	readonly expansionsTab: Locator;
 	readonly bggResults: Locator;
 	readonly knownExpansionOptions: Locator;
-	readonly pageWarning: WriteWarning;
-	readonly expansionWarning: WriteWarning;
 	readonly statusBanner: Locator;
 	readonly header: Locator;
 	readonly toolbarBlock: Locator;
@@ -104,8 +87,6 @@ export class CollectionPage {
 		this.expansionsTab = page.locator('#expansions-tab-content');
 		this.bggResults = page.locator('#bgg-search-results');
 		this.knownExpansionOptions = page.locator('.exp-known-select option:not([value=""])');
-		this.pageWarning = new WriteWarning(page.locator('#bgg-write-warning'));
-		this.expansionWarning = new WriteWarning(page.locator('#expansion-bgg-write-warning'));
 		this.statusBanner = page.locator('#bgg-status-banner');
 		this.header = page.locator('header');
 		this.toolbarBlock = page.locator('.sticky-controls');
@@ -119,6 +100,14 @@ export class CollectionPage {
 		await this.page.locator('body[data-ready="true"]').waitFor();
 	}
 
+	/** The BGG write warning and every alert are absent from the page. The warning no longer exists. */
+	async expectNoWriteWarning(): Promise<void> {
+		await expect(this.page.locator('#bgg-write-warning, #expansion-bgg-write-warning, .bgg-write-warning')).toHaveCount(
+			0
+		);
+		await expect(this.page.getByRole('alert')).toHaveCount(0);
+	}
+
 	async reload(): Promise<void> {
 		await this.page.reload();
 		await this.page.locator('body[data-ready="true"]').waitFor();
@@ -128,8 +117,51 @@ export class CollectionPage {
 	card(name: string): Locator {
 		const exactTitle = new RegExp(`^${escapeRegExp(name)}(?:\\s*\\(\\d{4}\\))?$`);
 		return this.page.locator('.game-card', {
-			has: this.page.locator('.game-card-title', { hasText: exactTitle }),
+			has: this.page.locator('.game-card-title, .list-row-title', { hasText: exactTitle }),
 		});
+	}
+
+	/** The BGG badge of the game, in any view mode. */
+	bggBadge(name: string): Locator {
+		return this.card(name).getByTestId('bgg-badge');
+	}
+
+	/** The status mark inside the BGG badge of the game. It is absent for a game whose BGG add is done. */
+	bggStatusMark(name: string): Locator {
+		return this.bggBadge(name).getByTestId('bgg-status-mark');
+	}
+
+	/** Chooses a view mode through its button. */
+	async setView(mode: ViewMode): Promise<void> {
+		await this.page.getByRole('button', { name: mode, exact: true }).click();
+	}
+
+	/** The BGG badge on the owned expansion row. */
+	ownedExpansionBadge(name: string): Locator {
+		return this.ownedExpansionRow(name).getByTestId('bgg-badge');
+	}
+
+	ownedExpansionStatusMark(name: string): Locator {
+		return this.ownedExpansionBadge(name).getByTestId('bgg-status-mark');
+	}
+
+	ownedExpansionRow(name: string): Locator {
+		return this.expansionsTab.locator('.exp-owned-item', {
+			has: this.page.locator('.exp-owned-name', { hasText: name }),
+		});
+	}
+
+	/** Reloads the page until the condition holds. */
+	async reloadUntil(condition: () => Promise<boolean>, message: string): Promise<void> {
+		await expect
+			.poll(
+				async () => {
+					await this.reload();
+					return condition();
+				},
+				{ message, timeout: 30_000 }
+			)
+			.toBe(true);
 	}
 
 	expansionBadge(name: string): Locator {

@@ -1,6 +1,7 @@
 import { allGames, currentViewMode, bggReachable } from './state.js';
 import { esc } from './helpers.js';
 import { sortGames } from './sort.js';
+import { bggBadgeHtml } from './bggStatus.js';
 
 // ── DOM refs ───────────────────────────────────────────────
 const gameGrid = document.getElementById('game-grid');
@@ -124,11 +125,7 @@ export function buildCard(game, { onEdit, onDelete, onInfo } = {}) {
 			? `<span class="badge badge-expansions badge-expansions--overlay">+${game.expansionCount} expansion${game.expansionCount === 1 ? '' : 's'}</span>`
 			: '';
 
-	const bggBadge = game.isBggSourced
-		? bggReachable
-			? `<a class="bgg-badge" href="https://boardgamegeek.com/boardgame/${game.bggId}" target="_blank" rel="noopener" title="View on BoardGameGeek"><img src="/bgg-logo.svg" alt="BGG" class="bgg-badge-logo" /></a>`
-			: `<span class="bgg-badge bgg-badge--disabled" title="BGG unavailable"><img src="/bgg-logo.svg" alt="BGG" class="bgg-badge-logo" /></span>`
-		: '';
+	const bggBadge = bggBadgeHtml(game, bggReachable);
 
 	const infoOrEdit = game.isBggSourced
 		? `<button class="btn btn-secondary btn-info">Info</button>`

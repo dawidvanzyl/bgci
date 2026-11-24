@@ -13,7 +13,7 @@
 #   docker compose --env-file .env.qa --profile qa down -v
 #
 # The dev profile runs the real stack against BoardGameGeek: database, API, web, and the jobs
-# service with its jobs database (in a named volume). It needs BGG_USERNAME, BGG_PASSWORD and BGG_BEARER_TOKEN in .env.dev. Its database
+# service with its jobs database (in a named volume). It needs BGG_USERNAME, BGG_PASSWORD and BGG_BEARER_TOKEN in .env.dev. The jobs service uses BGG_PASSWORD to log in to BoardGameGeek, the API never sees it. Its database
 # lives in a named volume until the profile is taken down with -v. To run only the database,
 # for running the API from source, name the service:
 #   docker compose --env-file .env.dev --profile dev up --build -d
@@ -103,13 +103,21 @@ services:
       Bgg__BaseUrl: http://mock-bgg:4010/
       Bgg__BearerToken: qa-token
       Bgg__Username: qa-user
-      Bgg__Password: qa-password
+      JobsDatabase__Host: bgci-jobs-db
+      JobsDatabase__Port: "5432"
+      JobsDatabase__Name: ${JOBS_DB_NAME:-bgci_jobs}
+      JobsDatabase__User: ${JOBS_DB_USER:-bgci_jobs}
+      JobsDatabase__Password: ${JOBS_DB_PASSWORD:-bgci_jobs}
       APP_VERSION: qa
     depends_on:
       mock-bgg:
         condition: service_healthy
       bgci-db:
         condition: service_healthy
+      bgci-jobs-db:
+        condition: service_healthy
+      bgci-jobs:
+        condition: service_started
 
   bgci-jobs:
     image: bgci-qa-jobs
@@ -126,10 +134,27 @@ services:
       JobsDatabase__User: ${JOBS_DB_USER:-bgci_jobs}
       JobsDatabase__Password: ${JOBS_DB_PASSWORD:-bgci_jobs}
       Bgg__BaseUrl: http://mock-bgg:4010/
+      Database__Host: bgci-db
+      Database__Port: "5432"
+      Database__Name: ${DB_NAME:-bgci}
+      Database__User: ${DB_USER:-bgci}
+      Database__Password: ${DB_PASSWORD:-bgci}
+      Bgg__BearerToken: qa-token
+      Bgg__Username: qa-user
+      Bgg__Password: qa-password
+      Jobs__QaResetEnabled: "true"
+      Jobs__RetryDelaysSeconds__0: "2"
+      Jobs__RetryDelaysSeconds__1: "2"
+      Jobs__QueuePollIntervalSeconds: "1"
+      Jobs__SchedulePollingIntervalSeconds: "1"
     ports:
       - "127.0.0.1:${QA_JOBS_DASHBOARD_PORT:-15104}:8080"
     depends_on:
       bgci-jobs-db:
+        condition: service_healthy
+      bgci-db:
+        condition: service_healthy
+      mock-bgg:
         condition: service_healthy
 
   bgci-web:
@@ -180,10 +205,20 @@ services:
       JobsDatabase__Name: ${JOBS_DB_NAME:-bgci_jobs}
       JobsDatabase__User: ${JOBS_DB_USER:-bgci_jobs}
       JobsDatabase__Password: ${JOBS_DB_PASSWORD:-bgci_jobs}
+      Database__Host: bgci-dev-db
+      Database__Port: "5432"
+      Database__Name: ${DB_NAME:-bgci}
+      Database__User: ${DB_USER:-bgci}
+      Database__Password: ${DB_PASSWORD:-bgci}
+      Bgg__BearerToken: ${BGG_BEARER_TOKEN:-}
+      Bgg__Username: ${BGG_USERNAME:-}
+      Bgg__Password: ${BGG_PASSWORD:-}
     ports:
       - "127.0.0.1:${DEV_JOBS_DASHBOARD_PORT:-15203}:8080"
     depends_on:
       bgci-dev-jobs-db:
+        condition: service_healthy
+      bgci-dev-db:
         condition: service_healthy
 
   # nginx.conf proxies /api/ to http://bgci-api:8080, so the dev API takes that name as an
@@ -206,11 +241,19 @@ services:
       Database__Password: ${DB_PASSWORD:-bgci}
       Bgg__BearerToken: ${BGG_BEARER_TOKEN:-}
       Bgg__Username: ${BGG_USERNAME:-}
-      Bgg__Password: ${BGG_PASSWORD:-}
+      JobsDatabase__Host: bgci-dev-jobs-db
+      JobsDatabase__Port: "5432"
+      JobsDatabase__Name: ${JOBS_DB_NAME:-bgci_jobs}
+      JobsDatabase__User: ${JOBS_DB_USER:-bgci_jobs}
+      JobsDatabase__Password: ${JOBS_DB_PASSWORD:-bgci_jobs}
       APP_VERSION: dev
     depends_on:
       bgci-dev-db:
         condition: service_healthy
+      bgci-dev-jobs-db:
+        condition: service_healthy
+      bgci-dev-jobs:
+        condition: service_started
 
   bgci-dev-web:
     image: bgci-dev-web

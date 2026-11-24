@@ -1,9 +1,9 @@
 using GameCollection.Domain.Repositories;
 using GameCollection.Infrastructure.Postgres;
-using GameCollection.Infrastructure.Postgres.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using Shared.Persistence.Migrations;
 
 namespace GameCollection.Infrastructure;
 
@@ -18,7 +18,7 @@ public static class DependencyInjection
 		services.AddScoped<ICollectedGameRepository>(
 			_ => new PostgresCollectedGameRepository(connectionString));
 
-		services.AddSingleton(new DatabaseMigrationRunner(connectionString, MigrationScripts.LoadEmbedded()));
+		services.AddSingleton(new DatabaseMigrationRunner(connectionString, MigrationScripts.LoadEmbedded(typeof(DependencyInjection).Assembly, "GameCollection.Infrastructure.Postgres.Scripts.")));
 
 		return services;
 	}

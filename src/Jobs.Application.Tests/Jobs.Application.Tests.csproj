@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<ItemGroup>
+		<ProjectReference Include="..\Jobs.Application\Jobs.Application.csproj" />
+		<ProjectReference Include="..\Jobs.Testing\Jobs.Testing.csproj" />
+		<ProjectReference Include="..\Shared.Testing\Shared.Testing.csproj" />
+	</ItemGroup>
+</Project>

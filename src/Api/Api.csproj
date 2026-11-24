@@ -5,6 +5,7 @@
     <ProjectReference Include="..\GameCollection.Infrastructure\GameCollection.Infrastructure.csproj" />
     <ProjectReference Include="..\BggIntegration.Application\BggIntegration.Application.csproj" />
     <ProjectReference Include="..\BggIntegration.Infrastructure\BggIntegration.Infrastructure.csproj" />
+    <ProjectReference Include="..\Jobs.Infrastructure\Jobs.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

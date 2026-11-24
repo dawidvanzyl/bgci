@@ -1,44 +1,11 @@
-import {
-	allGames,
-	expansionSearchTimer,
-	setExpansionSearchTimer,
-	bggReachable,
-	expansionWarning,
-	setExpansionWarning,
-} from './state.js';
+import { allGames, expansionSearchTimer, setExpansionSearchTimer, bggReachable } from './state.js';
 import { fetchBggExpansions, saveExpansion, saveExpansionFromBgg, deleteGame, searchBgg } from './api.js';
 import { esc, setButtonLoading, clearButtonLoading, showInlineError } from './helpers.js';
-import { bggWriteWarning } from './bggWriteWarning.js';
-import { buildWarningParts } from './warningBanner.js';
-
-function recordExpansionWarning(parentGameId, { bggWrite, action, name, bggId }) {
-	const warning = bggWriteWarning({ bggWrite, action, isExpansion: true, name, bggId });
-	if (warning) setExpansionWarning({ parentGameId, warning });
-}
-
-function buildExpansionWarning(warning) {
-	const el = document.createElement('div');
-	el.id = 'expansion-bgg-write-warning';
-	el.className = 'bgg-status-banner bgg-write-warning bgg-write-warning--inline';
-	el.setAttribute('role', 'alert');
-	el.append(
-		...buildWarningParts(warning, {
-			onDismiss: () => {
-				setExpansionWarning(null);
-				el.remove();
-			},
-		})
-	);
-	return el;
-}
+import { bggBadgeHtml } from './bggStatus.js';
 
 export async function renderExpansionsTab(game, { onRefresh } = {}) {
 	const container = document.getElementById('expansions-tab-content');
 	container.innerHTML = '';
-
-	if (expansionWarning?.parentGameId === game.id) {
-		container.appendChild(buildExpansionWarning(expansionWarning.warning));
-	}
 
 	// ── Add expansion ──────────────────────────────────────
 	const addSection = document.createElement('section');
@@ -107,8 +74,7 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 			if (!bggId) return;
 			setButtonLoading(knownAddBtn, 'Adding\u2026');
 			try {
-				const result = await saveExpansionFromBgg(bggId, game.id);
-				recordExpansionWarning(game.id, { bggWrite: result.bggWrite, action: 'add', name: result.name, bggId });
+				await saveExpansionFromBgg(bggId, game.id);
 				if (onRefresh) await onRefresh();
 				await renderExpansionsTab(game, { onRefresh });
 			} catch (err) {
@@ -193,8 +159,7 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 			searchInput.disabled = true;
 			searchStatus.hidden = false;
 			try {
-				const result = await saveExpansionFromBgg(bggId, game.id);
-				recordExpansionWarning(game.id, { bggWrite: result.bggWrite, action: 'add', name: result.name, bggId });
+				await saveExpansionFromBgg(bggId, game.id);
 				if (onRefresh) await onRefresh();
 				await renderExpansionsTab(game, { onRefresh });
 			} catch (err) {
@@ -298,6 +263,7 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 					<span class="exp-owned-name">
 						${esc(exp.name)}
 						${exp.year ? `<span class="exp-year">(${exp.year})</span>` : ''}
+						${bggBadgeHtml(exp, bggReachable)}
 						${ratingBadge}
 					</span>
 					<div class="exp-owned-actions">
@@ -313,6 +279,7 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 			// Toggle accordion
 			li.addEventListener('click', (e) => {
 				if (e.target.closest('.exp-remove-btn')) return;
+				if (e.target.closest('.bgg-badge')) return;
 				const isOpen = li.classList.contains('is-expanded');
 				// Close all open items first
 				list.querySelectorAll('.exp-owned-item.is-expanded').forEach((other) => {
@@ -332,13 +299,7 @@ export async function renderExpansionsTab(game, { onRefresh } = {}) {
 				const btn = e.currentTarget;
 				setButtonLoading(btn, 'Removing\u2026');
 				try {
-					const result = await deleteGame(exp.id);
-					recordExpansionWarning(game.id, {
-						bggWrite: result.bggWrite,
-						action: 'remove',
-						name: exp.name,
-						bggId: exp.bggId,
-					});
+					await deleteGame(exp.id);
 					if (onRefresh) await onRefresh();
 					await renderExpansionsTab(game, { onRefresh });
 				} catch (err) {

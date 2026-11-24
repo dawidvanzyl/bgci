@@ -23,8 +23,7 @@ public class ConfigController : ControllerBase
 	[HttpGet]
 	public IActionResult Get()
 	{
-		// Search results exist only to be added, and an add needs the password.
-		var bggConfigured = !string.IsNullOrWhiteSpace(_bggSettings.BearerToken) && !string.IsNullOrWhiteSpace(_bggSettings.Password);
+		var bggConfigured = !string.IsNullOrWhiteSpace(_bggSettings.BearerToken);
 		var bggReachable = _bggAvailability.IsAvailable;
 
 		var raw = Environment.GetEnvironmentVariable("APP_VERSION")?.Trim();

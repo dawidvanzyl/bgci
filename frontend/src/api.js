@@ -43,7 +43,6 @@ export async function saveGameFromBgg(payload) {
 export async function deleteGame(id) {
 	const res = await fetch(`${API}/games/${id}`, { method: 'DELETE' });
 	if (!res.ok) throw new Error(await res.text());
-	return res.json();
 }
 
 export async function syncBgg() {

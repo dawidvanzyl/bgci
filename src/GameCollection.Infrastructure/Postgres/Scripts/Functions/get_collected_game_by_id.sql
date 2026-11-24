@@ -24,6 +24,7 @@ RETURNS TABLE (
 	bgg_id integer,
 	bgg_coll_id bigint,
 	parent_game_id uuid,
+	bgg_status text,
 	added_at timestamptz,
 	updated_at timestamptz,
 	expansion_count integer
@@ -56,6 +57,7 @@ AS $body$
 		g.bgg_id,
 		g.bgg_coll_id,
 		g.parent_game_id,
+		g.bgg_status,
 		g.added_at,
 		g.updated_at,
 		(SELECT count(*)::integer FROM collected_games e WHERE e.parent_game_id = g.id)

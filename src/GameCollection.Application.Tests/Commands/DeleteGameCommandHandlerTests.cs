@@ -1,5 +1,5 @@
-using GameCollection.Application.Abstractions;
 using GameCollection.Application.Commands;
+using GameCollection.Domain.ValueObjects;
 using GameCollection.Testing;
 using GameCollection.Testing.Factories;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,119 +21,70 @@ public sealed class DeleteGameCommandHandlerTests : IClassFixture<GameCollection
 	}
 
 	[Fact]
-	[Trait("AC", "90UC6")]
-	public async Task Handle_ManualGame_DeletesWithoutCallingBggAndReportsNone()
+	[Trait("AC", "111UC2")]
+	public async Task Handle_BggGame_DeletesItAndQueuesTheRemoveWithTheCollectionItemId()
+	{
+		var game = CollectedGameFactory.CreateFromBgg(bggId: 230802, bggCollId: 777);
+		_context.Repositories.HasStored(game);
+
+		await _handler.Handle(new DeleteGameCommand(game.Id.Value), CancellationToken.None);
+
+		VerifyDeleted(game.Id);
+		_context.Services.BggWriteQueueMock
+			.Verify(q => q.QueueRemoveAsync(game.Id.Value, 230802, 777, It.IsAny<CancellationToken>()), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "111UC2")]
+	public async Task Handle_BggGameWithoutCollId_QueuesTheRemoveWithNull()
+	{
+		var game = CollectedGameFactory.CreateFromBgg(bggCollId: null);
+		_context.Repositories.HasStored(game);
+
+		await _handler.Handle(new DeleteGameCommand(game.Id.Value), CancellationToken.None);
+
+		_context.Services.BggWriteQueueMock
+			.Verify(q => q.QueueRemoveAsync(game.Id.Value, CollectedGameFactory.DefaultBggId, null, It.IsAny<CancellationToken>()), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "111UC3")]
+	public async Task Handle_ManualGame_DeletesItAndNeverQueues()
 	{
 		var game = CollectedGameFactory.CreateManual();
 		_context.Repositories.HasStored(game);
 
-		var result = await _handler.Handle(new DeleteGameCommand(game.Id.Value), CancellationToken.None);
+		await _handler.Handle(new DeleteGameCommand(game.Id.Value), CancellationToken.None);
 
-		result.BggWrite.ShouldBe(BggWriteOutcome.None);
-		_context.Services.BggCollectionWriterMock
-			.Verify(w => w.RemoveFromCollectionAsync(It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
 		VerifyDeleted(game.Id);
+		_context.Services.BggWriteQueueMock
+			.Verify(q => q.QueueRemoveAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<long?>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]
-	public async Task Handle_BggGame_RemovesFromBggThenDeletes()
+	public async Task Handle_QueueFails_GameStaysDeletedAndTheExceptionPropagates()
 	{
 		var game = CollectedGameFactory.CreateFromBgg();
 		_context.Repositories.HasStored(game);
-		_context.Services.BggRemoveReturns(BggWriteOutcome.Succeeded);
+		_context.Services.QueueRemoveThrows(new InvalidOperationException("queue down"));
 
-		var result = await _handler.Handle(new DeleteGameCommand(game.Id.Value), CancellationToken.None);
+		await Should.ThrowAsync<InvalidOperationException>(
+			() => _handler.Handle(new DeleteGameCommand(game.Id.Value), CancellationToken.None));
 
-		result.BggWrite.ShouldBe(BggWriteOutcome.Succeeded);
-		_context.Services.BggCollectionWriterMock
-			.Verify(w => w.RemoveFromCollectionAsync(CollectedGameFactory.DefaultBggCollId, It.IsAny<CancellationToken>()), Times.Once);
 		VerifyDeleted(game.Id);
 	}
 
 	[Fact]
-	[Trait("AC", "90UC3")]
-	public async Task Handle_BggRemoveSkipped_ReportsSkipped()
+	public async Task Handle_UnknownGame_ThrowsKeyNotFoundAndDeletesNothing()
 	{
-		var game = CollectedGameFactory.CreateFromBgg();
-		_context.Repositories.HasStored(game);
-		_context.Services.BggRemoveReturns(BggWriteOutcome.Skipped);
+		await Should.ThrowAsync<KeyNotFoundException>(
+			() => _handler.Handle(new DeleteGameCommand(Guid.NewGuid()), CancellationToken.None));
 
-		var result = await _handler.Handle(new DeleteGameCommand(game.Id.Value), CancellationToken.None);
-
-		result.BggWrite.ShouldBe(BggWriteOutcome.Skipped);
-		VerifyDeleted(game.Id);
+		_context.Repositories.CollectedGameRepositoryMock
+			.Verify(r => r.DeleteAsync(It.IsAny<GameId>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
-	[Fact]
-	[Trait("AC", "90UC4")]
-	public async Task Handle_BggRemoveFails_DeletesAndReportsFailed()
-	{
-		var game = CollectedGameFactory.CreateFromBgg();
-		_context.Repositories.HasStored(game);
-		_context.Services.BggRemoveReturns(BggWriteOutcome.Failed);
-
-		var result = await _handler.Handle(new DeleteGameCommand(game.Id.Value), CancellationToken.None);
-
-		result.BggWrite.ShouldBe(BggWriteOutcome.Failed);
-		VerifyDeleted(game.Id);
-	}
-
-	[Fact]
-	[Trait("AC", "90UC4")]
-	public async Task Handle_BggRemoveThrows_DeletesAndReportsFailed()
-	{
-		var game = CollectedGameFactory.CreateFromBgg();
-		_context.Repositories.HasStored(game);
-		_context.Services.BggRemoveThrows(new HttpRequestException("BGG down"));
-
-		var result = await _handler.Handle(new DeleteGameCommand(game.Id.Value), CancellationToken.None);
-
-		result.BggWrite.ShouldBe(BggWriteOutcome.Failed);
-		VerifyDeleted(game.Id);
-	}
-
-	[Fact]
-	[Trait("AC", "90UC4")]
-	public async Task Handle_BggRemoveTimesOut_DeletesAndReportsFailed()
-	{
-		var game = CollectedGameFactory.CreateFromBgg();
-		_context.Repositories.HasStored(game);
-		_context.Services.BggRemoveThrows(new TaskCanceledException("timeout"));
-
-		var result = await _handler.Handle(new DeleteGameCommand(game.Id.Value), CancellationToken.None);
-
-		result.BggWrite.ShouldBe(BggWriteOutcome.Failed);
-		VerifyDeleted(game.Id);
-	}
-
-	[Fact]
-	[Trait("AC", "90UC5")]
-	public async Task Handle_BggGameWithoutCollId_DeletesAndReportsFailed()
-	{
-		var game = CollectedGameFactory.CreateFromBgg(bggCollId: null);
-		_context.Repositories.HasStored(game);
-		_context.Services.BggRemoveReturns(BggWriteOutcome.Failed);
-
-		var result = await _handler.Handle(new DeleteGameCommand(game.Id.Value), CancellationToken.None);
-
-		result.BggWrite.ShouldBe(BggWriteOutcome.Failed);
-		VerifyDeleted(game.Id);
-	}
-
-	[Fact]
-	public async Task Handle_RequestCancelled_Propagates()
-	{
-		var game = CollectedGameFactory.CreateFromBgg();
-		_context.Repositories.HasStored(game);
-		using var cts = new CancellationTokenSource();
-		await cts.CancelAsync();
-		_context.Services.BggRemoveThrows(new OperationCanceledException(cts.Token));
-
-		await Should.ThrowAsync<OperationCanceledException>(
-			() => _handler.Handle(new DeleteGameCommand(game.Id.Value), cts.Token));
-	}
-
-	private void VerifyDeleted(GameCollection.Domain.ValueObjects.GameId id)
+	private void VerifyDeleted(GameId id)
 	{
 		_context.Repositories.CollectedGameRepositoryMock
 			.Verify(r => r.DeleteAsync(id, It.IsAny<CancellationToken>()), Times.Once);

@@ -10,13 +10,16 @@ These are guidelines, not rigid rules. The goal is consistency and clarity. When
 
 - One type per file. The file name must match the type name exactly (e.g. `CollectedGame.cs` contains `class CollectedGame`).
 - Folder structure within a project mirrors the namespace structure.
-- Each bounded context (BC) is a self-contained set of projects: `Domain`, `Application` and `Infrastructure`. `Api` and `Jobs` are the two composition roots. Current BCs: `GameCollection` and `BggIntegration`.
+- Each bounded context (BC) is a self-contained set of projects: `Domain`, `Application` and `Infrastructure`. `Api` and `Jobs` are the two composition roots. Current BCs: `GameCollection`, `BggIntegration` and `Jobs`. `Jobs` has no Domain project. Its projects are `Jobs.Application`, `Jobs.Infrastructure` and `Jobs.Worker`, and `Jobs` is its composition root.
 
 ```
 src/
 ├── Api/                              # Composition root only — no business logic
 ├── Jobs/                             # Composition root of the jobs service — no business logic
-├── Jobs.Infrastructure/              # Hangfire storage, server and dashboard
+├── Jobs.Application/                 # Job commands and handlers, the request model, the BGG writer port
+├── Jobs.Infrastructure/              # Shared by both hosts: Hangfire storage, job interfaces, jobs database, queue adapter
+├── Jobs.Worker/                      # Hangfire server, job classes, retry policy, BGG writer adapter, dashboard
+├── Shared.Persistence/               # Context-free migration runner (DbUp)
 ├── GameCollection.Domain/            # Aggregates, Value Objects, Events, Repository interfaces
 ├── GameCollection.Application/       # Commands, Queries, Handlers, DTOs
 ├── GameCollection.Infrastructure/    # Repository implementations, DB migrations
@@ -25,7 +28,7 @@ src/
 └── BggIntegration.Infrastructure/    # HTTP client, XML parser
 ```
 
-- **No cross-BC project references** except through the Anti-Corruption Layer. `BggIntegration` may reference `GameCollection.Application` only to produce `AddGameFromBggCommand` via `IBggTranslator`. It must never reference `GameCollection.Domain` directly.
+- **Cross-BC references.** A context may reference another context's **Application** project only to send its commands and queries, or to implement an abstraction that project defines (the Anti-Corruption Layer). A context never references another context's Domain project. A context's Infrastructure project may reference another context's Infrastructure project only to adapt a client that project exposes to an abstraction of its own (today: `Jobs.Worker` to `BggIntegration.Infrastructure`). Shared, context-free code lives in `Shared.*` projects.
 - Infrastructure projects must not be referenced by Application or Domain projects. Dependency flow is always inward: `Api → Application → Domain`.
 
 ---
@@ -192,7 +195,7 @@ public static class DependencyInjection
         var connectionString = BuildConnectionString(configuration);
         services.AddScoped<ICollectedGameRepository>(
             _ => new PostgresCollectedGameRepository(connectionString));
-        services.AddSingleton(new DatabaseMigrationRunner(connectionString, MigrationScripts.LoadEmbedded()));
+        services.AddSingleton(new DatabaseMigrationRunner(connectionString, MigrationScripts.LoadEmbedded(typeof(DependencyInjection).Assembly, "GameCollection.Infrastructure.Postgres.Scripts.")));
         return services;
     }
 }
@@ -265,7 +268,7 @@ public sealed class DeleteGameCommandHandlerTests : IClassFixture<GameCollection
 
 ## 8. Database Migrations
 
-`GameCollection.Infrastructure` changes the PostgreSQL database with `DatabaseMigrationRunner`, which uses DbUp. The scripts are `.sql` files in three folders under `Postgres/Scripts`. Every `.sql` file there is embedded in the assembly.
+`DatabaseMigrationRunner` (in `Shared.Persistence`) changes a PostgreSQL database with DbUp. `GameCollection.Infrastructure` and `Jobs.Infrastructure` each use it with their own scripts and their own journal tables. The scripts are `.sql` files in three folders under `Postgres/Scripts`. Every `.sql` file there is embedded in the assembly.
 
 | Folder | Runs | Journal table |
 |---|---|---|

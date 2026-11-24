@@ -51,8 +51,8 @@ docker compose --profile qa down -v
 
 ## 3. Mock BGG
 
-`mock-bgg` replaces BoardGameGeek. The API reaches it through `Bgg__BaseUrl`, the site root.
-The API logs in with `Bgg__Username` and `Bgg__Password`. Tests never call the real BGG.
+`mock-bgg` replaces BoardGameGeek. The API and the jobs service reach it through `Bgg__BaseUrl`, the site root.
+The jobs service logs in with `Bgg__Username` and `Bgg__Password`. Tests never call the real BGG.
 
 - It serves `xmlapi2/search`, `xmlapi2/thing` and `xmlapi2/collection` as BGG XML, built from the standard game data set.
   The data set is `test-data/bgg-games.json` at the repository root. Mock BGG and the live suite
@@ -104,8 +104,17 @@ The API logs in with `Bgg__Username` and `Bgg__Password`. Tests never call the r
   `setLoginsRejected(true)` makes every login answer 400 and every add and remove answer 401.
   `expireSessions()` makes the next add or remove with an old session answer 401, while a new login works.
   `reset()` clears both controls.
-- The `cleanState` auto fixture empties the collection and resets the mock before every test.
-  A spec never depends on data from another spec.
+- It also holds, fails and records writes. A write is an add or a remove. Logins and the collection item lookup are not writes.
+  - `holdWrites('all')` makes every write with a valid session wait until `releaseWrites()`. `holdWrites('next')` holds only the next one.
+    `releaseWrites()` answers every held write as it would have been answered without the hold, and turns the hold off.
+    The jobs service gives up on a write after 30 seconds, so never hold a write for more than 20 seconds.
+  - `failNextWrites(n)` makes the next `n` writes with a valid session answer 500 and change nothing. A write without a valid session does not use up the count.
+  - `setCollectionLookup(false)` makes the collection item lookup answer an empty collection. `reset()` turns it back on.
+  - `report().attempts` lists every write in start order with `action`, `username`, `bggId`, `collId`, `outcome` (`accepted`, `failed` or `rejected`), `startedAt` and `endedAt`.
+    `endedAt` is null while the write is held. `report().maxConcurrentWrites` is the most writes in progress at one moment since the last reset.
+  - `reset()` answers every held write with 503 first.
+- The `cleanState` auto fixture empties the collection, resets the mock, resets the jobs service (`jobs.reset()`, which deletes every BGG job and waits until
+  none runs) and resets the mock again, before every test. A spec never depends on data from another spec.
 
 ## 4. Writing specs
 
