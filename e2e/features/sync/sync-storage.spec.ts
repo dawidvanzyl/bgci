@@ -1,4 +1,5 @@
 import { expect, test } from '../../fixtures/base';
+import { waitForBggStatus } from '../../fixtures/bggSeeds';
 import { CollectionPage } from '../../pages/CollectionPage';
 
 test.describe('Sync BGG — sync adds the games BGG lists', { tag: ['@61IT8'] }, () => {
@@ -93,12 +94,13 @@ test.describe('Sync BGG — sync leaves manually added games alone', { tag: ['@6
 		await expect(collection.formField('categories')).toHaveValue('Heirloom');
 	});
 
-	test('S2 — a manual game survives a sync that adds and removes BGG games', async ({ page, mockBgg }) => {
+	test('S2 — a manual game survives a sync that adds and removes BGG games', async ({ page, request, mockBgg }) => {
 		const collection = new CollectionPage(page);
 		await collection.goto();
 		await collection.addGame({ name: 'Shelf Copy Game' });
 		await collection.importFromBgg('catan', 'Catan');
 		await expect(collection.card('Catan')).toBeVisible();
+		await waitForBggStatus(request, 'Catan', 'sent');
 		await mockBgg.setCollection([{ bggId: 230802, collId: 5501, name: 'Azul', year: 2017 }]);
 
 		await collection.sync();
