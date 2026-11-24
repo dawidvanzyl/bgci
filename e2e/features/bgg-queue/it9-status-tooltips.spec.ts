@@ -34,11 +34,18 @@ test.describe('Queue BGG writes — the BGG badge tooltip names the status', { t
 		const collection = new CollectionPage(page);
 		await seedStatusGames(collection, request, mockBgg, jobsDashboard, { withHandGame: false });
 
-		await mockBgg.setAvailable(false);
-		await collection.reloadUntil(
-			async () => collection.statusBanner.isVisible(),
-			'The BGG status banner shows while BGG is unavailable'
-		);
+		// The app learns that BGG is down only from a slow background probe, so the page gets the
+		// unavailable answer from /api/config, as the other specs do.
+		await page.route('**/api/config', async (route) => {
+			const response = await route.fetch();
+			const config = (await response.json()) as Record<string, unknown>;
+			await route.fulfill({
+				response,
+				json: { ...config, bggReachable: false, bggSearchEnabled: false, bggCollectionEnabled: false },
+			});
+		});
+		await collection.reload();
+		await expect(collection.statusBanner).toBeVisible();
 
 		for (const name of ['Action Test', 'Catan', 'Azul']) {
 			const badge = collection.bggBadge(name);
