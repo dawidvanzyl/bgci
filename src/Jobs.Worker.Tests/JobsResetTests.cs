@@ -104,7 +104,7 @@ public sealed class JobsResetTests : IClassFixture<JobsTestFixture>
 			.Setup(r => r.GetAsync(request.Id, It.IsAny<CancellationToken>()))
 			.ReturnsAsync(() => truncated ? null : request);
 		_context.Repositories.BggWriteRequestRepositoryMock
-			.Setup(r => r.RecordAttemptAsync(request.Id, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.StartAttemptAsync(request.Id, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync(1);
 		_context.Services.BggAddReturns(555);
 		var processing = new[] { "late-job" };

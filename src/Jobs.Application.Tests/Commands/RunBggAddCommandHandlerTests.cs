@@ -41,17 +41,89 @@ public sealed class RunBggAddCommandHandlerTests : IClassFixture<JobsTestFixture
 	}
 
 	[Fact]
-	[Trait("AC", "111UC6")]
-	public async Task Handle_GameRemovedMeanwhile_StillAddsOnBggAndCompletesTheRequest()
+	[Trait("AC", "112UC3")]
+	public async Task Handle_GameRemovedMeanwhile_CompletesCancelledWithoutCallingBgg()
 	{
 		var request = StoredRequest();
 		_context.Services.GameIs(null);
-		_context.Services.BggAddReturns(555);
-		_context.Services.MarkSentReturns(false);
 
-		await _handler.Handle(new RunBggAddCommand(request.Id, 0), CancellationToken.None);
+		var outcome = await _handler.Handle(new RunBggAddCommand(request.Id, 0), CancellationToken.None);
 
-		_context.Repositories.Completions().ShouldHaveSingleItem().Status.ShouldBe(BggWriteRequestStatus.Sent);
+		outcome.ShouldBe(BggJobOutcome.Finished);
+		_context.Services.BggCollectionWriterMock.VerifyNoOtherCalls();
+		_context.Repositories.Completions().ShouldHaveSingleItem().Status.ShouldBe(BggWriteRequestStatus.Cancelled);
+	}
+
+	[Fact]
+	[Trait("AC", "112UC3")]
+	public async Task Handle_RequestCancelled_CallsNothingAndStartsNoAttempt()
+	{
+		var request = StoredRequest(status: BggWriteRequestStatus.Cancelled);
+
+		var outcome = await _handler.Handle(new RunBggAddCommand(request.Id, 0), CancellationToken.None);
+
+		outcome.ShouldBe(BggJobOutcome.Finished);
+		_context.Services.BggCollectionWriterMock.VerifyNoOtherCalls();
+		_context.Services.MediatorMock.VerifyNoOtherCalls();
+		_context.Repositories.BggWriteRequestRepositoryMock.Verify(
+			r => r.StartAttemptAsync(It.IsAny<Guid>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+		_context.Repositories.Completions().ShouldBeEmpty();
+	}
+
+	[Fact]
+	[Trait("AC", "112UC3")]
+	public async Task Handle_RequestCancelledBetweenTheReadAndTheAttempt_CallsNothingOnBgg()
+	{
+		var request = StoredRequest();
+		_context.Repositories.BggWriteRequestRepositoryMock
+			.Setup(r => r.StartAttemptAsync(request.Id, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync((int?)null);
+
+		var outcome = await _handler.Handle(new RunBggAddCommand(request.Id, 0), CancellationToken.None);
+
+		outcome.ShouldBe(BggJobOutcome.Finished);
+		_context.Services.BggCollectionWriterMock.VerifyNoOtherCalls();
+		_context.Repositories.Completions().ShouldBeEmpty();
+	}
+
+	[Theory]
+	[InlineData(0)]
+	[InlineData(2)]
+	[Trait("AC", "112UC4")]
+	public async Task Handle_ItemAlreadyOnBgg_MarksTheGameSentWithItAndDoesNotAddAgain(int retryCount)
+	{
+		var request = StoredRequest(attempts: retryCount);
+		_context.Services.GameIs(CollectedGameDtoFactory.CreateFromBgg(request.GameId));
+		_context.Services.BggFindReturns(4242);
+		_context.Services.MarkSentReturns(true);
+
+		var outcome = await _handler.Handle(new RunBggAddCommand(request.Id, retryCount), CancellationToken.None);
+
+		outcome.ShouldBe(BggJobOutcome.Finished);
+		_context.Services.BggCollectionWriterMock.Verify(w => w.AddAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+		_context.Services.MediatorMock.Verify(m => m.Send(new MarkGameBggSentCommand(request.GameId, 4242), It.IsAny<CancellationToken>()), Times.Once);
+		var completion = _context.Repositories.Completions().ShouldHaveSingleItem();
+		completion.Status.ShouldBe(BggWriteRequestStatus.Sent);
+		completion.CollectionItemId.ShouldBe(4242);
+	}
+
+	[Theory]
+	[InlineData(0)]
+	[InlineData(2)]
+	[Trait("AC", "112UC6")]
+	public async Task Handle_EarlierRequestUnfinished_WaitsWithoutAnAttemptOrAnyCall(int retryCount)
+	{
+		var request = StoredRequest();
+		_context.Repositories.HasUnfinishedEarlierRequest(request.Id, true);
+
+		var outcome = await _handler.Handle(new RunBggAddCommand(request.Id, retryCount), CancellationToken.None);
+
+		outcome.ShouldBe(BggJobOutcome.WaitingForEarlierRequest);
+		_context.Services.BggCollectionWriterMock.VerifyNoOtherCalls();
+		_context.Services.MediatorMock.VerifyNoOtherCalls();
+		_context.Repositories.BggWriteRequestRepositoryMock.Verify(
+			r => r.StartAttemptAsync(It.IsAny<Guid>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+		_context.Repositories.Completions().ShouldBeEmpty();
 	}
 
 	[Theory]
@@ -97,7 +169,7 @@ public sealed class RunBggAddCommandHandlerTests : IClassFixture<JobsTestFixture
 	{
 		var request = StoredRequest();
 		_context.Repositories.BggWriteRequestRepositoryMock
-			.Setup(r => r.RecordAttemptAsync(request.Id, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.StartAttemptAsync(request.Id, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new InvalidOperationException("jobs database down"));
 
 		await Should.ThrowAsync<InvalidOperationException>(
@@ -198,7 +270,7 @@ public sealed class RunBggAddCommandHandlerTests : IClassFixture<JobsTestFixture
 		_context.Services.BggCollectionWriterMock.VerifyNoOtherCalls();
 		_context.Services.MediatorMock.VerifyNoOtherCalls();
 		_context.Repositories.BggWriteRequestRepositoryMock.Verify(
-			r => r.RecordAttemptAsync(It.IsAny<Guid>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+			r => r.StartAttemptAsync(It.IsAny<Guid>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
 		_context.Repositories.Completions().ShouldBeEmpty();
 	}
 

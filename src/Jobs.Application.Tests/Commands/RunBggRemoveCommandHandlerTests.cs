@@ -23,14 +23,13 @@ public sealed class RunBggRemoveCommandHandlerTests : IClassFixture<JobsTestFixt
 
 	[Fact]
 	[Trait("AC", "111UC7")]
-	public async Task Handle_RequestHoldsTheCollectionItemId_RemovesItWithoutALookup()
+	public async Task Handle_RequestHoldsTheCollectionItemId_RemovesIt()
 	{
 		var request = StoredRequest(collectionItemId: 777);
 
 		await _handler.Handle(new RunBggRemoveCommand(request.Id, 0), CancellationToken.None);
 
 		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync(777, It.IsAny<CancellationToken>()), Times.Once);
-		_context.Services.BggCollectionWriterMock.Verify(w => w.FindCollectionItemIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
 		var completion = _context.Repositories.Completions().ShouldHaveSingleItem();
 		completion.Status.ShouldBe(BggWriteRequestStatus.Sent);
 		completion.CollectionItemId.ShouldBe(777);
@@ -50,18 +49,65 @@ public sealed class RunBggRemoveCommandHandlerTests : IClassFixture<JobsTestFixt
 		_context.Repositories.Completions().ShouldHaveSingleItem().CollectionItemId.ShouldBe(888);
 	}
 
-	[Fact]
-	[Trait("AC", "111UC7")]
-	public async Task Handle_LookupFindsNothing_FailsTheAttemptWithoutRemoving()
+	[Theory]
+	[InlineData(null)]
+	[InlineData(777L)]
+	[Trait("AC", "112UC5")]
+	public async Task Handle_ItemNoLongerOnBgg_CompletesSentWithoutRemoving(long? collectionItemId)
 	{
-		var request = StoredRequest(bggId: 230802);
+		var request = StoredRequest(bggId: 230802, collectionItemId: collectionItemId);
 		_context.Services.BggFindReturns(null);
 
-		var exception = await Should.ThrowAsync<BggItemNotFoundException>(
-			() => _handler.Handle(new RunBggRemoveCommand(request.Id, 0), CancellationToken.None));
+		var outcome = await _handler.Handle(new RunBggRemoveCommand(request.Id, 0), CancellationToken.None);
 
-		exception.BggId.ShouldBe(230802);
+		outcome.ShouldBe(BggJobOutcome.Finished);
 		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+		var completion = _context.Repositories.Completions().ShouldHaveSingleItem();
+		completion.Status.ShouldBe(BggWriteRequestStatus.Sent);
+		completion.Result.ShouldBe("already gone from the BGG collection");
+	}
+
+	[Fact]
+	[Trait("AC", "112UC5")]
+	public async Task Handle_ItemListedAndRequestHoldsAnId_RemovesTheStoredId()
+	{
+		var request = StoredRequest(collectionItemId: 777);
+		_context.Services.BggFindReturns(9999);
+
+		await _handler.Handle(new RunBggRemoveCommand(request.Id, 0), CancellationToken.None);
+
+		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync(777, It.IsAny<CancellationToken>()), Times.Once);
+		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync(9999, It.IsAny<CancellationToken>()), Times.Never);
+	}
+
+	[Theory]
+	[InlineData(0)]
+	[InlineData(2)]
+	[Trait("AC", "112UC6")]
+	public async Task Handle_EarlierRequestUnfinished_WaitsWithoutAnAttemptOrAnyCall(int retryCount)
+	{
+		var request = StoredRequest(collectionItemId: 777);
+		_context.Repositories.HasUnfinishedEarlierRequest(request.Id, true);
+
+		var outcome = await _handler.Handle(new RunBggRemoveCommand(request.Id, retryCount), CancellationToken.None);
+
+		outcome.ShouldBe(BggJobOutcome.WaitingForEarlierRequest);
+		_context.Services.BggCollectionWriterMock.VerifyNoOtherCalls();
+		_context.Repositories.BggWriteRequestRepositoryMock.Verify(
+			r => r.StartAttemptAsync(It.IsAny<Guid>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()), Times.Never);
+		_context.Repositories.Completions().ShouldBeEmpty();
+	}
+
+	[Fact]
+	[Trait("AC", "112UC6")]
+	public async Task Handle_RequestCancelled_CallsNothing()
+	{
+		var request = StoredRequest(collectionItemId: 777, status: BggWriteRequestStatus.Cancelled);
+
+		var outcome = await _handler.Handle(new RunBggRemoveCommand(request.Id, 0), CancellationToken.None);
+
+		outcome.ShouldBe(BggJobOutcome.Finished);
+		_context.Services.BggCollectionWriterMock.VerifyNoOtherCalls();
 		_context.Repositories.Completions().ShouldBeEmpty();
 	}
 
@@ -85,12 +131,14 @@ public sealed class RunBggRemoveCommandHandlerTests : IClassFixture<JobsTestFixt
 
 	[Fact]
 	[Trait("AC", "111UC8")]
-	public async Task Handle_LookupFindsNothingOnTheFinalAttempt_CompletesFailed()
+	public async Task Handle_LookupFailsOnTheFinalAttempt_CompletesFailed()
 	{
 		var request = StoredRequest(bggId: 230802);
-		_context.Services.BggFindReturns(null);
+		_context.Services.BggCollectionWriterMock
+			.Setup(w => w.FindCollectionItemIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+			.ThrowsAsync(new InvalidOperationException("BGG not ready"));
 
-		await Should.ThrowAsync<BggItemNotFoundException>(
+		await Should.ThrowAsync<InvalidOperationException>(
 			() => _handler.Handle(new RunBggRemoveCommand(request.Id, 2), CancellationToken.None));
 
 		_context.Repositories.Completions().ShouldHaveSingleItem().Status.ShouldBe(BggWriteRequestStatus.Failed);
@@ -102,7 +150,7 @@ public sealed class RunBggRemoveCommandHandlerTests : IClassFixture<JobsTestFixt
 	{
 		var request = StoredRequest(collectionItemId: 777);
 		_context.Repositories.BggWriteRequestRepositoryMock
-			.Setup(r => r.RecordAttemptAsync(request.Id, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+			.Setup(r => r.StartAttemptAsync(request.Id, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new InvalidOperationException("jobs database down"));
 
 		await Should.ThrowAsync<InvalidOperationException>(
@@ -196,6 +244,7 @@ public sealed class RunBggRemoveCommandHandlerTests : IClassFixture<JobsTestFixt
 	{
 		var request = BggWriteRequestFactory.CreateRemove(bggId: bggId, collectionItemId: collectionItemId, status: status, attempts: attempts);
 		_context.Repositories.HasStored(request);
+	_context.Services.BggFindReturns(collectionItemId ?? 888);
 		return request;
 	}
 }
