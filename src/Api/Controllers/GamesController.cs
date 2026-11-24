@@ -45,9 +45,33 @@ public class GamesController : ControllerBase
 
 	[HttpPost("from-bgg")]
 	public async Task<ActionResult<AddGameFromBggResult>> AddFromBgg(
-		[FromBody] AddGameFromBggCommand command,
+		[FromBody] AddGameFromBggRequest request,
 		CancellationToken cancellationToken)
 	{
+		var command = new AddGameFromBggCommand(
+			request.Name,
+			request.Year,
+			request.Description,
+			request.MinPlayers,
+			request.MaxPlayers,
+			request.PlayTimeMinutes,
+			request.MinPlayTimeMinutes,
+			request.MaxPlayTimeMinutes,
+			request.BggRating,
+			request.BggWeight,
+			request.MinAge,
+			request.BestPlayerCountMin,
+			request.BestPlayerCountMax,
+			request.CoverImageUrl,
+			request.Categories,
+			request.Mechanics,
+			request.Designers,
+			request.Artists,
+			request.Publishers,
+			request.Subdomains,
+			request.BggId,
+			SkipBggWrite: false,
+			ParentGameId: request.ParentGameId);
 		var result = await _mediator.Send(command, cancellationToken);
 		return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
 	}
@@ -94,9 +118,16 @@ public class GamesController : ControllerBase
 	}
 
 	[HttpDelete("{id:guid}")]
-	public async Task<ActionResult<DeleteGameResult>> Delete(Guid id, CancellationToken cancellationToken)
+	public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
 	{
-		var result = await _mediator.Send(new DeleteGameCommand(id), cancellationToken);
-		return Ok(result);
+		try
+		{
+			await _mediator.Send(new DeleteGameCommand(id), cancellationToken);
+			return NoContent();
+		}
+		catch (KeyNotFoundException)
+		{
+			return NotFound();
+		}
 	}
 }

@@ -3,7 +3,9 @@ using BggIntegration.Infrastructure;
 using GameCollection.Application;
 using GameCollection.Infrastructure;
 using GameCollection.Infrastructure.Postgres;
-using GameCollection.Infrastructure.Postgres.Migrations;
+using Jobs.Infrastructure;
+using Jobs.Infrastructure.Postgres;
+using Shared.Persistence.Migrations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -25,6 +27,7 @@ builder.Services.AddMediatR(cfg =>
 // Infrastructure (background services registered inside AddBggIntegrationInfrastructure)
 builder.Services.AddGameCollectionInfrastructure(builder.Configuration);
 builder.Services.AddBggIntegrationInfrastructure(builder.Configuration);
+builder.Services.AddJobsInfrastructure(builder.Configuration);
 
 // CORS — allow the nginx-served frontend
 builder.Services.AddCors(options =>
@@ -37,8 +40,11 @@ var app = builder.Build();
 
 // Run DB migrations at startup
 await app.Services.GetRequiredService<DatabaseMigrationRunner>().RunAsync(app.Lifetime.ApplicationStopping);
+await app.Services.GetRequiredService<JobsDatabaseMigrator>().RunAsync(app.Lifetime.ApplicationStopping);
 
 app.UseCors();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program;
