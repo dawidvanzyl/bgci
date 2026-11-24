@@ -126,6 +126,27 @@ export class MockBgg {
 		await this.post('/__control/fail-next-writes', { count });
 	}
 
+	/**
+	 * Each of the next `count` writes with a valid session does its work, as an accepted write does, and then answers 500.
+	 * Its attempt has the outcome `failed`. `reset()` sets the count to 0.
+	 */
+	async applyButFailNextWrites(count: number): Promise<void> {
+		await this.post('/__control/apply-fail-next-writes', { count });
+	}
+
+	/** While enabled, the BGG search also returns the expansions whose name matches. `reset()` disables it. */
+	async setSearchIncludesExpansions(enabled: boolean): Promise<void> {
+		await this.post('/__control/search-expansions', { enabled });
+	}
+
+	/**
+	 * While the offset is not 0, the collection item lookup by BGG id answers each item with its collection item id
+	 * plus the offset, so a remove that uses the looked-up id and not the stored one is seen. `reset()` sets 0.
+	 */
+	async setLookupCollIdOffset(offset: number): Promise<void> {
+		await this.post('/__control/lookup-coll-id-offset', { offset });
+	}
+
 	/** While disabled, the collection item lookup answers an empty collection. `reset()` enables it. */
 	async setCollectionLookup(enabled: boolean): Promise<void> {
 		await this.post('/__control/collection-lookup', { enabled });

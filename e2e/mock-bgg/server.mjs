@@ -40,6 +40,10 @@ const initialState = () => ({
 	holdMode: 'none',
 	held: [],
 	failWrites: 0,
+	applyFailWrites: 0,
+	removedCollIds: [],
+	searchExpansions: false,
+	lookupCollIdOffset: 0,
 	attempts: [],
 	activeWrites: 0,
 	maxConcurrentWrites: 0,
@@ -78,7 +82,7 @@ const handleXmlApi = (url, res) => {
 
 	if (endpoint === 'search') {
 		const query = (url.searchParams.get('query') ?? '').toLowerCase();
-		const matches = games.filter((g) => !g.expansionOf && g.name.toLowerCase().includes(query));
+		const matches = games.filter((g) => (state.searchExpansions || !g.expansionOf) && g.name.toLowerCase().includes(query));
 		return send(res, 200, searchXml(matches), xml);
 	}
 
@@ -93,7 +97,14 @@ const handleXmlApi = (url, res) => {
 			if (!state.collectionLookupEnabled) {
 				return send(res, 200, collectionXml([]), xml);
 			}
-			return send(res, 200, collectionXml(state.addedItems.filter((i) => String(i.bggId) === bggId)), xml);
+			const listed = [
+				...state.addedItems,
+				...state.collection.filter((i) => !state.removedCollIds.includes(i.collId)),
+			];
+			const found = listed
+				.filter((i) => String(i.bggId) === bggId)
+				.map((i) => ({ ...i, collId: i.collId + state.lookupCollIdOffset }));
+			return send(res, 200, collectionXml(found), xml);
 		}
 		const wantsExpansions = url.searchParams.get('subtype') === 'boardgameexpansion';
 		const items = state.collection.filter((i) => Boolean(i.expansion) === wantsExpansions);
@@ -164,6 +175,10 @@ const runWrite = async (req, res, session, attempt, work) => {
 	if (fails) {
 		own.failWrites--;
 	}
+	const appliesThenFails = !fails && own.applyFailWrites > 0;
+	if (appliesThenFails) {
+		own.applyFailWrites--;
+	}
 
 	let held = false;
 	if (own.holdMode === 'all' || own.holdMode === 'next') {
@@ -191,6 +206,10 @@ const runWrite = async (req, res, session, attempt, work) => {
 		return send(res, 500, { error: 'Mock BGG failed the write' });
 	}
 	const body = work(own);
+	if (appliesThenFails) {
+		finish('failed');
+		return send(res, 500, { error: 'Mock BGG applied the write and failed the answer' });
+	}
 	finish('accepted');
 	return send(res, 200, body);
 };
@@ -241,6 +260,7 @@ const handleRemove = async (req, url, res) => {
 	};
 	return runWrite(req, res, session, attempt, (own) => {
 		own.addedItems = own.addedItems.filter((i) => i.collId !== collId);
+		own.removedCollIds.push(collId);
 		own.writes.push({ action: 'remove', username: session.username, collId });
 		return { message: 'Item removed from collection' };
 	});
@@ -293,6 +313,21 @@ const handleControl = async (req, url, res) => {
 
 	if (url.pathname === '/__control/fail-next-writes') {
 		state.failWrites = Number((await readJson(req)).count) || 0;
+		return send(res, 200, {});
+	}
+
+	if (url.pathname === '/__control/apply-fail-next-writes') {
+		state.applyFailWrites = Number((await readJson(req)).count) || 0;
+		return send(res, 200, {});
+	}
+
+	if (url.pathname === '/__control/search-expansions') {
+		state.searchExpansions = Boolean((await readJson(req)).enabled);
+		return send(res, 200, {});
+	}
+
+	if (url.pathname === '/__control/lookup-coll-id-offset') {
+		state.lookupCollIdOffset = Number((await readJson(req)).offset) || 0;
 		return send(res, 200, {});
 	}
 

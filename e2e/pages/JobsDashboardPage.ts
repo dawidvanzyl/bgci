@@ -13,6 +13,10 @@ export class JobsDashboardPage {
 		await this.page.goto(`${jobsUrl}/jobs/processing`);
 	}
 
+	async openSucceeded(): Promise<void> {
+		await this.page.goto(`${jobsUrl}/jobs/succeeded`);
+	}
+
 	async openFailed(): Promise<void> {
 		await this.page.goto(`${jobsUrl}/jobs/failed`);
 	}
@@ -55,6 +59,26 @@ export class JobsDashboardPage {
 				{ message: `A "${name}" job reaches the Failed list`, timeout: listTimeoutMs }
 			)
 			.toBeGreaterThan(0);
+	}
+
+	/** Reloads the Succeeded list until it holds at least `count` jobs with the display name. */
+	async waitUntilSucceeded(name: JobName, count = 1): Promise<void> {
+		await expect
+			.poll(
+				async () => {
+					await this.openSucceeded();
+					return this.jobRows(name).count();
+				},
+				{ message: `At least ${count} "${name}" job reaches the Succeeded list`, timeout: listTimeoutMs }
+			)
+			.toBeGreaterThanOrEqual(count);
+	}
+
+	/** Opens the first Failed job with the display name and requeues it, as the owner does. */
+	async retryFailed(name: JobName): Promise<void> {
+		await this.openFailed();
+		await this.openJob(name);
+		await this.requeue();
 	}
 
 	/** Reloads the Failed list until it holds no job with the display name. */
