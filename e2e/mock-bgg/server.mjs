@@ -82,7 +82,9 @@ const handleXmlApi = (url, res) => {
 
 	if (endpoint === 'search') {
 		const query = (url.searchParams.get('query') ?? '').toLowerCase();
-		const matches = games.filter((g) => (state.searchExpansions || !g.expansionOf) && g.name.toLowerCase().includes(query));
+		const matches = games.filter(
+			(g) => (state.searchExpansions || !g.expansionOf) && g.name.toLowerCase().includes(query)
+		);
 		return send(res, 200, searchXml(matches), xml);
 	}
 
@@ -97,10 +99,7 @@ const handleXmlApi = (url, res) => {
 			if (!state.collectionLookupEnabled) {
 				return send(res, 200, collectionXml([]), xml);
 			}
-			const listed = [
-				...state.addedItems,
-				...state.collection.filter((i) => !state.removedCollIds.includes(i.collId)),
-			];
+			const listed = [...state.addedItems, ...state.collection.filter((i) => !state.removedCollIds.includes(i.collId))];
 			const found = listed
 				.filter((i) => String(i.bggId) === bggId)
 				.map((i) => ({ ...i, collId: i.collId + state.lookupCollIdOffset }));

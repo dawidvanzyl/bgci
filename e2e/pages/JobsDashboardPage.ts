@@ -7,7 +7,23 @@ const listTimeoutMs = 30_000;
 
 /** The Hangfire dashboard of the jobs service. Every Hangfire selector of the suite is here. */
 export class JobsDashboardPage {
+	/** The newest job id on the Succeeded list when the test started. Hangfire keeps the Succeeded rows of earlier tests. */
+	private succeededBaseline = 0;
+
 	constructor(readonly page: Page) {}
+
+	/** Remembers the newest Succeeded job, so `waitUntilSucceeded` counts only the jobs of this test. */
+	async markSucceededBaseline(): Promise<void> {
+		await this.openSucceeded();
+		this.succeededBaseline = Math.max(0, ...(await this.listedJobIds()));
+	}
+
+	/** The ids of the jobs in the list that is open. */
+	private async listedJobIds(name?: JobName): Promise<number[]> {
+		const rows = name ? this.jobRows(name) : this.page.locator('tr.js-jobs-list-row');
+		const links = await rows.getByRole('link', { name: /^#?\d+$/ }).allTextContents();
+		return links.map((text) => Number(text.replace('#', '')));
+	}
 
 	async openProcessing(): Promise<void> {
 		await this.page.goto(`${jobsUrl}/jobs/processing`);
@@ -61,13 +77,13 @@ export class JobsDashboardPage {
 			.toBeGreaterThan(0);
 	}
 
-	/** Reloads the Succeeded list until it holds at least `count` jobs with the display name. */
+	/** Reloads the Succeeded list until it holds at least `count` jobs with the display name that are newer than the baseline. */
 	async waitUntilSucceeded(name: JobName, count = 1): Promise<void> {
 		await expect
 			.poll(
 				async () => {
 					await this.openSucceeded();
-					return this.jobRows(name).count();
+					return (await this.listedJobIds(name)).filter((id) => id > this.succeededBaseline).length;
 				},
 				{ message: `At least ${count} "${name}" job reaches the Succeeded list`, timeout: listTimeoutMs }
 			)
@@ -106,6 +122,12 @@ export class JobsDashboardPage {
 	/** The state history of the job whose details are open: one card per state it went through. */
 	get stateHistory(): Locator {
 		return this.page.locator('.state-card');
+	}
+
+	/** The titles of the state cards of the job whose details are open, in the order the page shows them. */
+	async stateTitles(): Promise<string[]> {
+		const titles = await this.stateHistory.locator('.state-card-title').allTextContents();
+		return titles.map((title) => title.replace(/^[\s\S]*\s(\w+)\s*$/, '$1'));
 	}
 
 	/** The state card of the job whose details are open, for one state such as `Enqueued`. */

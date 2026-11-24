@@ -49,9 +49,13 @@ export const test = base.extend<Fixtures>({
 	// held write from the last test, so its job ends at once. The jobs reset then removes every job and waits
 	// until none runs. The second mock reset clears any write that a job sent before it ended.
 	// The dashboard has its own page, so a spec keeps the collection page open while it reads the dashboard.
-	jobsDashboard: async ({ context }, use) => {
+	// The Succeeded list keeps the rows of earlier tests, so the page object notes the newest one first.
+	jobsDashboard: async ({ context, cleanState }, use) => {
+		void cleanState;
 		const dashboardPage = await context.newPage();
-		await use(new JobsDashboardPage(dashboardPage));
+		const dashboard = new JobsDashboardPage(dashboardPage);
+		await dashboard.markSucceededBaseline();
+		await use(dashboard);
 		await dashboardPage.close();
 	},
 

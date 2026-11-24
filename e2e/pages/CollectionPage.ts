@@ -113,7 +113,7 @@ export class CollectionPage {
 		this.expansionSearchWarning = this.expansionsTab.locator('.exp-search-wrap').getByTestId('inline-warning');
 		this.knownExpansionLabel = this.expansionsTab.locator('.exp-known-wrap > label');
 		this.knownExpansionRow = this.expansionsTab.locator('.exp-known-row');
-		this.knownAddButton = this.knownExpansionRow.getByRole('button', { name: 'Add' });
+		this.knownAddButton = this.knownExpansionRow.locator('button');
 		this.expansionSearchLabel = this.expansionsTab.locator('.exp-search-wrap > label');
 		this.expansionSearchRow = this.expansionsTab.locator('.exp-search-row');
 		this.expansionSearchInput = this.expansionsTab.locator('.exp-search-input');
