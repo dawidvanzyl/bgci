@@ -2,6 +2,7 @@ using BggIntegration.Domain.Models;
 using BggIntegration.Infrastructure.Http;
 using Hangfire;
 using Jobs.Application.Abstractions;
+using Jobs.Infrastructure;
 using Jobs.Infrastructure.Jobs;
 using Jobs.Worker.Bgg;
 using Jobs.Worker.Jobs;
@@ -10,7 +11,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Jobs.Infrastructure;
 
 namespace Jobs.Worker;
 
@@ -67,12 +67,9 @@ public static class DependencyInjection
 	public static IApplicationBuilder UseQaResetControl(this IApplicationBuilder app)
 	{
 		var configuration = app.ApplicationServices.GetRequiredService<IConfiguration>();
-		if (!configuration.GetValue<bool>("Jobs:QaResetEnabled"))
-		{
-			return app;
-		}
-
-		return app.UseWhen(
+		return !configuration.GetValue<bool>("Jobs:QaResetEnabled")
+			? app
+			: app.UseWhen(
 			context => HttpMethods.IsPost(context.Request.Method)
 				&& context.Request.Path.Equals(_qaResetPath, StringComparison.OrdinalIgnoreCase),
 			branch => branch.Run(async context =>
@@ -102,12 +99,9 @@ public static class DependencyInjection
 	private static TimeSpan? ReadSeconds(IConfiguration configuration, string key)
 	{
 		var value = configuration[key];
-		if (string.IsNullOrWhiteSpace(value))
-		{
-			return null;
-		}
-
-		return double.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out var seconds) && seconds > 0
+		return string.IsNullOrWhiteSpace(value)
+			? null
+			: double.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out var seconds) && seconds > 0
 			? TimeSpan.FromSeconds(seconds)
 			: throw new InvalidOperationException($"The configuration key '{key}' must be a positive number of seconds.");
 	}

@@ -195,7 +195,7 @@ public static class DependencyInjection
         var connectionString = BuildConnectionString(configuration);
         services.AddScoped<ICollectedGameRepository>(
             _ => new PostgresCollectedGameRepository(connectionString));
-        services.AddSingleton(new DatabaseMigrationRunner(connectionString, MigrationScripts.LoadEmbedded()));
+        services.AddSingleton(new DatabaseMigrationRunner(connectionString, MigrationScripts.LoadEmbedded(typeof(DependencyInjection).Assembly, "GameCollection.Infrastructure.Postgres.Scripts.")));
         return services;
     }
 }

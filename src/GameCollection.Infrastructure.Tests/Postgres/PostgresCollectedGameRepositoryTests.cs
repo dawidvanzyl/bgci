@@ -2,9 +2,9 @@ using GameCollection.Domain.Aggregates;
 using GameCollection.Domain.ValueObjects;
 using GameCollection.Infrastructure.Postgres;
 using GameCollection.Infrastructure.Tests.Postgres.Migrations;
-using Shared.Persistence.Migrations;
 using GameCollection.Testing.Factories;
 using GameCollection.Testing.Postgres;
+using Shared.Persistence.Migrations;
 using Shouldly;
 using Xunit;
 

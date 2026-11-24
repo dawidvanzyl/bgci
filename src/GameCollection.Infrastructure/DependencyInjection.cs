@@ -1,9 +1,9 @@
 using GameCollection.Domain.Repositories;
 using GameCollection.Infrastructure.Postgres;
-using Shared.Persistence.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using Shared.Persistence.Migrations;
 
 namespace GameCollection.Infrastructure;
 

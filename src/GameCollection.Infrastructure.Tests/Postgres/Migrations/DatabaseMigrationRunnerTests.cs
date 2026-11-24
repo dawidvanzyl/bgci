@@ -1,6 +1,6 @@
-using Shared.Persistence.Migrations;
 using GameCollection.Testing.Postgres;
 using Npgsql;
+using Shared.Persistence.Migrations;
 using Shouldly;
 using Xunit;
 

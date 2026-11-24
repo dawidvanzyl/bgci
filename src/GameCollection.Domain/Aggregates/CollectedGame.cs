@@ -75,7 +75,7 @@ public class CollectedGame
 		GameId? parentGameId = null,
 		BggStatus? bggStatus = null)
 	{
-		if (bggId is null != bggStatus is null)
+		if ((bggId is null) != (bggStatus is null))
 			throw new ArgumentException("A game has a BGG status exactly when it has a BGG id.", nameof(bggStatus));
 
 		var game = new CollectedGame

@@ -57,12 +57,9 @@ public static class DependencyInjection
 	private static TimeSpan? ReadSeconds(IConfiguration configuration, string key)
 	{
 		var value = configuration[key];
-		if (string.IsNullOrWhiteSpace(value))
-		{
-			return null;
-		}
-
-		return double.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out var seconds) && seconds > 0
+		return string.IsNullOrWhiteSpace(value)
+			? null
+			: double.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out var seconds) && seconds > 0
 			? TimeSpan.FromSeconds(seconds)
 			: throw new InvalidOperationException($"The configuration key '{key}' must be a positive number of seconds.");
 	}
