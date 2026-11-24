@@ -19,7 +19,7 @@ public sealed class HangfireBggWriteQueueTests
 	public HangfireBggWriteQueueTests(PostgresContainerFixture postgres)
 	{
 		_postgres = postgres;
-		_jobs.Setup(c => c.Create(It.IsAny<Job>(), It.IsAny<IState>())).Returns("job-1");
+		_jobs.Setup(c => c.Create(It.IsAny<Job>(), It.IsAny<IState>())).Returns("101");
 	}
 
 	[Fact]
@@ -40,7 +40,7 @@ public sealed class HangfireBggWriteQueueTests
 		request.Account.ShouldBe("owner");
 		request.IdempotencyKey.ShouldBe($"add:{gameId}");
 		request.Status.ShouldBe("queued");
-		request.JobId.ShouldBe("job-1");
+		request.JobId.ShouldBe("101");
 		request.Attempts.ShouldBe(0);
 
 		var (job, state) = CreatedJob();
@@ -69,7 +69,7 @@ public sealed class HangfireBggWriteQueueTests
 		request.CollectionItemId.ShouldBe(777);
 		request.IdempotencyKey.ShouldBe($"remove:{gameId}");
 		request.Status.ShouldBe("queued");
-		request.JobId.ShouldBe("job-1");
+		request.JobId.ShouldBe("101");
 
 		var (job, state) = CreatedJob();
 		job.Type.ShouldBe(typeof(IBggRemoveJob));
@@ -132,17 +132,70 @@ public sealed class HangfireBggWriteQueueTests
 	}
 
 	[Fact]
-	[Trait("AC", "111UC5")]
-	public async Task QueueAddAsync_AddThenRemoveOfTheSameGame_KeepsBothRequests()
+	[Trait("AC", "112UC3")]
+	public async Task QueueRemoveAsync_AddWithNoAttempt_CancelsItAndCreatesNeitherARemoveRequestNorAJob()
 	{
 		var database = await JobsTestDatabase.CreateAsync(_postgres);
 		var gameId = Guid.NewGuid();
 		var queue = Queue(database);
-
 		await queue.QueueAddAsync(gameId, 230802, "Azul", TestContext.Current.CancellationToken);
+		_jobs.Invocations.Clear();
+
 		await queue.QueueRemoveAsync(gameId, 230802, null, TestContext.Current.CancellationToken);
 
-		(await database.RequestsAsync()).Select(r => r.Kind).ShouldBe(["add", "remove"]);
+		var request = (await database.RequestsAsync()).ShouldHaveSingleItem();
+		request.Kind.ShouldBe("add");
+		request.Status.ShouldBe("cancelled");
+		_jobs.Invocations.ShouldBeEmpty();
+		(await database.LogAsync()).ShouldHaveSingleItem().Result.ShouldBe("cancelled by a remove");
+	}
+
+	[Fact]
+	[Trait("AC", "112UC3")]
+	public async Task QueueRemoveAsync_AddThatStartedAnAttempt_CancelsItAndQueuesTheRemove()
+	{
+		var database = await JobsTestDatabase.CreateAsync(_postgres);
+		var gameId = Guid.NewGuid();
+		var queue = Queue(database);
+		await queue.QueueAddAsync(gameId, 230802, "Azul", TestContext.Current.CancellationToken);
+		var add = (await database.RequestsAsync()).ShouldHaveSingleItem();
+		await database.Repository.StartAttemptAsync(add.Id, DateTimeOffset.UtcNow, TestContext.Current.CancellationToken);
+
+		await queue.QueueRemoveAsync(gameId, 230802, null, TestContext.Current.CancellationToken);
+
+		(await database.RequestsAsync()).Select(r => (r.Kind, r.Status)).ShouldBe([("add", "cancelled"), ("remove", "queued")]);
+		_jobs.Verify(c => c.Create(It.Is<Job>(j => j.Type == typeof(IBggRemoveJob)), It.IsAny<IState>()), Times.Once);
+	}
+
+	[Fact]
+	[Trait("AC", "112UC3")]
+	public async Task QueueRemoveAsync_AddAlreadySent_QueuesTheRemoveAndLeavesTheAddSent()
+	{
+		var database = await JobsTestDatabase.CreateAsync(_postgres);
+		var gameId = Guid.NewGuid();
+		var queue = Queue(database);
+		await queue.QueueAddAsync(gameId, 230802, "Azul", TestContext.Current.CancellationToken);
+		var add = (await database.RequestsAsync()).ShouldHaveSingleItem();
+		await database.Repository.CompleteAsync(
+			new BggWriteCompletion(add.Id, BggWriteRequestStatus.Sent, 5, "BGG add", "owner", "{}", "added", null, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
+			TestContext.Current.CancellationToken);
+
+		await queue.QueueRemoveAsync(gameId, 230802, 5, TestContext.Current.CancellationToken);
+
+		(await database.RequestsAsync()).Select(r => (r.Kind, r.Status)).ShouldBe([("add", "sent"), ("remove", "queued")]);
+	}
+
+	[Fact]
+	[Trait("AC", "112UC1")]
+	public async Task HasUnresolvedRemoveAsync_QueuedRemoveOfTheBggId_ReturnsTrue()
+	{
+		var database = await JobsTestDatabase.CreateAsync(_postgres);
+		var cancellationToken = TestContext.Current.CancellationToken;
+		await Queue(database).QueueRemoveAsync(Guid.NewGuid(), 230802, null, cancellationToken);
+		await database.InsertHangfireJobAsync(101, "Enqueued");
+
+		(await Queue(database).HasUnresolvedRemoveAsync(230802, cancellationToken)).ShouldBeTrue();
+		(await Queue(database).HasUnresolvedRemoveAsync(1, cancellationToken)).ShouldBeFalse();
 	}
 
 	[Fact]
@@ -168,13 +221,13 @@ public sealed class HangfireBggWriteQueueTests
 		var database = await JobsTestDatabase.CreateAsync(_postgres);
 		_jobs.Setup(c => c.Create(It.IsAny<Job>(), It.IsAny<IState>()))
 			.Callback(() => database.ExecuteAsync("drop function set_bgg_write_request_job(uuid, text)").GetAwaiter().GetResult())
-			.Returns("job-1");
+			.Returns("101");
 
 		await Should.ThrowAsync<Exception>(
 			() => Queue(database).QueueAddAsync(Guid.NewGuid(), 230802, "Azul", TestContext.Current.CancellationToken));
 
 		(await database.RequestsAsync()).ShouldBeEmpty();
-		_jobs.Verify(c => c.ChangeState("job-1", It.IsAny<IState>(), It.IsAny<string>()), Times.Once);
+		_jobs.Verify(c => c.ChangeState("101", It.IsAny<IState>(), It.IsAny<string>()), Times.Once);
 	}
 
 	[Fact]

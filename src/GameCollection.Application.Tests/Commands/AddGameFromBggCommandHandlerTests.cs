@@ -40,6 +40,39 @@ public sealed class AddGameFromBggCommandHandlerTests : IClassFixture<GameCollec
 	}
 
 	[Fact]
+	[Trait("AC", "112UC1")]
+	public async Task Handle_RemoveOfTheBggGameNotFinished_ThrowsAndSavesAndQueuesNothing()
+	{
+		_context.Services.BggWriteQueueMock
+			.Setup(q => q.HasUnresolvedRemoveAsync(230802, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(true);
+
+		var exception = await Should.ThrowAsync<BggRemoveNotFinishedException>(
+			() => _handler.Handle(AddGameFromBggCommandFactory.Create(bggId: 230802), CancellationToken.None));
+
+		exception.BggId.ShouldBe(230802);
+		_context.Repositories.CollectedGameRepositoryMock
+			.Verify(r => r.AddAsync(It.IsAny<CollectedGame>(), It.IsAny<CancellationToken>()), Times.Never);
+		_context.Services.BggWriteQueueMock
+			.Verify(q => q.QueueAddAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+	}
+
+	[Fact]
+	[Trait("AC", "112UC2")]
+	public async Task Handle_NoRemoveOfTheBggGameNotFinished_SavesPendingAndQueuesTheAdd()
+	{
+		_context.Services.BggWriteQueueMock
+			.Setup(q => q.HasUnresolvedRemoveAsync(230802, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(false);
+
+		var result = await _handler.Handle(AddGameFromBggCommandFactory.Create(name: "Azul", bggId: 230802), CancellationToken.None);
+
+		result.BggStatus.ShouldBe("pending");
+		_context.Services.BggWriteQueueMock
+			.Verify(q => q.QueueAddAsync(result.Id, 230802, "Azul", It.IsAny<CancellationToken>()), Times.Once);
+	}
+
+	[Fact]
 	[Trait("AC", "111UC4")]
 	public async Task Handle_QueueFails_DeletesTheNewGameAndRethrows()
 	{
