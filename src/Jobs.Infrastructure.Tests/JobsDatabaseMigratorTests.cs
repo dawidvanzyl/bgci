@@ -81,7 +81,7 @@ public sealed class JobsDatabaseMigratorTests
 
 	[Fact]
 	[Trait("AC", "112UC3")]
-	public async Task RunAsync_RowsFromTheFirstTwoScripts_GetASequenceAcceptCancelledAndLoseTheOldAttemptFunction()
+	public async Task RunAsync_RowsFromTheFirstTwoScripts_GetASequenceInCreationOrderAcceptCancelledAndLoseTheOldAttemptFunction()
 	{
 		var connectionString = await _postgres.CreateDatabaseAsync();
 		var all = MigrationScripts.LoadEmbedded(typeof(DependencyInjection).Assembly, "Jobs.Infrastructure.Postgres.Scripts.");
@@ -93,7 +93,8 @@ public sealed class JobsDatabaseMigratorTests
 			await using var command = new NpgsqlCommand(
 				"""
 				insert into bgg_write_requests (id, kind, bgg_id, game_id, name, account, idempotency_key, status, attempts, created_at, updated_at)
-				values (gen_random_uuid(), 'add', 1, gen_random_uuid(), 'Azul', 'owner', 'add:old', 'queued', 0, now(), now());
+				values (gen_random_uuid(), 'add', 1, gen_random_uuid(), 'Azul', 'owner', 'add:later', 'queued', 0, now() + interval '1 hour', now()),
+					(gen_random_uuid(), 'add', 1, gen_random_uuid(), 'Azul', 'owner', 'add:earlier', 'queued', 0, now(), now());
 				create function record_bgg_write_attempt(p_id uuid, p_at timestamptz) returns integer language sql as 'select 1';
 				""",
 				connection);
@@ -108,10 +109,12 @@ public sealed class JobsDatabaseMigratorTests
 			"""
 			update bgg_write_requests set status = 'cancelled';
 			select (select count(*) from bgg_write_requests where seq is not null)
-				+ 10 * (select count(*) from pg_proc where proname = 'record_bgg_write_attempt');
+				+ 10 * (select count(*) from pg_proc where proname = 'record_bgg_write_attempt')
+				+ 100 * (select count(*) from bgg_write_requests e, bgg_write_requests l
+					where e.idempotency_key = 'add:earlier' and l.idempotency_key = 'add:later' and e.seq < l.seq);
 			""",
 			verify);
-		Convert.ToInt32(await check.ExecuteScalarAsync(TestContext.Current.CancellationToken), System.Globalization.CultureInfo.InvariantCulture).ShouldBe(1);
+		Convert.ToInt32(await check.ExecuteScalarAsync(TestContext.Current.CancellationToken), System.Globalization.CultureInfo.InvariantCulture).ShouldBe(102);
 	}
 
 	private static async Task<List<string>> QueryFunctionNamesAsync(string connectionString)

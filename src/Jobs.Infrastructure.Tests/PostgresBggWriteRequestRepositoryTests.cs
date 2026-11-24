@@ -188,6 +188,7 @@ public sealed class PostgresBggWriteRequestRepositoryTests
 	[InlineData(BggWriteRequestStatus.Queued, "Enqueued", true)]
 	[InlineData(BggWriteRequestStatus.Queued, "Scheduled", true)]
 	[InlineData(BggWriteRequestStatus.Queued, "Processing", true)]
+	[InlineData(BggWriteRequestStatus.Queued, "Failed", true)]
 	[InlineData(BggWriteRequestStatus.Queued, "Deleted", false)]
 	[InlineData(BggWriteRequestStatus.Queued, "Gone", false)]
 	[InlineData(BggWriteRequestStatus.Failed, "Enqueued", true)]
@@ -274,6 +275,9 @@ public sealed class PostgresBggWriteRequestRepositoryTests
 	[InlineData(BggWriteRequestStatus.Sent, "Succeeded", false)]
 	[InlineData(BggWriteRequestStatus.Failed, "Enqueued", false)]
 	[InlineData(BggWriteRequestStatus.Cancelled, "Enqueued", false)]
+	[InlineData(BggWriteRequestStatus.Cancelled, "Processing", true)]
+	[InlineData(BggWriteRequestStatus.Cancelled, "Succeeded", false)]
+	[InlineData(BggWriteRequestStatus.Queued, "Failed", false)]
 	[Trait("AC", "112UC6")]
 	public async Task HasUnfinishedEarlierRequestAsync_EarlierRequestInTheGivenState_ReportsWhetherItBlocks(
 		BggWriteRequestStatus status,
@@ -335,6 +339,28 @@ public sealed class PostgresBggWriteRequestRepositoryTests
 		await database.SetHangfireJobStateAsync(101, "Enqueued");
 
 		(await database.Repository.HasUnfinishedEarlierRequestAsync(later, cancellationToken)).ShouldBeTrue();
+	}
+
+	[Fact]
+	[Trait("AC", "112UC6")]
+	public async Task HasUnfinishedEarlierRequestAsync_AddCancelledWhileItsAttemptRuns_BlocksTheRemoveUntilTheJobLeavesProcessing()
+	{
+		var database = await JobsTestDatabase.CreateAsync(_postgres);
+		var cancellationToken = TestContext.Current.CancellationToken;
+		var add = Guid.NewGuid();
+		var remove = Guid.NewGuid();
+		var gameId = Guid.NewGuid();
+		await CreateAsync(database, add, gameId);
+		await SetUpJobAsync(database, add, 101, "Processing");
+		await database.Repository.StartAttemptAsync(add, _createdAt, cancellationToken);
+		await database.Repository.CancelUnfinishedAddAsync(gameId, "owner", "BGG add", _createdAt, cancellationToken);
+		await CreateAsync(database, remove, gameId, BggWriteKind.Remove);
+
+		(await database.Repository.HasUnfinishedEarlierRequestAsync(remove, cancellationToken)).ShouldBeTrue();
+
+		await database.SetHangfireJobStateAsync(101, "Succeeded");
+
+		(await database.Repository.HasUnfinishedEarlierRequestAsync(remove, cancellationToken)).ShouldBeFalse();
 	}
 
 	[Fact]

@@ -13,8 +13,10 @@ BEGIN
 			AND r.seq < me.seq
 		LEFT JOIN hangfire.job j ON j.id = r.job_id::bigint
 		WHERE me.id = p_id
-			AND r.status = 'queued'
-			AND (r.job_id IS NULL OR j.statename <> 'Deleted')
+			AND (
+				(r.status = 'queued' AND (r.job_id IS NULL OR j.statename NOT IN ('Deleted', 'Failed')))
+				OR (r.status = 'cancelled' AND j.statename = 'Processing')
+			)
 	);
 END;
 $body$;
