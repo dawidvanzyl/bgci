@@ -18,6 +18,7 @@
   <Project Path="Jobs.Worker/Jobs.Worker.csproj" />
   <Project Path="Jobs.Application.Tests/Jobs.Application.Tests.csproj" />
   <Project Path="Jobs.Testing/Jobs.Testing.csproj" />
+  <Project Path="Jobs.Infrastructure.Tests/Jobs.Infrastructure.Tests.csproj" />
   <Project Path="Jobs/Jobs.csproj" />
   <Project Path="Shared.Persistence/Shared.Persistence.csproj" />
   <Project Path="Shared.Testing/Shared.Testing.csproj" />
