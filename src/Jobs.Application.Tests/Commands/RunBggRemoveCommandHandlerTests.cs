@@ -244,7 +244,7 @@ public sealed class RunBggRemoveCommandHandlerTests : IClassFixture<JobsTestFixt
 	{
 		var request = BggWriteRequestFactory.CreateRemove(bggId: bggId, collectionItemId: collectionItemId, status: status, attempts: attempts);
 		_context.Repositories.HasStored(request);
-	_context.Services.BggFindReturns(collectionItemId ?? 888);
+		_context.Services.BggFindReturns(collectionItemId ?? 888);
 		return request;
 	}
 }

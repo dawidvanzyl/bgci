@@ -248,7 +248,6 @@ public sealed class BggWriteHttpClientTests
 		_handler.Count("lookup").ShouldBe(5);
 	}
 
-
 	[Fact]
 	[Trait("AC", "111UC7")]
 	public async Task FindCollectionItemIdAsync_LookupAnswersError_FailsWithTheLookupStep()

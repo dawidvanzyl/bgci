@@ -1,7 +1,7 @@
 using GameCollection.Testing.Postgres;
 using Jobs.Application.Models;
-using System.Text.Json;
 using Shouldly;
+using System.Text.Json;
 using Xunit;
 
 namespace Jobs.Infrastructure.Tests;
