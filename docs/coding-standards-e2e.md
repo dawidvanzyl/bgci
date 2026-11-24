@@ -96,20 +96,24 @@ The jobs service logs in with `Bgg__Username` and `Bgg__Password`. Tests never c
 - It also serves the BGG write calls: the login (`login/api/v1`), the add (`api/collectionitem`) and the
   remove (`api/collectionitem/{collId}`). A login gives a session, and an add or remove needs a live session.
   An add does not change the collection that the sync reads. Only the collection item id lookup
-  (a `collection` request with `id`) sees the items that adds created.
+  (a `collection` request with `id`) sees the items that adds created. That lookup also sees the items from
+  `setCollection([...])`, until a remove records their collection item id.
 - Read what it did with `mockBgg.report()`: the accepted writes, the accepted and rejected logins, and
   the rejected writes. `mockBgg.acceptedWrites()` returns only the accepted adds and removes, in order.
 - Steer it from a spec through the `mockBgg` fixture: `setAvailable(false)`,
   `setCollection([...])`, `setLoginsRejected(true)`, `expireSessions()`, `reset()`.
   `setLoginsRejected(true)` makes every login answer 400 and every add and remove answer 401.
   `expireSessions()` makes the next add or remove with an old session answer 401, while a new login works.
-  `reset()` clears both controls.
+  `reset()` clears both controls and every control listed below.
 - It also holds, fails and records writes. A write is an add or a remove. Logins and the collection item lookup are not writes.
   - `holdWrites('all')` makes every write with a valid session wait until `releaseWrites()`. `holdWrites('next')` holds only the next one.
     `releaseWrites()` answers every held write as it would have been answered without the hold, and turns the hold off.
     The jobs service gives up on a write after 30 seconds, so never hold a write for more than 20 seconds.
   - `failNextWrites(n)` makes the next `n` writes with a valid session answer 500 and change nothing. A write without a valid session does not use up the count.
   - `setCollectionLookup(false)` makes the collection item lookup answer an empty collection. `reset()` turns it back on.
+  - `applyButFailNextWrites(n)` makes each of the next `n` writes with a valid session do its work, as an accepted write does, and then answer 500. Its attempt has the outcome `failed`. A write without a valid session does not use up the count. `reset()` sets the count to 0.
+  - `setSearchIncludesExpansions(true)` makes the BGG search also return the expansions whose name matches. `reset()` turns it off.
+  - `setLookupCollIdOffset(n)` makes the collection item lookup by BGG id answer each item with its collection item id plus `n`, so a remove that uses the looked-up id and not the stored one can be seen. `reset()` sets 0.
   - `report().attempts` lists every write in start order with `action`, `username`, `bggId`, `collId`, `outcome` (`accepted`, `failed` or `rejected`), `startedAt` and `endedAt`.
     `endedAt` is null while the write is held. `report().maxConcurrentWrites` is the most writes in progress at one moment since the last reset.
   - `reset()` answers every held write with 503 first.

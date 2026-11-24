@@ -131,8 +131,12 @@ game or expansion added by hand has no BGG badge and no status. Mockup:
 - After an add or a remove no banner and no toast shows. The game appears with `Pending`
   or leaves the collection at once.
 - The amber inline warning box (`.bgg-write-warning--inline`, the colours of the BGG status
-  banner, `10px` radius, border on all sides) stays as a general inline warning above the
-  `Add Expansion` section. It has no BGG write text of its own.
+  banner, `10px` radius, border on all sides) shows the message of a refused add. It sits above
+  the control that failed: the `Add from BGG` Cancel / Save row (with a 16px top margin), the
+  Known BGG expansions row, or the BGG search row. It has no close button and leaves after
+  5 seconds. The BGG search row shows every error in this box, in place of the browser alert.
+  Other errors on the modal and on the Known BGG expansions row keep the plain inline error.
+  Mockup: `.design/bgg_remove_not_finished_03/bgg_remove_not_finished.html`.
 
 ## 7. Wording
 

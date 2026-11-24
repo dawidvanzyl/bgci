@@ -23,6 +23,21 @@ export function showInlineError(anchorEl, message) {
 	setTimeout(() => el.remove(), 5000);
 }
 
+export function showInlineWarning(anchorEl, message, { spaced = false } = {}) {
+	anchorEl.parentElement.querySelector(':scope > [data-testid="inline-warning"]')?.remove();
+	const el = document.createElement('div');
+	el.className = 'bgg-status-banner bgg-write-warning bgg-write-warning--inline';
+	if (spaced) el.classList.add('bgg-write-warning--spaced');
+	el.setAttribute('role', 'alert');
+	el.dataset.testid = 'inline-warning';
+	const body = document.createElement('div');
+	body.className = 'bgg-write-warning-body';
+	body.textContent = message;
+	el.appendChild(body);
+	anchorEl.parentElement.insertBefore(el, anchorEl);
+	setTimeout(() => el.remove(), 5000);
+}
+
 export function showSyncError(message) {
 	const syncBtn = document.getElementById('btn-sync-bgg');
 	const existing = syncBtn.parentElement.querySelector('.sync-error');
