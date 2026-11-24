@@ -69,6 +69,15 @@ public sealed class PostgresBggWriteRequestRepository : IBggWriteRequestReposito
 		return row is null ? null : MapToModel(row);
 	}
 
+	public async Task<IReadOnlyList<int>> GetPendingRemoveBggIdsAsync(string account, CancellationToken cancellationToken = default)
+	{
+		await using var connection = new NpgsqlConnection(_connectionString);
+		var parameters = new DynamicParameters();
+		parameters.Add("p_account", account);
+		var ids = await connection.QueryAsync<int>(Call("get_pending_bgg_remove_bgg_ids", parameters, cancellationToken));
+		return ids.ToList();
+	}
+
 	public async Task<int> RecordAttemptAsync(Guid requestId, DateTimeOffset at, CancellationToken cancellationToken = default)
 	{
 		await using var connection = new NpgsqlConnection(_connectionString);

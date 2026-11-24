@@ -155,22 +155,54 @@ public sealed class PostgresBggWriteRequestRepositoryTests
 		(await database.Repository.GetAsync(id, TestContext.Current.CancellationToken)).ShouldBeNull();
 	}
 
+	[Fact]
+	[Trait("AC", "114UC2")]
+	public async Task GetPendingRemoveBggIdsAsync_MixedRequests_ReturnsEachQueuedRemoveOfTheAccountOnce()
+	{
+		var database = await JobsTestDatabase.CreateAsync(_postgres);
+		var cancellationToken = TestContext.Current.CancellationToken;
+		var retried = Guid.NewGuid();
+		var sent = Guid.NewGuid();
+		var failed = Guid.NewGuid();
+		await CreateAsync(database, kind: BggWriteKind.Remove, bggId: 1);
+		await CreateAsync(database, kind: BggWriteKind.Remove, bggId: 1);
+		await CreateAsync(database, retried, kind: BggWriteKind.Remove, bggId: 2);
+		await database.Repository.RecordAttemptAsync(retried, _createdAt, cancellationToken);
+		await CreateAsync(database, sent, kind: BggWriteKind.Remove, bggId: 3);
+		await CompleteAsync(database, sent, BggWriteRequestStatus.Sent);
+		await CreateAsync(database, failed, kind: BggWriteKind.Remove, bggId: 4);
+		await CompleteAsync(database, failed, BggWriteRequestStatus.Failed);
+		await CreateAsync(database, kind: BggWriteKind.Add, bggId: 5);
+		await CreateAsync(database, kind: BggWriteKind.Remove, bggId: 6, account: "test");
+
+		var ids = await database.Repository.GetPendingRemoveBggIdsAsync("owner", cancellationToken);
+
+		ids.OrderBy(id => id).ShouldBe([1, 2]);
+	}
+
+	private static Task CompleteAsync(JobsTestDatabase database, Guid id, BggWriteRequestStatus status) =>
+		database.Repository.CompleteAsync(
+			new BggWriteCompletion(id, status, null, "BGG remove", "owner", "{}", null, null, 1, _createdAt, _createdAt),
+			TestContext.Current.CancellationToken);
+
 	private static Task<bool> CreateAsync(
 		JobsTestDatabase database,
 		Guid? id = null,
 		Guid? gameId = null,
 		BggWriteKind kind = BggWriteKind.Add,
-		long? collectionItemId = null)
+		long? collectionItemId = null,
+		int bggId = 230802,
+		string account = "owner")
 	{
 		var game = gameId ?? Guid.NewGuid();
 		return database.Repository.CreateAsync(
 			id ?? Guid.NewGuid(),
 			kind,
-			230802,
+			bggId,
 			game,
 			"Azul",
 			collectionItemId,
-			"owner",
+			account,
 			$"{kind.ToString().ToLowerInvariant()}:{game}",
 			_createdAt,
 			TestContext.Current.CancellationToken);

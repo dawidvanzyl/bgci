@@ -2,4 +2,4 @@ using MediatR;
 
 namespace GameCollection.Application.Commands;
 
-public record DeleteGameCommand(Guid Id) : IRequest;
+public record DeleteGameCommand(Guid Id, bool SkipBggWrite = false) : IRequest;

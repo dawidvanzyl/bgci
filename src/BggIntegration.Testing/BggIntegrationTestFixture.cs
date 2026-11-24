@@ -1,4 +1,5 @@
 using BggIntegration.Application.Queries;
+using BggIntegration.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,6 +23,7 @@ public sealed class BggIntegrationTestFixture
 
 			RegisterLogging(services);
 			RegisterClients(services, context);
+			RegisterServices(services, context);
 			RegisterHandlers(services);
 
 			return services.BuildServiceProvider();
@@ -36,6 +38,12 @@ public sealed class BggIntegrationTestFixture
 	private static void RegisterClients(ServiceCollection services, BggIntegrationTestContext context)
 	{
 		services.AddTransient(_ => context.Clients.BggClientMock.Object);
+	}
+
+	private static void RegisterServices(ServiceCollection services, BggIntegrationTestContext context)
+	{
+		services.AddTransient(_ => context.Services.MediatorMock.Object);
+		services.AddTransient<BggSyncService>();
 	}
 
 	private static void RegisterHandlers(ServiceCollection services)

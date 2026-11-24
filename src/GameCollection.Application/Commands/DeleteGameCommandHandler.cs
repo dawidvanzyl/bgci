@@ -24,7 +24,7 @@ public class DeleteGameCommandHandler : IRequestHandler<DeleteGameCommand>
 
 		await _repository.DeleteAsync(id, cancellationToken);
 
-		if (game.IsBggSourced)
+		if (game.IsBggSourced && !request.SkipBggWrite)
 			await _bggWriteQueue.QueueRemoveAsync(game.Id.Value, game.BggId!.Value, game.BggCollId, cancellationToken);
 	}
 }

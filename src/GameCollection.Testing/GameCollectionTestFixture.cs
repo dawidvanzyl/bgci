@@ -54,6 +54,7 @@ public sealed class GameCollectionTestFixture
 		services.AddTransient<MarkGameBggSentCommandHandler>();
 		services.AddTransient<MarkGameBggFailedCommandHandler>();
 		services.AddTransient<GetAllGamesQueryHandler>();
+		services.AddTransient<GetPendingBggRemovesQueryHandler>();
 		services.AddTransient<GetGameByIdQueryHandler>();
 	}
 }
