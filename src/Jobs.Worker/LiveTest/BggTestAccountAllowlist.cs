@@ -1,26 +1,24 @@
 using System.Text.Json;
 
-namespace BggIntegration.Infrastructure.Tests.Http;
+namespace Jobs.Worker.LiveTest;
 
-public sealed class LiveTestAllowlist
+public sealed class BggTestAccountAllowlist
 {
 	public const string FileName = "bgg-live-test-accounts.json";
 
 	private readonly IReadOnlyList<string> _usernames;
 
-	private LiveTestAllowlist(IReadOnlyList<string> usernames)
+	private BggTestAccountAllowlist(IReadOnlyList<string> usernames)
 	{
 		_usernames = usernames;
 	}
 
-	public int Count => _usernames.Count;
-
-	public static LiveTestAllowlist? Load(string directory)
+	public static BggTestAccountAllowlist Load(string directory)
 	{
 		var path = Path.Combine(directory, FileName);
 		if (!File.Exists(path))
 		{
-			return null;
+			return new BggTestAccountAllowlist([]);
 		}
 
 		using var document = JsonDocument.Parse(File.ReadAllText(path));
@@ -37,7 +35,7 @@ public sealed class LiveTestAllowlist
 			}
 		}
 
-		return new LiveTestAllowlist(usernames);
+		return new BggTestAccountAllowlist(usernames);
 	}
 
 	public bool Contains(string username) =>

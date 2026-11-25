@@ -45,12 +45,18 @@ public class RunBggAddCommandHandler : IRequestHandler<RunBggAddCommand, BggJobO
 				return BggJobOutcome.Finished;
 
 			attempts = started.Value;
-			await AddAsync(request, attempts, startedAt, cancellationToken);
+			if (request.GameId is { } gameId)
+				await AddGameAsync(request, gameId, attempts, startedAt, cancellationToken);
+			else
+				await AddWithoutGameAsync(request, attempts, startedAt, cancellationToken);
+
 			return BggJobOutcome.Finished;
 		}
-		catch (Exception ex) when (BggJobPolicy.IsFinalAttempt(command.RetryCount) && !IsCancelled(ex, cancellationToken))
+		catch (Exception ex) when ((BggJobPolicy.IsFinalAttempt(command.RetryCount) || ex is BggFinalAttemptException) && !IsCancelled(ex, cancellationToken))
 		{
-			await _mediator.Send(new MarkGameBggFailedCommand(request.GameId), cancellationToken);
+			if (request.GameId is { } gameId)
+				await _mediator.Send(new MarkGameBggFailedCommand(gameId), cancellationToken);
+
 			await _requests.CompleteAsync(
 				BggWriteCompletions.Failed(request, JobType, ex.Message, attempts, startedAt, _timeProvider.GetUtcNow()),
 				cancellationToken);
@@ -58,9 +64,9 @@ public class RunBggAddCommandHandler : IRequestHandler<RunBggAddCommand, BggJobO
 		}
 	}
 
-	private async Task AddAsync(BggWriteRequest request, int attempts, DateTimeOffset startedAt, CancellationToken cancellationToken)
+	private async Task AddGameAsync(BggWriteRequest request, Guid gameId, int attempts, DateTimeOffset startedAt, CancellationToken cancellationToken)
 	{
-		var game = await _mediator.Send(new GetGameByIdQuery(request.GameId), cancellationToken);
+		var game = await _mediator.Send(new GetGameByIdQuery(gameId), cancellationToken);
 		if (game is null)
 		{
 			await _requests.CompleteAsync(
@@ -77,18 +83,35 @@ public class RunBggAddCommandHandler : IRequestHandler<RunBggAddCommand, BggJobO
 			return;
 		}
 
-		var existingItemId = await _writer.FindCollectionItemIdAsync(request.BggId, cancellationToken);
+		var existingItemId = await _writer.FindCollectionItemIdAsync(request.Account, request.BggId, cancellationToken);
 		if (existingItemId is not null)
 		{
-			await _mediator.Send(new MarkGameBggSentCommand(request.GameId, existingItemId.Value), cancellationToken);
+			await _mediator.Send(new MarkGameBggSentCommand(gameId, existingItemId.Value), cancellationToken);
 			await _requests.CompleteAsync(
 				BggWriteCompletions.Sent(request, JobType, existingItemId, $"already in the BGG collection as item {existingItemId}", attempts, startedAt, _timeProvider.GetUtcNow()),
 				cancellationToken);
 			return;
 		}
 
-		var collectionItemId = await _writer.AddAsync(request.BggId, request.Name, cancellationToken);
-		await _mediator.Send(new MarkGameBggSentCommand(request.GameId, collectionItemId), cancellationToken);
+		var collectionItemId = await _writer.AddAsync(request.Account, request.BggId, request.Name, cancellationToken);
+		await _mediator.Send(new MarkGameBggSentCommand(gameId, collectionItemId), cancellationToken);
+		await _requests.CompleteAsync(
+			BggWriteCompletions.Sent(request, JobType, collectionItemId, $"added as collection item {collectionItemId}", attempts, startedAt, _timeProvider.GetUtcNow()),
+			cancellationToken);
+	}
+
+	private async Task AddWithoutGameAsync(BggWriteRequest request, int attempts, DateTimeOffset startedAt, CancellationToken cancellationToken)
+	{
+		var existingItemId = await _writer.FindCollectionItemIdAsync(request.Account, request.BggId, cancellationToken);
+		if (existingItemId is not null)
+		{
+			await _requests.CompleteAsync(
+				BggWriteCompletions.Sent(request, JobType, existingItemId, $"already in the BGG collection as item {existingItemId}", attempts, startedAt, _timeProvider.GetUtcNow()),
+				cancellationToken);
+			return;
+		}
+
+		var collectionItemId = await _writer.AddAsync(request.Account, request.BggId, request.Name, cancellationToken);
 		await _requests.CompleteAsync(
 			BggWriteCompletions.Sent(request, JobType, collectionItemId, $"added as collection item {collectionItemId}", attempts, startedAt, _timeProvider.GetUtcNow()),
 			cancellationToken);

@@ -23,5 +23,6 @@ var app = builder.Build();
 
 app.UseQaResetControl();
 app.UseJobsDashboard();
+app.UseBggLiveTestSchedule();
 
 app.Run();

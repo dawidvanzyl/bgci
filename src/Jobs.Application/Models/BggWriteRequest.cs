@@ -4,7 +4,7 @@ public sealed record BggWriteRequest(
 	Guid Id,
 	BggWriteKind Kind,
 	int BggId,
-	Guid GameId,
+	Guid? GameId,
 	string Name,
 	long? CollectionItemId,
 	string Account,

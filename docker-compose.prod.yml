@@ -96,6 +96,11 @@ services:
       - Bgg__BearerToken=${BGG_BEARER_TOKEN:-}
       - Bgg__Username=${BGG_USERNAME:-}
       - Bgg__Password=${BGG_PASSWORD:-}
+      - BggTestAccount__Username=${BGG_TEST_USERNAME:-}
+      - BggTestAccount__Password=${BGG_TEST_PASSWORD:-}
+      - BggTestAccount__BearerToken=${BGG_TEST_BEARER_TOKEN:-}
+      - LiveTest__Enabled=true
+      - LiveTest__Schedule=${BGG_LIVE_TEST_SCHEDULE:-0 3 * * *}
     ports:
       - "127.0.0.1:${BGCI_JOBS_DASHBOARD_PORT:-15003}:8080"
     depends_on:

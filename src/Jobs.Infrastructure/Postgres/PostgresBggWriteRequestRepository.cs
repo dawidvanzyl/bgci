@@ -1,5 +1,6 @@
 using Dapper;
 using Jobs.Application.Abstractions;
+using Jobs.Application.LiveTest;
 using Jobs.Application.Models;
 using Jobs.Infrastructure.Models;
 using Npgsql;
@@ -7,7 +8,7 @@ using System.Data;
 
 namespace Jobs.Infrastructure.Postgres;
 
-public sealed class PostgresBggWriteRequestRepository : IBggWriteRequestRepository, IBggWriteRequestReset
+public sealed class PostgresBggWriteRequestRepository : IBggWriteRequestRepository, IBggLiveTestLog, IBggWriteRequestReset
 {
 	private readonly string _connectionString;
 
@@ -20,7 +21,7 @@ public sealed class PostgresBggWriteRequestRepository : IBggWriteRequestReposito
 		Guid id,
 		BggWriteKind kind,
 		int bggId,
-		Guid gameId,
+		Guid? gameId,
 		string name,
 		long? collectionItemId,
 		string account,
@@ -136,6 +137,38 @@ public sealed class PostgresBggWriteRequestRepository : IBggWriteRequestReposito
 		parameters.Add("p_started_at", completion.StartedAt);
 		parameters.Add("p_ended_at", completion.EndedAt);
 		await connection.ExecuteAsync(Call("complete_bgg_write_request", parameters, cancellationToken));
+	}
+
+	public async Task<string?> GetErrorAsync(Guid requestId, CancellationToken cancellationToken = default)
+	{
+		await using var connection = new NpgsqlConnection(_connectionString);
+		var parameters = new DynamicParameters();
+		parameters.Add("p_id", requestId);
+		return await connection.ExecuteScalarAsync<string?>(Call("get_bgg_write_request_error", parameters, cancellationToken));
+	}
+
+	public async Task<bool> CancelAsync(Guid requestId, string jobType, DateTimeOffset at, CancellationToken cancellationToken = default)
+	{
+		await using var connection = new NpgsqlConnection(_connectionString);
+		var parameters = new DynamicParameters();
+		parameters.Add("p_id", requestId);
+		parameters.Add("p_job_type", jobType);
+		parameters.Add("p_at", at);
+		return await connection.ExecuteScalarAsync<bool>(Call("cancel_bgg_write_request", parameters, cancellationToken));
+	}
+
+	public async Task RecordAsync(BggLiveTestRecord record, CancellationToken cancellationToken = default)
+	{
+		await using var connection = new NpgsqlConnection(_connectionString);
+		var parameters = new DynamicParameters();
+		parameters.Add("p_job_type", record.JobType);
+		parameters.Add("p_account", record.Account);
+		parameters.Add("p_payload", record.Payload);
+		parameters.Add("p_result", record.Result);
+		parameters.Add("p_error", record.Error);
+		parameters.Add("p_started_at", record.StartedAt);
+		parameters.Add("p_ended_at", record.EndedAt);
+		await connection.ExecuteAsync(Call("record_bgg_live_test_run", parameters, cancellationToken));
 	}
 
 	public async Task ResetAsync(CancellationToken cancellationToken = default)

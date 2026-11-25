@@ -11,4 +11,6 @@ public interface IBggWriteRequestRepository
 	Task<bool> HasUnfinishedEarlierRequestAsync(Guid requestId, CancellationToken cancellationToken = default);
 
 	Task CompleteAsync(BggWriteCompletion completion, CancellationToken cancellationToken = default);
+
+	Task<string?> GetErrorAsync(Guid requestId, CancellationToken cancellationToken = default);
 }
