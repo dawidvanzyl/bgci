@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\GameCollection.Application\GameCollection.Application.csproj" />
+		<ProjectReference Include="..\Jobs.Application\Jobs.Application.csproj" />
+		<ProjectReference Include="..\Shared.Persistence\Shared.Persistence.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Dapper" Version="2.1.72" />
+		<PackageReference Include="Hangfire.AspNetCore" Version="1.8.25" />
+		<PackageReference Include="Hangfire.PostgreSql" Version="1.21.1" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+		<PackageReference Include="Npgsql" Version="9.0.4" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Postgres\Scripts\**\*.sql" />
+	</ItemGroup>
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+</Project>

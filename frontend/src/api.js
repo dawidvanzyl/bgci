@@ -1,4 +1,5 @@
 import { setAllGames } from './state.js';
+import { BGG_REMOVE_NOT_FINISHED, BggAddRefusedError } from './bggRefusal.js';
 
 const API = window.API_OVERRIDE ?? '/api';
 export { API };
@@ -30,20 +31,31 @@ export async function saveGame(payload, id) {
 	if (!res.ok) throw new Error(await res.text());
 }
 
+async function addFailure(res, gameName) {
+	const text = await res.text();
+	try {
+		if (res.status === 409 && JSON.parse(text).reason === BGG_REMOVE_NOT_FINISHED) {
+			return new BggAddRefusedError(gameName);
+		}
+	} catch {
+		// A body that is not JSON is an ordinary failure, reported with its text
+	}
+	return new Error(text);
+}
+
 export async function saveGameFromBgg(payload) {
 	const res = await fetch(`${API}/games/from-bgg`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(payload),
 	});
-	if (!res.ok) throw new Error(await res.text());
+	if (!res.ok) throw await addFailure(res, payload.name);
 	return res.json();
 }
 
 export async function deleteGame(id) {
 	const res = await fetch(`${API}/games/${id}`, { method: 'DELETE' });
 	if (!res.ok) throw new Error(await res.text());
-	return res.json();
 }
 
 export async function syncBgg() {
@@ -86,7 +98,7 @@ export async function saveExpansionFromBgg(bggId, parentGameId) {
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ ...preview, parentGameId }),
 	});
-	if (!res.ok) throw new Error(await res.text());
+	if (!res.ok) throw await addFailure(res, preview.name);
 	const result = await res.json();
 	return { ...result, name: preview.name };
 }

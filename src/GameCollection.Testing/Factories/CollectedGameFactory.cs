@@ -37,7 +37,8 @@ public static class CollectedGameFactory
 		int? minPlayTimeMinutes = null,
 		int? maxPlayTimeMinutes = null,
 		int? bestPlayerCountMin = null,
-		int? bestPlayerCountMax = null)
+		int? bestPlayerCountMax = null,
+		BggStatus? bggStatus = null)
 	{
 		return CollectedGame.Create(
 			new GameName(name),
@@ -61,14 +62,20 @@ public static class CollectedGameFactory
 			subdomains: subdomains,
 			bggId: bggId is not null ? new BggGameId(bggId.Value) : null,
 			bggCollId: bggCollId,
-			parentGameId: parentGameId);
+			parentGameId: parentGameId,
+			bggStatus: bggId is not null ? bggStatus ?? BggStatus.Sent : null);
 	}
 
 	public static CollectedGame CreateFromBgg(
 		string name = "Catan",
 		int bggId = DefaultBggId,
-		long? bggCollId = DefaultBggCollId)
+		long? bggCollId = DefaultBggCollId,
+		BggStatus bggStatus = BggStatus.Sent)
 	{
-		return CollectedGame.Create(new GameName(name), bggId: new BggGameId(bggId), bggCollId: bggCollId);
+		return CollectedGame.Create(
+			new GameName(name),
+			bggId: new BggGameId(bggId),
+			bggCollId: bggCollId,
+			bggStatus: bggStatus);
 	}
 }

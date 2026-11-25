@@ -10,11 +10,16 @@ These are guidelines, not rigid rules. The goal is consistency and clarity. When
 
 - One type per file. The file name must match the type name exactly (e.g. `CollectedGame.cs` contains `class CollectedGame`).
 - Folder structure within a project mirrors the namespace structure.
-- Each bounded context (BC) is a self-contained set of projects: `Domain`, `Application` and `Infrastructure`. The shared `Api` project is the composition root. Current BCs: `GameCollection` and `BggIntegration`.
+- Each bounded context (BC) is a self-contained set of projects: `Domain`, `Application` and `Infrastructure`. `Api` and `Jobs` are the two composition roots. Current BCs: `GameCollection`, `BggIntegration` and `Jobs`. `Jobs` has no Domain project. Its projects are `Jobs.Application`, `Jobs.Infrastructure` and `Jobs.Worker`, and `Jobs` is its composition root.
 
 ```
 src/
 ├── Api/                              # Composition root only — no business logic
+├── Jobs/                             # Composition root of the jobs service — no business logic
+├── Jobs.Application/                 # Job commands and handlers, the request model, the BGG writer port
+├── Jobs.Infrastructure/              # Shared by both hosts: Hangfire storage, job interfaces, jobs database, queue adapter
+├── Jobs.Worker/                      # Hangfire server, job classes, retry policy, BGG writer adapter, dashboard
+├── Shared.Persistence/               # Context-free migration runner (DbUp)
 ├── GameCollection.Domain/            # Aggregates, Value Objects, Events, Repository interfaces
 ├── GameCollection.Application/       # Commands, Queries, Handlers, DTOs
 ├── GameCollection.Infrastructure/    # Repository implementations, DB migrations
@@ -23,7 +28,7 @@ src/
 └── BggIntegration.Infrastructure/    # HTTP client, XML parser
 ```
 
-- **No cross-BC project references** except through the Anti-Corruption Layer. `BggIntegration` may reference `GameCollection.Application` only to produce `AddGameFromBggCommand` via `IBggTranslator`. It must never reference `GameCollection.Domain` directly.
+- **Cross-BC references.** A context may reference another context's **Application** project only to send its commands and queries, or to implement an abstraction that project defines (the Anti-Corruption Layer). A context never references another context's Domain project. A context's Infrastructure project may reference another context's Infrastructure project only to adapt a client that project exposes to an abstraction of its own (today: `Jobs.Worker` to `BggIntegration.Infrastructure`). Shared, context-free code lives in `Shared.*` projects.
 - Infrastructure projects must not be referenced by Application or Domain projects. Dependency flow is always inward: `Api → Application → Domain`.
 
 ---
@@ -131,6 +136,7 @@ public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
 
 - **Domain exceptions** (e.g. `ArgumentException`) are thrown from Value Object constructors and aggregate methods when an invariant is violated. These represent programming errors or invalid input, not recoverable application states.
 - **`KeyNotFoundException`** is thrown from handlers when a requested entity does not exist. Controllers catch this and return `404 Not Found`.
+- **A command refused by a business rule** throws an application exception. The controller maps it to `409 Conflict` with a fixed reason code in the body, never the exception message.
 - Controllers are responsible for translating exceptions into appropriate HTTP responses. Raw exception messages must never be returned to the client in production.
 - Do not swallow exceptions silently. If an exception is caught and not rethrown, there must be a comment explaining why.
 - Avoid empty `catch` blocks.
@@ -190,13 +196,13 @@ public static class DependencyInjection
         var connectionString = BuildConnectionString(configuration);
         services.AddScoped<ICollectedGameRepository>(
             _ => new PostgresCollectedGameRepository(connectionString));
-        services.AddSingleton(new DatabaseMigrationRunner(connectionString, MigrationScripts.LoadEmbedded()));
+        services.AddSingleton(new DatabaseMigrationRunner(connectionString, MigrationScripts.LoadEmbedded(typeof(DependencyInjection).Assembly, "GameCollection.Infrastructure.Postgres.Scripts.")));
         return services;
     }
 }
 ```
 
-- `Program.cs` is the **only** place where `DependencyInjection` extension methods are called. Service registration must not be scattered across the codebase.
+- A host's `Program.cs` (`Api` or `Jobs`) is the **only** place where `DependencyInjection` extension methods are called. Service registration must not be scattered across the codebase.
 - Never use the service locator pattern (`IServiceProvider.GetService<T>()`) outside of `Program.cs` or factory methods that have no other option.
 - Domain and Application layers must never reference `Microsoft.Extensions.DependencyInjection`, `Microsoft.Extensions.Hosting`, or any DI container. They are container-agnostic.
 - **Background services** (types inheriting `BackgroundService` or implementing `IHostedService`) belong in the **Infrastructure** layer. They interact with the hosting framework, manage DI scope lifetimes via `IServiceScopeFactory`, and drive OS-level timers — all infrastructure concerns. The application logic they trigger (e.g. syncing a collection) must be extracted into an Application service and injected as a dependency.
@@ -263,7 +269,7 @@ public sealed class DeleteGameCommandHandlerTests : IClassFixture<GameCollection
 
 ## 8. Database Migrations
 
-`GameCollection.Infrastructure` changes the PostgreSQL database with `DatabaseMigrationRunner`, which uses DbUp. The scripts are `.sql` files in three folders under `Postgres/Scripts`. Every `.sql` file there is embedded in the assembly.
+`DatabaseMigrationRunner` (in `Shared.Persistence`) changes a PostgreSQL database with DbUp. `GameCollection.Infrastructure` and `Jobs.Infrastructure` each use it with their own scripts and their own journal tables. The scripts are `.sql` files in three folders under `Postgres/Scripts`. Every `.sql` file there is embedded in the assembly.
 
 | Folder | Runs | Journal table |
 |---|---|---|

@@ -6,6 +6,7 @@ let nextId = 1;
  */
 export function createGame(overrides = {}) {
 	const id = nextId++;
+	const isBggSourced = overrides.bggId != null;
 	return {
 		id: `game-${id}`,
 		name: `Game ${id}`,
@@ -20,6 +21,8 @@ export function createGame(overrides = {}) {
 		mechanics: [],
 		subdomains: [],
 		publishers: [],
+		isBggSourced,
+		bggStatus: isBggSourced ? 'sent' : null,
 		...overrides,
 	};
 }

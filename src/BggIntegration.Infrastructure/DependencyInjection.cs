@@ -3,7 +3,6 @@ using BggIntegration.Domain.Interfaces;
 using BggIntegration.Domain.Models;
 using BggIntegration.Infrastructure.Constants;
 using BggIntegration.Infrastructure.Http;
-using GameCollection.Application.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -35,19 +34,6 @@ public static class DependencyInjection
 		})
 		.AddStandardResilienceHandler();
 
-		services.AddHttpClient<IBggWriteClient, BggWriteHttpClient>(client =>
-		{
-			client.BaseAddress = bggBaseAddress;
-			client.Timeout = TimeSpan.FromSeconds(30);
-		})
-		.RedactLoggedHeaders(_ => true)
-		.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-		{
-			UseCookies = false,
-			AllowAutoRedirect = false,
-		});
-
-		services.AddSingleton<BggSession>();
 		services.TryAddSingleton(TimeProvider.System);
 
 		// Dedicated lightweight named HttpClient for availability probing — no Polly retry pipeline
@@ -67,7 +53,6 @@ public static class DependencyInjection
 		// Singleton — availability state is in-memory, intentionally resets on app restart
 		services.AddSingleton<IBggAvailabilityService, BggAvailabilityService>();
 
-		services.AddScoped<IBggCollectionWriter, BggCollectionWriterAdapter>();
 		services.AddScoped<BggSyncService>();
 
 		// Hosted service — owns the health-check and sync loops

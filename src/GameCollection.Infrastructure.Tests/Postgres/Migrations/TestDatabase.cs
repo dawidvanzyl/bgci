@@ -19,21 +19,23 @@ internal sealed class TestDatabase
 
 	public string ConnectionString { get; }
 
-	public async Task InsertGamesAsync()
+	public async Task InsertGamesAsync(bool withBggStatus = true)
 	{
 		await using var connection = await OpenAsync();
+		var statusColumn = withBggStatus ? ", bgg_status" : string.Empty;
+		var statusValue = withBggStatus ? ", 'sent'" : string.Empty;
 		await connection.ExecuteAsync(
-			"""
+			$"""
 			insert into collected_games (
 				id, name, year, description, min_players, max_players, play_time_minutes, min_play_time, max_play_time,
 				bgg_rating, bgg_weight, min_age, best_player_count_min, best_player_count_max, cover_image_url,
 				categories, mechanics, designers, artists, publishers, subdomains,
-				bgg_id, bgg_coll_id, parent_game_id, added_at, updated_at)
+				bgg_id, bgg_coll_id, parent_game_id, added_at, updated_at{statusColumn})
 			values (
 				@id, @name, @year, @description, @minPlayers, @maxPlayers, @playTime, @minPlayTime, @maxPlayTime,
 				@rating, @weight, @minAge, @bestMin, @bestMax, @cover,
 				@categories, @mechanics, @designers, @artists, @publishers, @subdomains,
-				@bggId, @bggCollId, @parentGameId, @addedAt, @updatedAt)
+				@bggId, @bggCollId, @parentGameId, @addedAt, @updatedAt{statusValue})
 			""",
 			new
 			{
@@ -101,6 +103,12 @@ internal sealed class TestDatabase
 			: await connection.ExecuteScalarAsync<int>(
 			$"select count(*)::int from {table} where scriptname = @scriptName",
 			new { scriptName });
+	}
+
+	public async Task ExecuteAsync(string sql)
+	{
+		await using var connection = await OpenAsync();
+		await connection.ExecuteAsync(sql);
 	}
 
 	public async Task<int> CountAsync(string table)

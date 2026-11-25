@@ -6,7 +6,24 @@ export interface BggWrite {
 	collId: number;
 }
 
+/** One add or remove that reached mock BGG, accepted or not. The times are milliseconds since the epoch. */
+export interface BggAttempt {
+	action: 'add' | 'remove';
+	/** Null when the session was not valid. */
+	username: string | null;
+	bggId?: number;
+	/** Known for an add once it is accepted; always known for a remove. */
+	collId: number | null;
+	/** Null while the write is held. */
+	outcome: 'accepted' | 'failed' | 'rejected' | null;
+	startedAt: number;
+	/** Null while the write is held. */
+	endedAt: number | null;
+}
+
 export interface BggReport {
+	attempts: BggAttempt[];
+	maxConcurrentWrites: number;
 	writes: BggWrite[];
 	acceptedLogins: number;
 	rejectedLogins: number;
@@ -91,6 +108,50 @@ export class MockBgg {
 		await this.post('/__control/expire-sessions', {});
 	}
 
+	/**
+	 * `all`: every write with a valid session waits until `releaseWrites()`.
+	 * `next`: only the next such write waits.
+	 */
+	async holdWrites(mode: 'all' | 'next'): Promise<void> {
+		await this.post('/__control/hold-writes', { mode });
+	}
+
+	/** Answers every held write as it would have been answered without the hold, and turns the hold off. */
+	async releaseWrites(): Promise<void> {
+		await this.post('/__control/release-writes', {});
+	}
+
+	/** The next `count` writes with a valid session answer 500 and change nothing. */
+	async failNextWrites(count: number): Promise<void> {
+		await this.post('/__control/fail-next-writes', { count });
+	}
+
+	/**
+	 * Each of the next `count` writes with a valid session does its work, as an accepted write does, and then answers 500.
+	 * Its attempt has the outcome `failed`. `reset()` sets the count to 0.
+	 */
+	async applyButFailNextWrites(count: number): Promise<void> {
+		await this.post('/__control/apply-fail-next-writes', { count });
+	}
+
+	/** While enabled, the BGG search also returns the expansions whose name matches. `reset()` disables it. */
+	async setSearchIncludesExpansions(enabled: boolean): Promise<void> {
+		await this.post('/__control/search-expansions', { enabled });
+	}
+
+	/**
+	 * While the offset is not 0, the collection item lookup by BGG id answers each item with its collection item id
+	 * plus the offset, so a remove that uses the looked-up id and not the stored one is seen. `reset()` sets 0.
+	 */
+	async setLookupCollIdOffset(offset: number): Promise<void> {
+		await this.post('/__control/lookup-coll-id-offset', { offset });
+	}
+
+	/** While disabled, the collection item lookup answers an empty collection. `reset()` enables it. */
+	async setCollectionLookup(enabled: boolean): Promise<void> {
+		await this.post('/__control/collection-lookup', { enabled });
+	}
+
 	async setCollection(items: MockCollectionItem[]): Promise<void> {
 		await this.post('/__control/collection', { items });
 	}
@@ -98,6 +159,14 @@ export class MockBgg {
 	async report(): Promise<BggReport> {
 		const response = await fetch(`${this.baseUrl}/__control/calls`);
 		return (await response.json()) as BggReport;
+	}
+
+	/** The write attempts of the given kind that have started, in start order. */
+	async attempts(
+		action: 'add' | 'remove',
+		predicate: (attempt: BggAttempt) => boolean = () => true
+	): Promise<BggAttempt[]> {
+		return (await this.report()).attempts.filter((attempt) => attempt.action === action && predicate(attempt));
 	}
 
 	/** The adds and removes that mock BGG accepted, in order. */

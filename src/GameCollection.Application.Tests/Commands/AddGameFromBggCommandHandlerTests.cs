@@ -1,7 +1,7 @@
-using GameCollection.Application.Abstractions;
 using GameCollection.Application.Commands;
 using GameCollection.Domain.Aggregates;
 using GameCollection.Domain.Repositories;
+using GameCollection.Domain.ValueObjects;
 using GameCollection.Testing;
 using GameCollection.Testing.Factories;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,87 +23,97 @@ public sealed class AddGameFromBggCommandHandlerTests : IClassFixture<GameCollec
 	}
 
 	[Fact]
-	[Trait("AC", "90UC1")]
-	public async Task Handle_BggAddFails_SavesWithoutCollIdAndReportsFailed()
+	[Trait("AC", "111UC1")]
+	public async Task Handle_Add_SavesPendingGameWithoutCollIdAndQueuesTheAddOnce()
 	{
-		_context.Services.BggAddReturns(new BggAddResult(BggWriteOutcome.Failed, null));
+		var command = AddGameFromBggCommandFactory.Create(name: "Azul", bggId: 230802);
 
-		var result = await _handler.Handle(AddGameFromBggCommandFactory.Create(), CancellationToken.None);
+		var result = await _handler.Handle(command, CancellationToken.None);
 
-		result.BggWrite.ShouldBe(BggWriteOutcome.Failed);
-		SavedGame().BggCollId.ShouldBeNull();
+		var saved = SavedGame();
+		saved.BggStatus.ShouldBe(BggStatus.Pending);
+		saved.BggCollId.ShouldBeNull();
+		result.Id.ShouldBe(saved.Id.Value);
+		result.BggStatus.ShouldBe("pending");
+		_context.Services.BggWriteQueueMock
+			.Verify(q => q.QueueAddAsync(saved.Id.Value, 230802, "Azul", It.IsAny<CancellationToken>()), Times.Once);
 	}
 
 	[Fact]
-	[Trait("AC", "90UC1")]
-	public async Task Handle_BggAddThrows_SavesWithoutCollIdAndReportsFailed()
+	[Trait("AC", "112UC1")]
+	public async Task Handle_RemoveOfTheBggGameNotFinished_ThrowsAndSavesAndQueuesNothing()
 	{
-		_context.Services.BggAddThrows(new HttpRequestException("BGG down"));
+		_context.Services.BggWriteQueueMock
+			.Setup(q => q.HasUnresolvedRemoveAsync(230802, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(true);
 
-		var result = await _handler.Handle(AddGameFromBggCommandFactory.Create(), CancellationToken.None);
+		var exception = await Should.ThrowAsync<BggRemoveNotFinishedException>(
+			() => _handler.Handle(AddGameFromBggCommandFactory.Create(bggId: 230802), CancellationToken.None));
 
-		result.BggWrite.ShouldBe(BggWriteOutcome.Failed);
-		SavedGame().BggCollId.ShouldBeNull();
+		exception.BggId.ShouldBe(230802);
+		_context.Repositories.CollectedGameRepositoryMock
+			.Verify(r => r.AddAsync(It.IsAny<CollectedGame>(), It.IsAny<CancellationToken>()), Times.Never);
+		_context.Services.BggWriteQueueMock
+			.Verify(q => q.QueueAddAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Fact]
-	[Trait("AC", "90UC1")]
-	public async Task Handle_BggAddTimesOut_SavesWithoutCollIdAndReportsFailed()
+	[Trait("AC", "112UC2")]
+	public async Task Handle_NoRemoveOfTheBggGameNotFinished_SavesPendingAndQueuesTheAdd()
 	{
-		_context.Services.BggAddThrows(new TaskCanceledException("timeout"));
+		_context.Services.BggWriteQueueMock
+			.Setup(q => q.HasUnresolvedRemoveAsync(230802, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(false);
 
-		var result = await _handler.Handle(AddGameFromBggCommandFactory.Create(), CancellationToken.None);
+		var result = await _handler.Handle(AddGameFromBggCommandFactory.Create(name: "Azul", bggId: 230802), CancellationToken.None);
 
-		result.BggWrite.ShouldBe(BggWriteOutcome.Failed);
-		SavedGame().BggCollId.ShouldBeNull();
+		result.BggStatus.ShouldBe("pending");
+		_context.Services.BggWriteQueueMock
+			.Verify(q => q.QueueAddAsync(result.Id, 230802, "Azul", It.IsAny<CancellationToken>()), Times.Once);
 	}
 
 	[Fact]
-	[Trait("AC", "90UC2")]
-	public async Task Handle_BggAddSucceeds_SavesCollIdAndReportsSucceeded()
+	[Trait("AC", "111UC4")]
+	public async Task Handle_QueueFails_DeletesTheNewGameAndRethrows()
 	{
-		_context.Services.BggAddReturns(new BggAddResult(BggWriteOutcome.Succeeded, 555));
+		_context.Services.QueueAddThrows(new InvalidOperationException("queue down"));
 
-		var result = await _handler.Handle(AddGameFromBggCommandFactory.Create(), CancellationToken.None);
+		await Should.ThrowAsync<InvalidOperationException>(
+			() => _handler.Handle(AddGameFromBggCommandFactory.Create(), CancellationToken.None));
 
-		result.BggWrite.ShouldBe(BggWriteOutcome.Succeeded);
-		SavedGame().BggCollId.ShouldBe(555);
+		_context.Repositories.CollectedGameRepositoryMock
+			.Verify(r => r.DeleteAsync(SavedGame().Id, It.IsAny<CancellationToken>()), Times.Once);
 	}
 
 	[Fact]
-	[Trait("AC", "90UC3")]
-	public async Task Handle_BggAddSkipped_ReportsSkipped()
+	[Trait("AC", "111UC4")]
+	public async Task Handle_QueueFailsAfterTheRequestIsAborted_StillDeletesTheNewGameWithoutTheRequestToken()
 	{
-		_context.Services.BggAddReturns(new BggAddResult(BggWriteOutcome.Skipped, null));
+		using var aborted = new CancellationTokenSource();
+		_context.Services.QueueAddThrows(new OperationCanceledException(aborted.Token));
+		await aborted.CancelAsync();
 
-		var result = await _handler.Handle(AddGameFromBggCommandFactory.Create(), CancellationToken.None);
+		await Should.ThrowAsync<OperationCanceledException>(
+			() => _handler.Handle(AddGameFromBggCommandFactory.Create(), aborted.Token));
 
-		result.BggWrite.ShouldBe(BggWriteOutcome.Skipped);
-		SavedGame().BggCollId.ShouldBeNull();
+		_context.Repositories.CollectedGameRepositoryMock
+			.Verify(r => r.DeleteAsync(SavedGame().Id, CancellationToken.None), Times.Once);
 	}
 
 	[Fact]
-	public async Task Handle_SkipBggWrite_ReportsNoneWithoutCallingBgg()
+	[Trait("AC", "111UC14")]
+	public async Task Handle_SkipBggWrite_SavesSentGameWithTheGivenCollIdAndNeverQueues()
 	{
 		var command = AddGameFromBggCommandFactory.Create(skipBggWrite: true, bggCollId: 42);
 
 		var result = await _handler.Handle(command, CancellationToken.None);
 
-		result.BggWrite.ShouldBe(BggWriteOutcome.None);
-		SavedGame().BggCollId.ShouldBe(42);
-		_context.Services.BggCollectionWriterMock
-			.Verify(w => w.AddToCollectionAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-	}
-
-	[Fact]
-	public async Task Handle_RequestCancelled_Propagates()
-	{
-		using var cts = new CancellationTokenSource();
-		await cts.CancelAsync();
-		_context.Services.BggAddThrows(new OperationCanceledException(cts.Token));
-
-		await Should.ThrowAsync<OperationCanceledException>(
-			() => _handler.Handle(AddGameFromBggCommandFactory.Create(), cts.Token));
+		var saved = SavedGame();
+		saved.BggStatus.ShouldBe(BggStatus.Sent);
+		saved.BggCollId.ShouldBe(42);
+		result.BggStatus.ShouldBe("sent");
+		_context.Services.BggWriteQueueMock
+			.Verify(q => q.QueueAddAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	private CollectedGame SavedGame()

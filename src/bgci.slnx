@@ -13,5 +13,15 @@
   <Project Path="GameCollection.Infrastructure.Tests/GameCollection.Infrastructure.Tests.csproj" />
   <Project Path="GameCollection.Infrastructure/GameCollection.Infrastructure.csproj" />
   <Project Path="GameCollection.Testing/GameCollection.Testing.csproj" />
+  <Project Path="Jobs.Application/Jobs.Application.csproj" />
+  <Project Path="Jobs.Infrastructure/Jobs.Infrastructure.csproj" />
+  <Project Path="Jobs.Worker/Jobs.Worker.csproj" />
+  <Project Path="Jobs.Application.Tests/Jobs.Application.Tests.csproj" />
+  <Project Path="Jobs.Testing/Jobs.Testing.csproj" />
+  <Project Path="Jobs.Infrastructure.Tests/Jobs.Infrastructure.Tests.csproj" />
+  <Project Path="Jobs.Worker.Tests/Jobs.Worker.Tests.csproj" />
+  <Project Path="Api.Tests/Api.Tests.csproj" />
+  <Project Path="Jobs/Jobs.csproj" />
+  <Project Path="Shared.Persistence/Shared.Persistence.csproj" />
   <Project Path="Shared.Testing/Shared.Testing.csproj" />
 </Solution>

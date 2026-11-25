@@ -1,12 +1,14 @@
 import { expect, test } from '../../fixtures/base';
+import { waitForBggStatus } from '../../fixtures/bggSeeds';
 import { CollectionPage } from '../../pages/CollectionPage';
 
 test.describe('Sync BGG — sync removes games that BGG no longer lists', { tag: ['@55IT2'] }, () => {
-	test('S1 — sync removes a game that was imported by a BGG search', async ({ page }) => {
+	test('S1 — sync removes a game that was imported by a BGG search', async ({ page, request }) => {
 		const collection = new CollectionPage(page);
 		await collection.goto();
 		await collection.importFromBgg('catan', 'Catan');
 		await expect(collection.card('Catan')).toBeVisible();
+		await waitForBggStatus(request, 'Catan', 'sent');
 
 		await collection.clickSyncBgg();
 
@@ -38,13 +40,14 @@ test.describe('Sync BGG — sync removes games that BGG no longer lists', { tag:
 		await expect(collection.card('Azul')).toHaveCount(0);
 	});
 
-	test('S3 — sync keeps a manually added game when it removes the BGG game', async ({ page }) => {
+	test('S3 — sync keeps a manually added game when it removes the BGG game', async ({ page, request }) => {
 		const collection = new CollectionPage(page);
 		await collection.goto();
 		await collection.addManually('Shelf Copy Game');
 		await expect(collection.card('Shelf Copy Game')).toBeVisible();
 		await collection.importFromBgg('catan', 'Catan');
 		await expect(collection.card('Catan')).toBeVisible();
+		await waitForBggStatus(request, 'Catan', 'sent');
 
 		await collection.clickSyncBgg();
 

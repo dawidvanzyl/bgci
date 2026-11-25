@@ -36,6 +36,14 @@
 				{
 					"id": 325,
 					"name": "Catan: Seafarers"
+				},
+				{
+					"id": 926,
+					"name": "Catan: Cities & Knights"
+				},
+				{
+					"id": 27760,
+					"name": "Catan: Traders & Barbarians"
 				}
 			],
 			"liveWritable": true
@@ -110,6 +118,70 @@
 			"minAge": 10,
 			"rating": 7.4,
 			"weight": 2.5,
+			"categories": [
+				"Expansion for Base-game",
+				"Negotiation"
+			],
+			"mechanics": [
+				"Dice Rolling"
+			],
+			"designers": [
+				"Klaus Teuber"
+			],
+			"artists": [],
+			"publishers": [
+				"KOSMOS"
+			],
+			"subdomains": [],
+			"expansions": [],
+			"liveWritable": false,
+			"expansionOf": 13
+		},
+		{
+			"id": 926,
+			"name": "Catan: Cities & Knights",
+			"year": 1998,
+			"description": "Defend Catan against barbarian raids and develop its cities.",
+			"minPlayers": 3,
+			"maxPlayers": 4,
+			"playTime": 120,
+			"minPlayTime": 90,
+			"maxPlayTime": 120,
+			"minAge": 12,
+			"rating": 7.6,
+			"weight": 3,
+			"categories": [
+				"Expansion for Base-game",
+				"Negotiation"
+			],
+			"mechanics": [
+				"Dice Rolling"
+			],
+			"designers": [
+				"Klaus Teuber"
+			],
+			"artists": [],
+			"publishers": [
+				"KOSMOS"
+			],
+			"subdomains": [],
+			"expansions": [],
+			"liveWritable": false,
+			"expansionOf": 13
+		},
+		{
+			"id": 27760,
+			"name": "Catan: Traders & Barbarians",
+			"year": 2007,
+			"description": "Five scenarios and variants that add new goods and new threats to Catan.",
+			"minPlayers": 3,
+			"maxPlayers": 4,
+			"playTime": 90,
+			"minPlayTime": 60,
+			"maxPlayTime": 120,
+			"minAge": 12,
+			"rating": 7.3,
+			"weight": 2.6,
 			"categories": [
 				"Expansion for Base-game",
 				"Negotiation"

@@ -1,5 +1,6 @@
 using GameCollection.Application.DTOs;
 using GameCollection.Domain.Aggregates;
+using GameCollection.Domain.ValueObjects;
 
 namespace GameCollection.Application;
 
@@ -33,6 +34,15 @@ public static class CollectedGameMappings
 			UpdatedAt: game.UpdatedAt,
 			IsBggSourced: game.IsBggSourced,
 			ParentGameId: game.ParentGameId?.Value,
-			ExpansionCount: game.ExpansionCount
+			ExpansionCount: game.ExpansionCount,
+			BggStatus: game.BggStatus?.ToText()
 		);
+
+	public static string ToText(this BggStatus status) => status switch
+	{
+		BggStatus.Pending => BggStatusNames.Pending,
+		BggStatus.Sent => BggStatusNames.Sent,
+		BggStatus.Failed => BggStatusNames.Failed,
+		_ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+	};
 }

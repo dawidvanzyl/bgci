@@ -38,6 +38,7 @@ public sealed class PostgresCollectedGameRepository : ICollectedGameRepository
 		await using var connection = new NpgsqlConnection(_connectionString);
 		var parameters = GameParameters(game);
 		parameters.Add("p_added_at", game.AddedAt);
+		parameters.Add("p_bgg_status", ToText(game.BggStatus));
 		parameters.Add("p_updated_at", game.UpdatedAt);
 		await connection.ExecuteAsync(Call("create_collected_game", parameters, cancellationToken));
 	}
@@ -48,6 +49,16 @@ public sealed class PostgresCollectedGameRepository : ICollectedGameRepository
 		var parameters = GameParameters(game);
 		parameters.Add("p_updated_at", game.UpdatedAt);
 		await connection.ExecuteAsync(Call("update_collected_game", parameters, cancellationToken));
+	}
+
+	public async Task UpdateBggStatusAsync(CollectedGame game, CancellationToken cancellationToken = default)
+	{
+		await using var connection = new NpgsqlConnection(_connectionString);
+		var parameters = new DynamicParameters();
+		parameters.Add("p_id", game.Id.Value);
+		parameters.Add("p_bgg_status", ToText(game.BggStatus));
+		parameters.Add("p_bgg_coll_id", game.BggCollId);
+		await connection.ExecuteAsync(Call("update_collected_game_bgg_status", parameters, cancellationToken));
 	}
 
 	public async Task DeleteAsync(GameId id, CancellationToken cancellationToken = default)
@@ -91,6 +102,23 @@ public sealed class PostgresCollectedGameRepository : ICollectedGameRepository
 		return parameters;
 	}
 
+	private static string? ToText(BggStatus? status) => status switch
+	{
+		null => null,
+		BggStatus.Pending => "pending",
+		BggStatus.Sent => "sent",
+		BggStatus.Failed => "failed",
+		_ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+	};
+
+	private static BggStatus ParseStatus(string status) => status switch
+	{
+		"pending" => BggStatus.Pending,
+		"sent" => BggStatus.Sent,
+		"failed" => BggStatus.Failed,
+		_ => throw new InvalidOperationException($"Unknown BGG status '{status}'.")
+	};
+
 	private static CollectedGame MapToDomain(GameRow row)
 	{
 		var game = CollectedGame.Reconstitute(
@@ -128,6 +156,7 @@ public sealed class PostgresCollectedGameRepository : ICollectedGameRepository
 				? BggGameId.From(row.BggId.Value)
 				: null,
 			bggCollId: row.BggCollId,
+			bggStatus: row.BggStatus is null ? null : ParseStatus(row.BggStatus),
 			parentGameId: row.ParentGameId.HasValue
 				? GameId.From(row.ParentGameId.Value)
 				: null,

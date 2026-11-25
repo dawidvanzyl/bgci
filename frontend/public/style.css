@@ -468,6 +468,39 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 	opacity: 0.4;
 	cursor: default;
 }
+/* ── BGG write status ─────────────────────────────────────── */
+.bgg-status {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 3px;
+	margin-left: 4px;
+	height: 16px;
+	min-width: 16px;
+	padding: 0 4px;
+	border-radius: 6px;
+	border: 1px solid var(--border);
+	background: var(--surface2);
+	color: var(--text-muted);
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 1;
+	white-space: nowrap;
+}
+.bgg-status--failed {
+	background: #2a2410;
+	border-color: #5a4a1a;
+	color: #c8a840;
+}
+.bgg-status-text { display: none; }
+.game-card--large .bgg-status-text,
+.game-card--details .bgg-status-text,
+.list-row-badges .bgg-status-text,
+.exp-owned-name .bgg-status-text { display: inline; }
+
+.exp-owned-name .bgg-badge { display: inline-flex; align-items: center; text-decoration: none; }
+.exp-owned-name .bgg-badge .bgg-badge-logo { height: 16px; }
+
 
 /* ── BGG Status Banner ────────────────────────────────────── */
 .bgg-status-banner {
@@ -489,38 +522,21 @@ label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .bgg-write-warning[hidden] {
 	display: none;
 }
-.bgg-write-warning-body {
-	flex: 1;
-	text-align: center;
-	line-height: 1.5;
-}
-.bgg-write-warning-link {
-	color: inherit;
-	font-weight: 600;
-	text-decoration: underline;
-	white-space: nowrap;
-}
-.bgg-write-warning-close {
-	color: inherit;
-	background: none;
-	border: none;
-	font-size: 1.25rem;
-	padding: 2px 8px;
-	flex-shrink: 0;
-	border-radius: 6px;
-}
-.bgg-write-warning-close:hover {
-	background: #5a4a1a;
-	color: inherit;
-}
 .bgg-write-warning--inline {
 	align-items: flex-start;
 	border: 1px solid #5a4a1a;
 	border-radius: var(--radius);
 	padding: 10px 12px;
 }
+.bgg-write-warning-body {
+	flex: 1;
+	line-height: 1.5;
+}
 .bgg-write-warning--inline .bgg-write-warning-body {
 	text-align: left;
+}
+.bgg-write-warning--spaced {
+	margin-top: 16px;
 }
 
 /* ── Button loading state ─────────────────────────────────── */

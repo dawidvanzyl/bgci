@@ -36,6 +36,17 @@ const initialState = () => ({
 	rejectedWrites: 0,
 	loginsRejected: false,
 	nextCollId: 1000,
+	collectionLookupEnabled: true,
+	holdMode: 'none',
+	held: [],
+	failWrites: 0,
+	applyFailWrites: 0,
+	removedCollIds: [],
+	searchExpansions: false,
+	lookupCollIdOffset: 0,
+	attempts: [],
+	activeWrites: 0,
+	maxConcurrentWrites: 0,
 });
 
 let state = initialState();
@@ -71,7 +82,9 @@ const handleXmlApi = (url, res) => {
 
 	if (endpoint === 'search') {
 		const query = (url.searchParams.get('query') ?? '').toLowerCase();
-		const matches = games.filter((g) => !g.expansionOf && g.name.toLowerCase().includes(query));
+		const matches = games.filter(
+			(g) => (state.searchExpansions || !g.expansionOf) && g.name.toLowerCase().includes(query)
+		);
 		return send(res, 200, searchXml(matches), xml);
 	}
 
@@ -83,7 +96,14 @@ const handleXmlApi = (url, res) => {
 	if (endpoint === 'collection') {
 		const bggId = url.searchParams.get('id');
 		if (bggId !== null) {
-			return send(res, 200, collectionXml(state.addedItems.filter((i) => String(i.bggId) === bggId)), xml);
+			if (!state.collectionLookupEnabled) {
+				return send(res, 200, collectionXml([]), xml);
+			}
+			const listed = [...state.addedItems, ...state.collection.filter((i) => !state.removedCollIds.includes(i.collId))];
+			const found = listed
+				.filter((i) => String(i.bggId) === bggId)
+				.map((i) => ({ ...i, collId: i.collId + state.lookupCollIdOffset }));
+			return send(res, 200, collectionXml(found), xml);
 		}
 		const wantsExpansions = url.searchParams.get('subtype') === 'boardgameexpansion';
 		const items = state.collection.filter((i) => Boolean(i.expansion) === wantsExpansions);
@@ -128,38 +148,130 @@ const handleLogin = async (req, res) => {
 	return res.end();
 };
 
+const recordRejectedWrite = (action, bggId, collId) => {
+	const now = Date.now();
+	state.rejectedWrites++;
+	state.attempts.push({ action, username: null, bggId, collId, outcome: 'rejected', startedAt: now, endedAt: now });
+};
+
+/**
+ * Runs one write that has a valid session. It is one attempt in the report. It waits while a hold applies,
+ * and then answers 500 while failures are due, or does the work. A reset answers a held write with 503.
+ * The write only touches the state it started in, so a write released by a reset leaves no trace in the new state.
+ */
+const runWrite = async (req, res, session, attempt, work) => {
+	const own = state;
+	own.attempts.push(attempt);
+	own.activeWrites++;
+	own.maxConcurrentWrites = Math.max(own.maxConcurrentWrites, own.activeWrites);
+	const finish = (outcome) => {
+		attempt.outcome = outcome;
+		attempt.endedAt = Date.now();
+		own.activeWrites--;
+	};
+
+	const fails = own.failWrites > 0;
+	if (fails) {
+		own.failWrites--;
+	}
+	const appliesThenFails = !fails && own.applyFailWrites > 0;
+	if (appliesThenFails) {
+		own.applyFailWrites--;
+	}
+
+	let held = false;
+	if (own.holdMode === 'all' || own.holdMode === 'next') {
+		held = true;
+		if (own.holdMode === 'next') {
+			own.holdMode = 'none';
+		}
+	}
+	if (held) {
+		const verdict = await new Promise((resolve) => {
+			own.held.push(resolve);
+			res.on('close', () => resolve('gone'));
+		});
+		if (verdict === 'gone') {
+			return finish('failed');
+		}
+		if (verdict === 'reset') {
+			finish('failed');
+			return send(res, 503, { error: 'Mock BGG was reset' });
+		}
+	}
+
+	if (fails) {
+		finish('failed');
+		return send(res, 500, { error: 'Mock BGG failed the write' });
+	}
+	const body = work(own);
+	if (appliesThenFails) {
+		finish('failed');
+		return send(res, 500, { error: 'Mock BGG applied the write and failed the answer' });
+	}
+	finish('accepted');
+	return send(res, 200, body);
+};
+
 const handleAdd = async (req, res) => {
 	const body = await readJson(req);
+	const bggId = Number(body.item?.objectid);
 	const session = validSession(req);
 	if (!session) {
-		state.rejectedWrites++;
+		recordRejectedWrite('add', bggId || undefined, null);
 		return send(res, 401, { error: 'Not logged in' });
 	}
-	const bggId = Number(body.item?.objectid);
 	if (!bggId) {
 		return send(res, 400, { error: 'objectid is required' });
 	}
-	const collId = state.nextCollId++;
-	state.addedItems.push({ bggId, collId, name: body.item.objectname ?? '' });
-	state.writes.push({ action: 'add', username: session.username, bggId, collId });
-	return send(res, 200, { message: 'Item saved' });
+	const attempt = {
+		action: 'add',
+		username: session.username,
+		bggId,
+		collId: null,
+		outcome: null,
+		startedAt: Date.now(),
+		endedAt: null,
+	};
+	return runWrite(req, res, session, attempt, (own) => {
+		const collId = own.nextCollId++;
+		attempt.collId = collId;
+		own.addedItems.push({ bggId, collId, name: body.item.objectname ?? '' });
+		own.writes.push({ action: 'add', username: session.username, bggId, collId });
+		return { message: 'Item saved' };
+	});
 };
 
-const handleRemove = (req, url, res) => {
+const handleRemove = async (req, url, res) => {
+	const collId = Number(url.pathname.replace('/api/collectionitem/', ''));
 	const session = validSession(req);
 	if (!session) {
-		state.rejectedWrites++;
+		recordRejectedWrite('remove', undefined, collId);
 		return send(res, 401, { error: 'Not logged in' });
 	}
-	const collId = Number(url.pathname.replace('/api/collectionitem/', ''));
-	state.addedItems = state.addedItems.filter((i) => i.collId !== collId);
-	state.writes.push({ action: 'remove', username: session.username, collId });
-	return send(res, 200, { message: 'Item removed from collection' });
+	const attempt = {
+		action: 'remove',
+		username: session.username,
+		collId,
+		outcome: null,
+		startedAt: Date.now(),
+		endedAt: null,
+	};
+	return runWrite(req, res, session, attempt, (own) => {
+		own.addedItems = own.addedItems.filter((i) => i.collId !== collId);
+		own.removedCollIds.push(collId);
+		own.writes.push({ action: 'remove', username: session.username, collId });
+		return { message: 'Item removed from collection' };
+	});
 };
 
 const handleControl = async (req, url, res) => {
 	if (url.pathname === '/__control/reset') {
+		const previous = state;
 		state = initialState();
+		for (const answer of previous.held.splice(0)) {
+			answer('reset');
+		}
 		return send(res, 200, {});
 	}
 
@@ -185,8 +297,48 @@ const handleControl = async (req, url, res) => {
 		return send(res, 200, {});
 	}
 
+	if (url.pathname === '/__control/hold-writes') {
+		state.holdMode = (await readJson(req)).mode === 'next' ? 'next' : 'all';
+		return send(res, 200, {});
+	}
+
+	if (url.pathname === '/__control/release-writes') {
+		state.holdMode = 'none';
+		for (const answer of state.held.splice(0)) {
+			answer('release');
+		}
+		return send(res, 200, {});
+	}
+
+	if (url.pathname === '/__control/fail-next-writes') {
+		state.failWrites = Number((await readJson(req)).count) || 0;
+		return send(res, 200, {});
+	}
+
+	if (url.pathname === '/__control/apply-fail-next-writes') {
+		state.applyFailWrites = Number((await readJson(req)).count) || 0;
+		return send(res, 200, {});
+	}
+
+	if (url.pathname === '/__control/search-expansions') {
+		state.searchExpansions = Boolean((await readJson(req)).enabled);
+		return send(res, 200, {});
+	}
+
+	if (url.pathname === '/__control/lookup-coll-id-offset') {
+		state.lookupCollIdOffset = Number((await readJson(req)).offset) || 0;
+		return send(res, 200, {});
+	}
+
+	if (url.pathname === '/__control/collection-lookup') {
+		state.collectionLookupEnabled = Boolean((await readJson(req)).enabled);
+		return send(res, 200, {});
+	}
+
 	if (url.pathname === '/__control/calls') {
 		return send(res, 200, {
+			attempts: state.attempts,
+			maxConcurrentWrites: state.maxConcurrentWrites,
 			writes: state.writes,
 			acceptedLogins: state.acceptedLogins,
 			rejectedLogins: state.rejectedLogins,
@@ -223,7 +375,7 @@ createServer(async (req, res) => {
 		}
 
 		if (url.pathname.startsWith('/api/collectionitem/') && req.method === 'DELETE') {
-			return handleRemove(req, url, res);
+			return await handleRemove(req, url, res);
 		}
 
 		if (url.pathname.startsWith('/__control/')) {

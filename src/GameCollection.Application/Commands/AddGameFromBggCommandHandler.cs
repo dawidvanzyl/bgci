@@ -4,31 +4,24 @@ using GameCollection.Domain.Aggregates;
 using GameCollection.Domain.Repositories;
 using GameCollection.Domain.ValueObjects;
 using MediatR;
-using Microsoft.Extensions.Logging;
 
 namespace GameCollection.Application.Commands;
 
 public class AddGameFromBggCommandHandler : IRequestHandler<AddGameFromBggCommand, AddGameFromBggResult>
 {
 	private readonly ICollectedGameRepository _repository;
-	private readonly IBggCollectionWriter _bggCollectionWriter;
-	private readonly ILogger<AddGameFromBggCommandHandler> _logger;
+	private readonly IBggWriteQueue _bggWriteQueue;
 
-	public AddGameFromBggCommandHandler(
-		ICollectedGameRepository repository,
-		IBggCollectionWriter bggCollectionWriter,
-		ILogger<AddGameFromBggCommandHandler> logger)
+	public AddGameFromBggCommandHandler(ICollectedGameRepository repository, IBggWriteQueue bggWriteQueue)
 	{
 		_repository = repository;
-		_bggCollectionWriter = bggCollectionWriter;
-		_logger = logger;
+		_bggWriteQueue = bggWriteQueue;
 	}
 
 	public async Task<AddGameFromBggResult> Handle(AddGameFromBggCommand request, CancellationToken cancellationToken)
 	{
-		var bggAdd = request.SkipBggWrite
-			? new BggAddResult(BggWriteOutcome.None, request.BggCollId)
-			: await AddToBggAsync(request.BggId, request.Name, cancellationToken);
+		if (!request.SkipBggWrite && await _bggWriteQueue.HasUnresolvedRemoveAsync(request.BggId, cancellationToken))
+			throw new BggRemoveNotFinishedException(request.BggId);
 
 		var game = CollectedGame.Create(
 			name: new GameName(request.Name),
@@ -61,28 +54,31 @@ public class AddGameFromBggCommandHandler : IRequestHandler<AddGameFromBggComman
 			publishers: request.Publishers,
 			subdomains: request.Subdomains,
 			bggId: BggGameId.From(request.BggId),
-			bggCollId: bggAdd.BggCollId,
+			bggCollId: request.SkipBggWrite ? request.BggCollId : null,
 			parentGameId: request.ParentGameId.HasValue
 				? GameId.From(request.ParentGameId.Value)
-				: null
+				: null,
+			bggStatus: request.SkipBggWrite ? BggStatus.Sent : BggStatus.Pending
 		);
 
 		await _repository.AddAsync(game, cancellationToken);
 
-		return new AddGameFromBggResult(game.Id.Value, bggAdd.Outcome);
+		if (!request.SkipBggWrite)
+			await QueueAddAsync(game, request, cancellationToken);
+
+		return new AddGameFromBggResult(game.Id.Value, game.BggStatus!.Value.ToText());
 	}
 
-	private async Task<BggAddResult> AddToBggAsync(int bggId, string name, CancellationToken cancellationToken)
+	private async Task QueueAddAsync(CollectedGame game, AddGameFromBggCommand request, CancellationToken cancellationToken)
 	{
 		try
 		{
-			return await _bggCollectionWriter.AddToCollectionAsync(bggId, name, cancellationToken);
+			await _bggWriteQueue.QueueAddAsync(game.Id.Value, request.BggId, request.Name, cancellationToken);
 		}
-		catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+		catch
 		{
-			// The local add must complete when BGG fails or times out
-			_logger.LogWarning(ex, "Failed to add bggId {BggId} to BGG collection.", bggId);
-			return new BggAddResult(BggWriteOutcome.Failed, null);
+			await _repository.DeleteAsync(game.Id, CancellationToken.None);
+			throw;
 		}
 	}
 }

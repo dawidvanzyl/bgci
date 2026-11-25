@@ -1,7 +1,9 @@
 # Production stack, from the published images. Run it with its own env file:
 #   cp .env.prod.example .env.prod
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
-# DB_PASSWORD must be set in the env file. The web UI is on host port BGCI_WEB_PORT (default 15000).
+# DB_PASSWORD and JOBS_DB_PASSWORD must be set in the env file. The web UI is on host port
+# BGCI_WEB_PORT (default 15000). The jobs dashboard is on host port BGCI_JOBS_DASHBOARD_PORT
+# (default 15003), bound to 127.0.0.1.
 #
 # Each release attaches this file as docker-compose.yml and .env.prod.example as .env.example,
 # so end users run a plain `docker compose up -d` with a `.env` file.
@@ -28,6 +30,25 @@ services:
     networks:
       - bgci-net
 
+  bgci-jobs-db:
+    image: postgres:17-alpine
+    container_name: bgci-jobs-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${JOBS_DB_NAME:-bgci_jobs}
+      - POSTGRES_USER=${JOBS_DB_USER:-bgci_jobs}
+      - POSTGRES_PASSWORD=${JOBS_DB_PASSWORD:?JOBS_DB_PASSWORD must be set in .env}
+    volumes:
+      - bgci-jobs-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - bgci-net
+
   bgci-api:
     image: ghcr.io/dawidvanzyl/bgci-api:latest
     container_name: bgci-api
@@ -41,27 +62,62 @@ services:
       - Database__Password=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       - Bgg__BearerToken=${BGG_BEARER_TOKEN:-}
       - Bgg__Username=${BGG_USERNAME:-}
-      - Bgg__Password=${BGG_PASSWORD:-}
+      - JobsDatabase__Host=bgci-jobs-db
+      - JobsDatabase__Port=5432
+      - JobsDatabase__Name=${JOBS_DB_NAME:-bgci_jobs}
+      - JobsDatabase__User=${JOBS_DB_USER:-bgci_jobs}
+      - JobsDatabase__Password=${JOBS_DB_PASSWORD:?JOBS_DB_PASSWORD must be set in .env}
+    ports:
+      - "${BGCI_WEB_PORT:-15000}:8080"
     depends_on:
       bgci-db:
         condition: service_healthy
+      bgci-jobs-db:
+        condition: service_healthy
+      bgci-jobs:
+        condition: service_started
     networks:
       - bgci-net
 
-  bgci-web:
-    image: ghcr.io/dawidvanzyl/bgci-web:latest
-    container_name: bgci-web
+  bgci-jobs:
+    image: ghcr.io/dawidvanzyl/bgci-jobs:latest
+    container_name: bgci-jobs
     restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - JobsDatabase__Host=bgci-jobs-db
+      - JobsDatabase__Port=5432
+      - JobsDatabase__Name=${JOBS_DB_NAME:-bgci_jobs}
+      - JobsDatabase__User=${JOBS_DB_USER:-bgci_jobs}
+      - JobsDatabase__Password=${JOBS_DB_PASSWORD:?JOBS_DB_PASSWORD must be set in .env}
+      - Database__Host=bgci-db
+      - Database__Port=5432
+      - Database__Name=${DB_NAME:-bgci}
+      - Database__User=${DB_USER:-bgci}
+      - Database__Password=${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      - Bgg__BearerToken=${BGG_BEARER_TOKEN:-}
+      - Bgg__Username=${BGG_USERNAME:-}
+      - Bgg__Password=${BGG_PASSWORD:-}
+      - BggTestAccount__Username=${BGG_TEST_USERNAME:-}
+      - BggTestAccount__Password=${BGG_TEST_PASSWORD:-}
+      - BggTestAccount__BearerToken=${BGG_TEST_BEARER_TOKEN:-}
+      - LiveTest__Enabled=true
+      - LiveTest__Schedule=${BGG_LIVE_TEST_SCHEDULE:-0 3 * * *}
     ports:
-      - "${BGCI_WEB_PORT:-15000}:80"
+      - "127.0.0.1:${BGCI_JOBS_DASHBOARD_PORT:-15003}:8080"
     depends_on:
-      - bgci-api
+      bgci-jobs-db:
+        condition: service_healthy
+      bgci-db:
+        condition: service_healthy
     networks:
       - bgci-net
 
 volumes:
   bgci-pgdata:
     name: bgci-pgdata
+  bgci-jobs-pgdata:
+    name: bgci-jobs-pgdata
 
 networks:
   bgci-net:

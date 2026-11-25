@@ -1,4 +1,7 @@
 using BggIntegration.Domain.Interfaces;
+using GameCollection.Application.DTOs;
+using GameCollection.Application.Queries;
+using MediatR;
 using Moq;
 
 namespace BggIntegration.Testing;
@@ -17,10 +20,31 @@ public sealed class BggIntegrationTestContext
 
 	public ClientMocks Clients { get; } = new();
 
+	public ServiceMocks Services { get; } = new();
+
 	public IServiceProvider ServiceProvider { get; }
 
 	public sealed class ClientMocks
 	{
 		public Mock<IBggClient> BggClientMock { get; } = new();
+	}
+
+	public sealed class ServiceMocks
+	{
+		public Mock<IMediator> MediatorMock { get; } = new();
+
+		public void HasLocalGames(params CollectedGameDto[] games)
+		{
+			MediatorMock
+				.Setup(m => m.Send(It.IsAny<GetAllGamesQuery>(), It.IsAny<CancellationToken>()))
+				.ReturnsAsync(games);
+		}
+
+		public void HasPendingRemoves(params int[] bggIds)
+		{
+			MediatorMock
+				.Setup(m => m.Send(It.IsAny<GetPendingBggRemovesQuery>(), It.IsAny<CancellationToken>()))
+				.ReturnsAsync(bggIds);
+		}
 	}
 }
