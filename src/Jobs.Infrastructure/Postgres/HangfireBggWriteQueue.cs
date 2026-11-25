@@ -12,6 +12,7 @@ public sealed class HangfireBggWriteQueue : IBggWriteQueue
 	private readonly PostgresBggWriteRequestRepository _requests;
 	private readonly IBackgroundJobClient _jobs;
 	private readonly TimeProvider _timeProvider;
+	private readonly BggWriteRequestEnqueuer _enqueuer;
 
 	public HangfireBggWriteQueue(
 		PostgresBggWriteRequestRepository requests,
@@ -21,6 +22,7 @@ public sealed class HangfireBggWriteQueue : IBggWriteQueue
 		_requests = requests;
 		_jobs = jobs;
 		_timeProvider = timeProvider;
+		_enqueuer = new BggWriteRequestEnqueuer(requests, jobs, timeProvider);
 	}
 
 	public Task QueueAddAsync(Guid gameId, int bggId, string name, CancellationToken cancellationToken = default) =>
@@ -69,42 +71,16 @@ public sealed class HangfireBggWriteQueue : IBggWriteQueue
 		Func<Guid, string> createJob,
 		CancellationToken cancellationToken)
 	{
-		var requestId = Guid.NewGuid();
-		var key = $"{kind.ToString().ToLowerInvariant()}:{gameId}";
-		var created = await _requests.CreateAsync(
-			requestId,
+		await _enqueuer.EnqueueAsync(
+			Guid.NewGuid(),
 			kind,
 			bggId,
 			gameId,
 			name,
 			collectionItemId,
 			BggAccounts.Owner,
-			key,
-			_timeProvider.GetUtcNow(),
+			$"{kind.ToString().ToLowerInvariant()}:{gameId}",
+			createJob,
 			cancellationToken);
-		if (!created)
-			return;
-
-		string jobId;
-		try
-		{
-			jobId = createJob(requestId);
-		}
-		catch
-		{
-			await _requests.DeleteAsync(requestId, CancellationToken.None);
-			throw;
-		}
-
-		try
-		{
-			await _requests.SetJobAsync(requestId, jobId, cancellationToken);
-		}
-		catch
-		{
-			_jobs.Delete(jobId);
-			await _requests.DeleteAsync(requestId, CancellationToken.None);
-			throw;
-		}
 	}
 }

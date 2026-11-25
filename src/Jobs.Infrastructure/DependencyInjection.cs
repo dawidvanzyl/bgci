@@ -34,6 +34,8 @@ public static class DependencyInjection
 
 		services.AddScoped(_ => new PostgresBggWriteRequestRepository(connectionString));
 		services.AddScoped<IBggWriteRequestRepository>(provider => provider.GetRequiredService<PostgresBggWriteRequestRepository>());
+		services.AddScoped<IBggLiveTestLog>(provider => provider.GetRequiredService<PostgresBggWriteRequestRepository>());
+		services.AddScoped<IBggTestWriteQueue, HangfireBggTestWriteQueue>();
 		services.AddScoped<IBggWriteRequestReset>(provider => provider.GetRequiredService<PostgresBggWriteRequestRepository>());
 		services.AddScoped<IBggWriteQueue, HangfireBggWriteQueue>();
 

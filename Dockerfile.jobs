@@ -3,6 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /build
 
 COPY src/ ./
+COPY test-data/bgg-games.json test-data/bgg-live-test-accounts.json /test-data/
 RUN dotnet restore bgci.slnx
 RUN dotnet publish Jobs/Jobs.csproj -c Release -o /app/publish --no-restore
 

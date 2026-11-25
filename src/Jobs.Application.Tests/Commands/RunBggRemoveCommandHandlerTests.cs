@@ -29,7 +29,7 @@ public sealed class RunBggRemoveCommandHandlerTests : IClassFixture<JobsTestFixt
 
 		await _handler.Handle(new RunBggRemoveCommand(request.Id, 0), CancellationToken.None);
 
-		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync(777, It.IsAny<CancellationToken>()), Times.Once);
+		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync("owner", 777, It.IsAny<CancellationToken>()), Times.Once);
 		var completion = _context.Repositories.Completions().ShouldHaveSingleItem();
 		completion.Status.ShouldBe(BggWriteRequestStatus.Sent);
 		completion.CollectionItemId.ShouldBe(777);
@@ -44,8 +44,8 @@ public sealed class RunBggRemoveCommandHandlerTests : IClassFixture<JobsTestFixt
 
 		await _handler.Handle(new RunBggRemoveCommand(request.Id, 0), CancellationToken.None);
 
-		_context.Services.BggCollectionWriterMock.Verify(w => w.FindCollectionItemIdAsync(230802, It.IsAny<CancellationToken>()), Times.Once);
-		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync(888, It.IsAny<CancellationToken>()), Times.Once);
+		_context.Services.BggCollectionWriterMock.Verify(w => w.FindCollectionItemIdAsync("owner", 230802, It.IsAny<CancellationToken>()), Times.Once);
+		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync("owner", 888, It.IsAny<CancellationToken>()), Times.Once);
 		_context.Repositories.Completions().ShouldHaveSingleItem().CollectionItemId.ShouldBe(888);
 	}
 
@@ -61,7 +61,7 @@ public sealed class RunBggRemoveCommandHandlerTests : IClassFixture<JobsTestFixt
 		var outcome = await _handler.Handle(new RunBggRemoveCommand(request.Id, 0), CancellationToken.None);
 
 		outcome.ShouldBe(BggJobOutcome.Finished);
-		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
 		var completion = _context.Repositories.Completions().ShouldHaveSingleItem();
 		completion.Status.ShouldBe(BggWriteRequestStatus.Sent);
 		completion.Result.ShouldBe("already gone from the BGG collection");
@@ -76,8 +76,8 @@ public sealed class RunBggRemoveCommandHandlerTests : IClassFixture<JobsTestFixt
 
 		await _handler.Handle(new RunBggRemoveCommand(request.Id, 0), CancellationToken.None);
 
-		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync(777, It.IsAny<CancellationToken>()), Times.Once);
-		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync(9999, It.IsAny<CancellationToken>()), Times.Never);
+		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync("owner", 777, It.IsAny<CancellationToken>()), Times.Once);
+		_context.Services.BggCollectionWriterMock.Verify(w => w.RemoveAsync("owner", 9999, It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	[Theory]
@@ -117,7 +117,7 @@ public sealed class RunBggRemoveCommandHandlerTests : IClassFixture<JobsTestFixt
 	{
 		var request = StoredRequest(collectionItemId: 777);
 		_context.Services.BggCollectionWriterMock
-			.Setup(w => w.RemoveAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+			.Setup(w => w.RemoveAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new InvalidOperationException("BGG down"));
 
 		await Should.ThrowAsync<InvalidOperationException>(
@@ -135,7 +135,7 @@ public sealed class RunBggRemoveCommandHandlerTests : IClassFixture<JobsTestFixt
 	{
 		var request = StoredRequest(bggId: 230802);
 		_context.Services.BggCollectionWriterMock
-			.Setup(w => w.FindCollectionItemIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+			.Setup(w => w.FindCollectionItemIdAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
 			.ThrowsAsync(new InvalidOperationException("BGG not ready"));
 
 		await Should.ThrowAsync<InvalidOperationException>(

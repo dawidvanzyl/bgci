@@ -62,6 +62,16 @@ public sealed class JobsTestContext
 	{
 		public Mock<IBggCollectionWriter> BggCollectionWriterMock { get; } = new();
 
+		public Mock<IBggTestWriteQueue> BggTestWriteQueueMock { get; } = new();
+
+		public Mock<IBggTestCollectionReader> BggTestCollectionReaderMock { get; } = new();
+
+		public Mock<IBggTestAccount> BggTestAccountMock { get; } = new();
+
+		public Mock<ILiveWritableGames> LiveWritableGamesMock { get; } = new();
+
+		public Mock<IBggLiveTestLog> BggLiveTestLogMock { get; } = new();
+
 		public Mock<IMediator> MediatorMock { get; } = new();
 
 		public void GameIs(CollectedGameDto? game)
@@ -95,28 +105,28 @@ public sealed class JobsTestContext
 		public void BggAddReturns(long collectionItemId)
 		{
 			BggCollectionWriterMock
-				.Setup(w => w.AddAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+				.Setup(w => w.AddAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 				.ReturnsAsync(collectionItemId);
 		}
 
 		public void BggAddThrows(Exception exception)
 		{
 			BggCollectionWriterMock
-				.Setup(w => w.AddAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+				.Setup(w => w.AddAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
 				.ThrowsAsync(exception);
 		}
 
 		public void BggFindReturns(long? collectionItemId)
 		{
 			BggCollectionWriterMock
-				.Setup(w => w.FindCollectionItemIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+				.Setup(w => w.FindCollectionItemIdAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
 				.ReturnsAsync(collectionItemId);
 		}
 
 		public void BggRemoveThrows(Exception exception)
 		{
 			BggCollectionWriterMock
-				.Setup(w => w.RemoveAsync(It.IsAny<long>(), It.IsAny<CancellationToken>()))
+				.Setup(w => w.RemoveAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<CancellationToken>()))
 				.ThrowsAsync(exception);
 		}
 	}

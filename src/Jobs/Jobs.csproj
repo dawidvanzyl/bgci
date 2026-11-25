@@ -8,6 +8,11 @@
 		<ProjectReference Include="..\Jobs.Worker\Jobs.Worker.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<None Include="..\..\test-data\bgg-games.json" Link="bgg-games.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+		<None Include="..\..\test-data\bgg-live-test-accounts.json" Link="bgg-live-test-accounts.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+	</ItemGroup>
+
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
 		<Nullable>enable</Nullable>

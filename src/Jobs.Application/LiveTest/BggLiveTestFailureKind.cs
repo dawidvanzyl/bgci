@@ -1,6 +1,6 @@
-namespace BggIntegration.Infrastructure.Tests.Http;
+namespace Jobs.Application.LiveTest;
 
-public enum LiveFailureKind
+public enum BggLiveTestFailureKind
 {
 	Challenge,
 	Outage,
@@ -9,5 +9,5 @@ public enum LiveFailureKind
 	LookupFailed,
 	ReadFailed,
 	StillListed,
-	TimeLimit,
+	TimeLimit
 }

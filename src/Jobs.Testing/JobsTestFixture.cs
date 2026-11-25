@@ -43,6 +43,11 @@ public sealed class JobsTestFixture
 	{
 		services.AddTransient(_ => context.Services.BggCollectionWriterMock.Object);
 		services.AddTransient(_ => context.Services.MediatorMock.Object);
+		services.AddTransient(_ => context.Services.BggTestWriteQueueMock.Object);
+		services.AddTransient(_ => context.Services.BggTestCollectionReaderMock.Object);
+		services.AddTransient(_ => context.Services.BggTestAccountMock.Object);
+		services.AddTransient(_ => context.Services.LiveWritableGamesMock.Object);
+		services.AddTransient(_ => context.Services.BggLiveTestLogMock.Object);
 		services.AddSingleton<TimeProvider>(context.Time);
 	}
 
@@ -50,5 +55,6 @@ public sealed class JobsTestFixture
 	{
 		services.AddTransient<RunBggAddCommandHandler>();
 		services.AddTransient<RunBggRemoveCommandHandler>();
+		services.AddTransient<RunBggLiveTestCommandHandler>();
 	}
 }

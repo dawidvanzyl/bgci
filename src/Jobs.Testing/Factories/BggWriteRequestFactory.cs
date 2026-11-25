@@ -26,6 +26,25 @@ public static class BggWriteRequestFactory
 			attempts);
 	}
 
+	public static BggWriteRequest CreateTestAdd(
+		Guid? id = null,
+		int bggId = DefaultBggId,
+		string name = "Action Test",
+		BggWriteRequestStatus status = BggWriteRequestStatus.Queued,
+		int attempts = 0)
+	{
+		return new BggWriteRequest(
+			id ?? Guid.NewGuid(),
+			BggWriteKind.Add,
+			bggId,
+			null,
+			name,
+			null,
+			"test",
+			status,
+			attempts);
+	}
+
 	public static BggWriteRequest CreateRemove(
 		Guid? id = null,
 		Guid? gameId = null,

@@ -11,7 +11,9 @@ internal static class BggRetryPolicy
 		var attribute = new AutomaticRetryAttribute
 		{
 			Attempts = BggJobPolicy.MaxAttempts - 1,
-			OnAttemptsExceeded = AttemptsExceededAction.Fail
+			OnAttemptsExceeded = AttemptsExceededAction.Fail,
+			// A rejected test-account login must not be retried, because repeated bad logins risk locking the account.
+			ExceptOn = [typeof(BggFinalAttemptException)]
 		};
 
 		var delays = configuration.GetSection("Jobs:RetryDelaysSeconds").Get<int[]>();

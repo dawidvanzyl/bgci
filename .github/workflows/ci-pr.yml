@@ -35,7 +35,7 @@ jobs:
         run: dotnet build src/bgci.slnx --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test src/bgci.slnx --no-build --configuration Release --verbosity normal --filter "Category!=LiveBgg"
+        run: dotnet test src/bgci.slnx --no-build --configuration Release --verbosity normal
 
       - name: Format check
         run: dotnet format src/bgci.slnx --verify-no-changes --severity error
