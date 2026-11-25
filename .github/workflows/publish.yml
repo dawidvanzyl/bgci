@@ -49,24 +49,6 @@ jobs:
           labels: ${{ steps.meta-api.outputs.labels }}
           build-args: DISPLAY_VERSION=${{ steps.meta-api.outputs.version }}
 
-      - name: Extract metadata for Web image
-        id: meta-web
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/dawidvanzyl/bgci-web
-          tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest
-
-      - name: Build and push Web image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.web
-          push: true
-          tags: ${{ steps.meta-web.outputs.tags }}
-          labels: ${{ steps.meta-web.outputs.labels }}
-
       - name: Extract metadata for Jobs image
         id: meta-jobs
         uses: docker/metadata-action@v5

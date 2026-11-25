@@ -67,6 +67,8 @@ services:
       - JobsDatabase__Name=${JOBS_DB_NAME:-bgci_jobs}
       - JobsDatabase__User=${JOBS_DB_USER:-bgci_jobs}
       - JobsDatabase__Password=${JOBS_DB_PASSWORD:?JOBS_DB_PASSWORD must be set in .env}
+    ports:
+      - "${BGCI_WEB_PORT:-15000}:8080"
     depends_on:
       bgci-db:
         condition: service_healthy
@@ -108,17 +110,6 @@ services:
         condition: service_healthy
       bgci-db:
         condition: service_healthy
-    networks:
-      - bgci-net
-
-  bgci-web:
-    image: ghcr.io/dawidvanzyl/bgci-web:latest
-    container_name: bgci-web
-    restart: unless-stopped
-    ports:
-      - "${BGCI_WEB_PORT:-15000}:80"
-    depends_on:
-      - bgci-api
     networks:
       - bgci-net
 

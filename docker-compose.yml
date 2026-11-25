@@ -12,7 +12,7 @@
 #   docker compose --env-file .env.qa --profile qa up --build -d
 #   docker compose --env-file .env.qa --profile qa down -v
 #
-# The dev profile runs the real stack against BoardGameGeek: database, API, web, and the jobs
+# The dev profile runs the real stack against BoardGameGeek: database, API (which serves the web UI), and the jobs
 # service with its jobs database (in a named volume). It needs BGG_USERNAME, BGG_PASSWORD and BGG_BEARER_TOKEN in .env.dev. The jobs service uses BGG_PASSWORD to log in to BoardGameGeek, the API never sees it. Its database
 # lives in a named volume until the profile is taken down with -v. To run only the database,
 # for running the API from source, name the service:
@@ -25,11 +25,11 @@
 #
 # Host ports. Each stack has its own block of 100, below the Windows dynamic port range
 # (49152 and up), so no port here clashes with Docker's random ports:
-#   prod  15000 web (published, BGCI_WEB_PORT), 15001 api, 15002 db,
+#   prod  15000 web UI and API (published, BGCI_WEB_PORT), 15001 api, 15002 db,
 #         15003 jobs dashboard (published, 127.0.0.1 only)
-#   qa    15100 web (published), 15101 api, 15102 db, 15103 mock BGG (published),
+#   qa    15100 web UI and API (published), 15101 api, 15102 db, 15103 mock BGG (published),
 #         15104 jobs dashboard (published, 127.0.0.1 only)
-#   dev   15200 web (published), 15201 api, 15202 db (published, 127.0.0.1 only),
+#   dev   15200 web UI and API (published), 15201 api, 15202 db (published, 127.0.0.1 only),
 #         15203 jobs dashboard (published, 127.0.0.1 only)
 name: bgci-qa
 
@@ -85,13 +85,14 @@ services:
       timeout: 3s
       retries: 15
 
-  # The service name is bgci-api because nginx.conf proxies /api/ to http://bgci-api:8080.
   bgci-api:
     image: bgci-qa-api
     build:
       context: .
       dockerfile: Dockerfile
     profiles: [qa]
+    ports:
+      - "${QA_WEB_PORT:-15100}:8080"
     networks: [qa]
     environment:
       ASPNETCORE_ENVIRONMENT: Production
@@ -158,18 +159,6 @@ services:
       mock-bgg:
         condition: service_healthy
 
-  bgci-web:
-    image: bgci-qa-web
-    build:
-      context: .
-      dockerfile: Dockerfile.web
-    profiles: [qa]
-    networks: [qa]
-    ports:
-      - "${QA_WEB_PORT:-15100}:80"
-    depends_on:
-      - bgci-api
-
   # ---- dev profile: real BGG ----
 
   bgci-dev-db:
@@ -227,17 +216,15 @@ services:
       bgci-dev-db:
         condition: service_healthy
 
-  # nginx.conf proxies /api/ to http://bgci-api:8080, so the dev API takes that name as an
-  # alias on the dev network. The qa API uses it on the qa network.
   bgci-dev-api:
     image: bgci-dev-api
     build:
       context: .
       dockerfile: Dockerfile
     profiles: [dev]
-    networks:
-      dev:
-        aliases: [bgci-api]
+    networks: [dev]
+    ports:
+      - "${DEV_WEB_PORT:-15200}:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       Database__Host: bgci-dev-db
@@ -260,18 +247,6 @@ services:
         condition: service_healthy
       bgci-dev-jobs:
         condition: service_started
-
-  bgci-dev-web:
-    image: bgci-dev-web
-    build:
-      context: .
-      dockerfile: Dockerfile.web
-    profiles: [dev]
-    networks: [dev]
-    ports:
-      - "${DEV_WEB_PORT:-15200}:80"
-    depends_on:
-      - bgci-dev-api
 
 networks:
   qa:

@@ -1,6 +1,6 @@
 # BoardGame Collection Insights
 
-A personal board game collection tracker. Search [BoardGameGeek](https://boardgamegeek.com) to populate game details automatically, or add games manually. Runs entirely on your local machine via Docker: the API, a PostgreSQL database and the web server.
+A personal board game collection tracker. Search [BoardGameGeek](https://boardgamegeek.com) to populate game details automatically, or add games manually. Runs entirely on your local machine via Docker: the API (which also serves the web UI), the jobs service and two PostgreSQL databases.
 
 ---
 
@@ -51,7 +51,7 @@ The jobs service is a second .NET host that runs Hangfire, runs the BGG collecti
 | API | ASP.NET Core Web API (.NET 10) |
 | CQRS | MediatR |
 | Database | PostgreSQL via Dapper (stored functions) |
-| Web Server | nginx (reverse proxy + static files) |
+| Web UI hosting | ASP.NET Core static files (the API serves the built frontend) |
 | Container | Docker / Docker Compose |
 
 ---
@@ -125,7 +125,7 @@ The web UI listens on host port 15000. Set `BGCI_WEB_PORT` in `.env` to use anot
 docker compose ps
 ```
 
-Look for `0.0.0.0:15000->80/tcp` under `bgci-web`. Then open `http://localhost:15000` in your browser.
+Look for `0.0.0.0:15000->8080/tcp` under `bgci-api`. Then open `http://localhost:15000` in your browser.
 
 The jobs dashboard is at `http://localhost:15003`. Set `BGCI_JOBS_DASHBOARD_PORT` in `.env` to use another port. This port listens on 127.0.0.1 only. The dashboard has no login, so only this machine can open it.
 
@@ -165,21 +165,22 @@ Version 2.1.1 removes the `bgg-writer` container. The API now writes to BGG itse
 
 **Upgrading from 2.1.1**
 
-The next version adds the jobs service and the jobs database.
+The next version adds the jobs service and the jobs database. It also removes the `bgci-web` container. The API now serves the web UI on the same port, so `BGCI_WEB_PORT` and the address do not change.
 
 1. Set `JOBS_DB_PASSWORD` in `.env`. Compare `.env` with the new `env.example` for the other new values.
 2. Keep `BGG_PASSWORD` in `.env`. The jobs service now reads it, and the API no longer does. A game you add from BoardGameGeek shows as pending until the jobs service adds it to your BGG collection. A game you remove leaves your collection at once, and the jobs service removes it from your BGG collection afterwards.
 3. To enable the nightly live test, set `BGG_TEST_USERNAME`, `BGG_TEST_PASSWORD` and `BGG_TEST_BEARER_TOKEN` in `.env`. Without them, each run refuses and makes no BGG call.
 4. Replace `docker-compose.yml` with the file from the new release.
-5. Run `docker compose pull`. Every image in the compose file uses a `:latest` tag, and `docker compose up -d` does not fetch a newer `:latest` when a local copy exists. Without the pull, the jobs image is fetched, but the other images stay on their old versions.
-6. Run `docker compose up -d`.
+5. Run `docker compose pull`. Every image in the compose file uses a `:latest` tag, and `docker compose up -d` does not fetch a newer `:latest` when a local copy exists. Without the pull, the jobs image is fetched, but the other images stay on their old versions. The old API image has no web UI.
+6. Run `docker compose up -d --remove-orphans`. This removes the old `bgci-web` container. Without it, the old container keeps host port `BGCI_WEB_PORT`, and the new API cannot use that port.
 7. No data is lost. The `bgci-pgdata` volume is not changed. Docker creates a new `bgci-jobs-pgdata` volume for the jobs database.
+8. Optional: run `docker image rm ghcr.io/dawidvanzyl/bgci-web` to free disk space.
 
 ---
 
 ### Running the QA stack (for developers)
 
-Requires Docker Desktop. The `qa` profile of the root `docker-compose.yml` builds the API, the jobs service and the web server from source and replaces BoardGameGeek with a mock server (`e2e/mock-bgg`). It also runs two PostgreSQL services, one for the collection and one for the jobs service. Both keep their data in memory, so the databases start empty on every run. It is the stack the Playwright suite runs against; see `docs/coding-standards-e2e.md`.
+Requires Docker Desktop. The `qa` profile of the root `docker-compose.yml` builds the API (which serves the web UI) and the jobs service from source and replaces BoardGameGeek with a mock server (`e2e/mock-bgg`). It also runs two PostgreSQL services, one for the collection and one for the jobs service. Both keep their data in memory, so the databases start empty on every run. It is the stack the Playwright suite runs against; see `docs/coding-standards-e2e.md`.
 
 ```bash
 docker compose --env-file .env.qa --profile qa up --build -d
@@ -201,7 +202,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 
 ### Running the dev stack (for developers)
 
-The `dev` profile of the root `docker-compose.yml` builds the database, the API, the jobs service, the jobs database and the web server from source and runs them against the real BoardGameGeek. Use a test BGG account.
+The `dev` profile of the root `docker-compose.yml` builds the database, the API (which serves the web UI), the jobs service and the jobs database from source and runs them against the real BoardGameGeek. Use a test BGG account.
 
 ```bash
 cp .env.dev.example .env.dev
