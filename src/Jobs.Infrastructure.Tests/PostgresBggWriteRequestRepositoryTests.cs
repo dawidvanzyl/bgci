@@ -507,11 +507,12 @@ public sealed class PostgresBggWriteRequestRepositoryTests
 		string account = "owner")
 	{
 		var game = gameId ?? Guid.NewGuid();
+		Guid? rowGame = account == "owner" ? game : null;
 		return database.Repository.CreateAsync(
 			id ?? Guid.NewGuid(),
 			kind,
 			bggId,
-			game,
+			rowGame,
 			"Azul",
 			collectionItemId,
 			account,

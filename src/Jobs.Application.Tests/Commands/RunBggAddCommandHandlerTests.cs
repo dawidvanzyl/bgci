@@ -1,4 +1,5 @@
 using GameCollection.Application.Commands;
+using GameCollection.Application.Queries;
 using Jobs.Application.Commands;
 using Jobs.Application.Models;
 using Jobs.Testing;
@@ -329,6 +330,68 @@ public sealed class RunBggAddCommandHandlerTests : IClassFixture<JobsTestFixture
 		completion.Error.ShouldBe("BGG add failed with status 500: ***");
 		completion.Result.ShouldBeNull();
 		PayloadKeys(completion).ShouldBe(["account", "bggId", "collectionItemId", "gameId", "kind", "name", "requestId"]);
+	}
+
+	[Fact]
+	public async Task Handle_NoGameRow_AddsWithoutReadingOrMarkingTheGame()
+	{
+		var request = StoredTestRequest();
+		_context.Services.BggFindReturns(null);
+		_context.Services.BggAddReturns(555);
+
+		await _handler.Handle(new RunBggAddCommand(request.Id, 0), CancellationToken.None);
+
+		_context.Services.BggCollectionWriterMock.Verify(w => w.AddAsync("test", request.BggId, request.Name, It.IsAny<CancellationToken>()), Times.Once);
+		var completion = _context.Repositories.Completions().ShouldHaveSingleItem();
+		completion.Status.ShouldBe(BggWriteRequestStatus.Sent);
+		completion.CollectionItemId.ShouldBe(555);
+		completion.Account.ShouldBe("test");
+		VerifyNoGameAccess();
+	}
+
+	[Fact]
+	public async Task Handle_NoGameRowAlreadyOnBgg_RecordsSentWithoutMarkingTheGame()
+	{
+		var request = StoredTestRequest();
+		_context.Services.BggFindReturns(4242);
+
+		await _handler.Handle(new RunBggAddCommand(request.Id, 0), CancellationToken.None);
+
+		_context.Services.BggCollectionWriterMock.Verify(w => w.AddAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+		var completion = _context.Repositories.Completions().ShouldHaveSingleItem();
+		completion.Status.ShouldBe(BggWriteRequestStatus.Sent);
+		completion.CollectionItemId.ShouldBe(4242);
+		VerifyNoGameAccess();
+	}
+
+	[Fact]
+	public async Task Handle_NoGameRowFinalAttemptFails_RecordsFailedWithoutMarkingTheGame()
+	{
+		var request = StoredTestRequest();
+		_context.Services.BggFindReturns(null);
+		_context.Services.BggAddThrows(new InvalidOperationException("BGG down"));
+
+		await Should.ThrowAsync<InvalidOperationException>(
+			() => _handler.Handle(new RunBggAddCommand(request.Id, 2), CancellationToken.None));
+
+		var completion = _context.Repositories.Completions().ShouldHaveSingleItem();
+		completion.Status.ShouldBe(BggWriteRequestStatus.Failed);
+		completion.Error.ShouldBe("BGG down");
+		VerifyNoGameAccess();
+	}
+
+	private BggWriteRequest StoredTestRequest()
+	{
+		var request = BggWriteRequestFactory.CreateTestAdd();
+		_context.Repositories.HasStored(request);
+		return request;
+	}
+
+	private void VerifyNoGameAccess()
+	{
+		_context.Services.MediatorMock.Verify(m => m.Send(It.IsAny<GetGameByIdQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+		_context.Services.MediatorMock.Verify(m => m.Send(It.IsAny<MarkGameBggSentCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+		_context.Services.MediatorMock.Verify(m => m.Send(It.IsAny<MarkGameBggFailedCommand>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 
 	private BggWriteRequest StoredRequest(

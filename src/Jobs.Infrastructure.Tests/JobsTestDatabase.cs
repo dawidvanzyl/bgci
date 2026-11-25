@@ -89,7 +89,7 @@ internal sealed class JobsTestDatabase
 		Guid Id,
 		string Kind,
 		int BggId,
-		Guid GameId,
+		Guid? GameId,
 		string Name,
 		long? CollectionItemId,
 		string Account,
@@ -99,7 +99,7 @@ internal sealed class JobsTestDatabase
 		int Attempts);
 
 	public sealed record LogRow(
-		Guid RequestId,
+		Guid? RequestId,
 		string JobType,
 		string Account,
 		string Payload,

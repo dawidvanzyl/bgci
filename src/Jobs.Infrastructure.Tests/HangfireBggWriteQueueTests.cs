@@ -238,7 +238,7 @@ public sealed class HangfireBggWriteQueueTests
 		var cancellationToken = TestContext.Current.CancellationToken;
 		await Queue(database).QueueRemoveAsync(Guid.NewGuid(), 230802, null, cancellationToken);
 		await database.Repository.CreateAsync(
-			Guid.NewGuid(), BggWriteKind.Remove, 13, Guid.NewGuid(), string.Empty, null, "test", "remove:other", DateTimeOffset.UtcNow, cancellationToken);
+			Guid.NewGuid(), BggWriteKind.Remove, 13, null, string.Empty, null, "test", "remove:other", DateTimeOffset.UtcNow, cancellationToken);
 
 		var ids = await Queue(database).GetPendingRemoveBggIdsAsync(cancellationToken);
 

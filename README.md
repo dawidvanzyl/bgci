@@ -169,10 +169,11 @@ The next version adds the jobs service and the jobs database.
 
 1. Set `JOBS_DB_PASSWORD` in `.env`. Compare `.env` with the new `env.example` for the other new values.
 2. Keep `BGG_PASSWORD` in `.env`. The jobs service now reads it, and the API no longer does. A game you add from BoardGameGeek shows as pending until the jobs service adds it to your BGG collection. A game you remove leaves your collection at once, and the jobs service removes it from your BGG collection afterwards.
-2. Replace `docker-compose.yml` with the file from the new release.
-3. Run `docker compose pull`. Every image in the compose file uses a `:latest` tag, and `docker compose up -d` does not fetch a newer `:latest` when a local copy exists. Without the pull, the jobs image is fetched, but the other images stay on their old versions.
-4. Run `docker compose up -d`.
-5. No data is lost. The `bgci-pgdata` volume is not changed. Docker creates a new `bgci-jobs-pgdata` volume for the jobs database.
+3. To enable the nightly live test, set `BGG_TEST_USERNAME`, `BGG_TEST_PASSWORD` and `BGG_TEST_BEARER_TOKEN` in `.env`. Without them, each run refuses and makes no BGG call.
+4. Replace `docker-compose.yml` with the file from the new release.
+5. Run `docker compose pull`. Every image in the compose file uses a `:latest` tag, and `docker compose up -d` does not fetch a newer `:latest` when a local copy exists. Without the pull, the jobs image is fetched, but the other images stay on their old versions.
+6. Run `docker compose up -d`.
+7. No data is lost. The `bgci-pgdata` volume is not changed. Docker creates a new `bgci-jobs-pgdata` volume for the jobs database.
 
 ---
 
@@ -331,7 +332,7 @@ BGG has no public API for writing to a collection. The BGG website writes throug
 
 How it works:
 
-- When you add a game from BGG, the API saves it at once with the BGG status `pending` and queues an add job. When you remove a game, the API deletes it at once and queues a remove job. The jobs service runs one job at a time, in order. A failed job retries twice. After the third failed attempt the game shows the `Failed` mark, or the remove job stays in the Failed list of the jobs dashboard, where you can requeue it.
+- When you add a game from BGG, the API saves it at once with the BGG status `pending` and queues an add job. When you remove a game, the API deletes it at once and queues a remove job. The jobs service runs one job at a time, in order. A failed job retries twice (see the test account rule below). After the third failed attempt the game shows the `Failed` mark, or the remove job stays in the Failed list of the jobs dashboard, where you can requeue it.
 - Every finished job writes one record to the `bgg_job_log` table of the jobs database.
 - The jobs service signs in with `POST /login/api/v1`, using `Bgg:Username` and `Bgg:Password`. It keeps the session cookies in memory, so a restart needs a new login.
 - It adds a game with `POST /api/collectionitem` and removes one with `DELETE /api/collectionitem/{collId}`.
@@ -342,52 +343,43 @@ How it works:
 - One write has a limit of 60 seconds.
 - If a write fails, the local change stays. A failed add shows the `Failed` mark on the game.
 - With no username or password, the job fails.
-- One jobs service serves one account.
+- The jobs service serves two accounts. Your own account is `owner`, and the API always queues its writes for it. The `test` account is only for the live test. A write request for the test account is refused, before any BGG call, unless its username is in `test-data/bgg-live-test-accounts.json`.
+- A job for the test account whose login BGG rejects is not retried, because repeated rejected logins can lock the account. Every other failed job retries twice.
 
 ### Live BGG write test
 
-A mock of BGG serves every normal test. The live test is the one check against the real BGG. It builds the write client and runs one full cycle with a test account: log in, add Action Test (BGG id 3179), find the collection item id, remove the game, and confirm that the collection no longer lists it. It needs no API process, database or frontend.
+A mock of BGG serves every normal test. The live test is the one check against the real BGG. It is a recurring job, `bgg-live-test`, in the jobs service. Each run uses the test account to queue a real add of Action Test (BGG id 3179), check that the collection lists it, queue a real remove, and check that the collection no longer lists it. The add and remove run as normal jobs on the BGG queue, so every BGG write still goes through the one BGG worker. The run itself only reads the collection of the test account. It needs no API process or frontend.
 
-The normal test run and CI do not run it. It carries the trait `Category=LiveBgg`, CI excludes that trait, and the test skips itself unless `BGG_LIVE_TEST` is `true`. A plain `dotnet test` therefore never calls BGG.
+Where it runs:
 
-Run it by hand with the test account. Set four environment variables, then run the filter.
+- It is on in the production and dev stacks. These stacks set `LiveTest__Enabled=true` on the jobs service.
+- It is off in the `qa` stack. The `qa` stack has no test account and registers no live test job.
+- It runs every night at `LiveTest:Schedule` (`BGG_LIVE_TEST_SCHEDULE` in Docker, default `0 3 * * *`, in UTC).
+- If the jobs service was off at the scheduled time, it runs once when the service starts. It does not run once for each missed night.
+- To start it on demand, open the jobs dashboard, go to Recurring Jobs, select `bgg-live-test`, and choose Trigger now.
 
-```bash
-export BGG_LIVE_TEST=true
-export BGG_LIVE_USERNAME=<test account username>
-export BGG_LIVE_PASSWORD=<test account password>
-export BGG_LIVE_BEARER_TOKEN=<bearer token>
-dotnet test src/BggIntegration.Infrastructure.Tests --filter "Category=LiveBgg"
-```
+Set `BGG_TEST_USERNAME`, `BGG_TEST_PASSWORD` and `BGG_TEST_BEARER_TOKEN` in `.env`. These map to `BggTestAccount:Username`, `BggTestAccount:Password` and `BggTestAccount:BearerToken`. The bearer token may hold the same value as `BGG_BEARER_TOKEN`. Only the jobs service reads them. The API never holds test account values.
 
-```powershell
-$env:BGG_LIVE_TEST = "true"
-$env:BGG_LIVE_USERNAME = "<test account username>"
-$env:BGG_LIVE_PASSWORD = "<test account password>"
-$env:BGG_LIVE_BEARER_TOKEN = "<bearer token>"
-dotnet test src/BggIntegration.Infrastructure.Tests --filter "Category=LiveBgg"
-```
+Results:
+
+- The Succeeded or Failed list of the jobs dashboard shows each run. A failed run shows the message.
+- The `bgg_job_log` table of the jobs database holds one record for each run, with the job type `BGG live test`. The record holds no password, cookie or bearer token.
+- A failed run is not retried. The next run is the next scheduled one.
 
 Safety rules:
 
-- The test refuses to run, before any BGG call, when the username is not in `test-data/bgg-live-test-accounts.json`. That file must hold only the test account and never your own account.
-- A missing username, password or bearer token is a failure with a message that names the variable.
-- The test writes only games that `test-data/bgg-games.json` marks `liveWritable`.
-- The test account must not own Action Test outside the test, because the cleanup removes it. The test removes a leftover before the add and removes the game again after the run, passed or failed.
-- A manual run must not overlap a workflow run, because both use the same account.
-
-The workflow run:
-
-- The workflow `.github/workflows/bgg-live.yml` has no schedule. It starts only by hand, on `master` or a `milestone/*` branch. It never starts from a pull request.
-- It runs in the `bgg-test` environment, which is limited to `master` and `milestone/*`. That environment holds the secrets `BGG_TEST_USERNAME`, `BGG_TEST_PASSWORD` and `BGG_BEARER_TOKEN`.
-- One run at a time uses the test account. A second run waits.
-- A failed test fails the run, and GitHub notifies the owner.
+- The live test refuses to run, before any BGG call, when the test username, password or bearer token is missing. A missing value is a failed run with a message that names the setting.
+- It also refuses when the username is not in `test-data/bgg-live-test-accounts.json`, or when it is the same as `BGG_USERNAME`. That file must hold only the test account and never your own account.
+- The test account is a different BGG account from your own. A write request for the test account has no game in your collection, and the live test never changes your game data.
+- The live test writes only games that `test-data/bgg-games.json` marks `liveWritable`.
+- The test account must not own Action Test outside the test, because the cleanup removes it. The run removes a leftover before the add and removes the game again after the run, passed or failed.
+- Only one run at a time uses the test account.
 
 How to read a failure: the message reads `BGG live write failed at step '{step}': {kind}`. The step is `login`, `add`, `collection item id lookup`, `remove` or `cleanup`. The kind is one of these.
 
 | Kind | Meaning |
 |---|---|
-| `Challenge` | BGG answered with a Cloudflare page. A GitHub runner has a datacenter IP. This does not mean that a write broke. |
+| `Challenge` | BGG answered with a Cloudflare page. This does not mean that a write broke. |
 | `Outage` | BGG answered 5xx or did not answer. |
 | `LoginRejected` | BGG refused the login. |
 | `WriteRefused` | BGG refused the add or the remove. |

@@ -85,7 +85,7 @@ public sealed class JobsDatabaseMigratorTests
 	{
 		var connectionString = await _postgres.CreateDatabaseAsync();
 		var all = MigrationScripts.LoadEmbedded(typeof(DependencyInjection).Assembly, "Jobs.Infrastructure.Postgres.Scripts.");
-		var firstTwo = new MigrationScripts(all.Schema.Where(s => !s.Name.StartsWith("0003", StringComparison.Ordinal)).ToList(), [], []);
+		var firstTwo = new MigrationScripts(all.Schema.Where(s => s.Name.StartsWith("0001", StringComparison.Ordinal) || s.Name.StartsWith("0002", StringComparison.Ordinal)).ToList(), [], []);
 		await new DatabaseMigrationRunner(connectionString, firstTwo).RunAsync(TestContext.Current.CancellationToken);
 		await using (var connection = new NpgsqlConnection(connectionString))
 		{

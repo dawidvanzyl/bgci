@@ -45,12 +45,9 @@ public sealed class BggAccountClients : IBggAccountClients
 
 	private BggSettings RequireAllowedTestAccount()
 	{
-		if (string.IsNullOrWhiteSpace(_testSettings.Username))
-		{
-			throw new BggWriteException("configuration", "The BGG test account username is not configured.");
-		}
-
-		return !_allowlist.Contains(_testSettings.Username)
+		return string.IsNullOrWhiteSpace(_testSettings.Username)
+			? throw new BggWriteException("configuration", "The BGG test account username is not configured.")
+			: !_allowlist.Contains(_testSettings.Username)
 			? throw new BggWriteException("configuration", "The BGG test account username is not on the allowlist.")
 			: string.Equals(_testSettings.Username.Trim(), _ownerSettings.Username.Trim(), StringComparison.OrdinalIgnoreCase)
 			? throw new BggWriteException("configuration", "The BGG test account username is the same as the owner username.")

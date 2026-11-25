@@ -12,7 +12,7 @@ Conventions for the Playwright suite in `e2e/`.
 
 ```text
 test-data/
-├── bgg-games.json         # The standard game data set, shared with the live suite
+├── bgg-games.json         # The standard game data set, shared with the live BGG write test job
 └── bgg-live-test-accounts.json  # Usernames the live BGG write test may use
 e2e/
 ├── mock-bgg/              # Mock of BGG: the XML API, the login and the collection write calls
@@ -55,7 +55,7 @@ docker compose --profile qa down -v
 The jobs service logs in with `Bgg__Username` and `Bgg__Password`. Tests never call the real BGG.
 
 - It serves `xmlapi2/search`, `xmlapi2/thing` and `xmlapi2/collection` as BGG XML, built from the standard game data set.
-  The data set is `test-data/bgg-games.json` at the repository root. Mock BGG and the live suite
+  The data set is `test-data/bgg-games.json` at the repository root. Mock BGG and the live BGG write test job
   both read this one file. Neither keeps a game list of its own.
 - The file is one JSON object with one key, `games`, an array of entries. An entry has these fields.
   All are required unless marked optional.
@@ -74,12 +74,12 @@ The jobs service logs in with `Bgg__Username` and `Bgg__Password`. Tests never c
   | `categories`, `mechanics`, `designers`, `artists`, `publishers`, `subdomains` | string[] | Link names. May be empty. |
   | `expansions` | `{ "id": integer, "name": string }[]` | Expansions of this game. May be empty. |
   | `expansionOf` | integer, optional | Only on an expansion entry: the BGG id of its parent game. |
-  | `liveWritable` | boolean | `true` when the live suite may add this game to the test account and remove it again. |
+  | `liveWritable` | boolean | `true` when the live BGG write test job may add this game to the test account and remove it again. |
 
 - The ids are real BGG ids. The other values are test values and can differ from the current values
   on BGG. A consumer of the real BGG matches a game by `id` only, never by name or details.
 - `liveWritable` applies to its own entry only. A writable parent does not make its expansions
-  writable. Mark a game writable only when the test account does not own it outside the live suite.
+  writable. Mark a game writable only when the test account does not own it outside the live BGG write test job.
 - To add a game:
   1. Take the real BGG id from boardgamegeek.com. It must not be in the data set already.
   2. Fill every required field.
