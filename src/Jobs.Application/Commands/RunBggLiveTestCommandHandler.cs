@@ -136,11 +136,17 @@ public class RunBggLiveTestCommandHandler : IRequestHandler<RunBggLiveTestComman
 			if (run.AddRequestId is { } addRequestId)
 				await _queue.CancelAsync(addRequestId, linked.Token);
 
-			var failure = run.AddSent && !run.ConfirmedGone
-				? await SweepForLateListingAsync(run, game, linked.Token)
-				: await RemoveListedOnceAsync(run, linked.Token);
-			if (failure is not null)
-				run.Failures.Add(failure);
+			// A confirmed remove already proved the listing is empty, so no extra read is needed.
+			if (run.AddSent && !run.ConfirmedGone)
+			{
+				var failure = await SweepForLateListingAsync(run, game, linked.Token);
+				if (failure is not null)
+					run.Failures.Add(failure);
+			}
+			else if (!run.ConfirmedGone)
+			{
+				await RemoveListedOnceAsync(run, linked.Token);
+			}
 		}
 		catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
 		{
