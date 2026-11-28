@@ -40,6 +40,11 @@ export class JobsDashboardPage {
 	/** Opens the Enqueued page and follows the link of the queue to its job list. */
 	async openEnqueuedQueue(queue: string): Promise<void> {
 		await this.page.goto(`${jobsUrl}/jobs/enqueued`);
+		await this.followQueueLink(queue);
+	}
+
+	/** Follows the link of the queue on the Enqueued page that is open. */
+	private async followQueueLink(queue: string): Promise<void> {
 		await this.page.getByRole('link', { name: queue, exact: true }).click();
 		await this.page.waitForURL(new RegExp(`/jobs/enqueued/${queue}$`));
 	}
@@ -47,12 +52,14 @@ export class JobsDashboardPage {
 	/**
 	 * The number of jobs with the display name that are Enqueued in the queue or Processing now.
 	 * Hangfire lists a queue on the Enqueued page only while it holds a job, so a missing link counts as no job.
+	 * The link is followed on the same page load that counted it. A second load can come after the last job has left
+	 * the queue, and then it has no link to click.
 	 */
 	async activeJobCount(queue: string, name: JobName): Promise<number> {
 		await this.page.goto(`${jobsUrl}/jobs/enqueued`);
 		let enqueued = 0;
 		if ((await this.page.getByRole('link', { name: queue, exact: true }).count()) > 0) {
-			await this.openEnqueuedQueue(queue);
+			await this.followQueueLink(queue);
 			enqueued = await this.jobRows(name).count();
 		}
 		await this.openProcessing();
