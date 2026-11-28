@@ -144,10 +144,10 @@ services:
       Bgg__Username: qa-user
       Bgg__Password: qa-password
       Jobs__QaResetEnabled: "true"
-      Jobs__RetryDelaysSeconds__0: "1"
-      Jobs__RetryDelaysSeconds__1: "1"
+      Jobs__RetryDelaysSeconds__0: "0"
+      Jobs__RetryDelaysSeconds__1: "0"
       Jobs__QueuePollIntervalSeconds: "0.5"
-      Jobs__SchedulePollingIntervalSeconds: "0.5"
+      Jobs__SchedulePollingIntervalSeconds: "0.2"
       Jobs__WaitForEarlierRequestSeconds: "0.5"
     ports:
       - "127.0.0.1:${QA_JOBS_DASHBOARD_PORT:-15104}:8080"
