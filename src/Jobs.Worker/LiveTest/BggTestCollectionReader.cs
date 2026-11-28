@@ -14,6 +14,7 @@ namespace Jobs.Worker.LiveTest;
 public sealed partial class BggTestCollectionReader : IBggTestCollectionReader
 {
 	private const int _attempts = 5;
+	private static readonly TimeSpan _maxRetryDelay = TimeSpan.FromMinutes(1);
 
 	private readonly IHttpClientFactory _httpClientFactory;
 	private readonly IBggAccountClients _accounts;
@@ -38,14 +39,16 @@ public sealed partial class BggTestCollectionReader : IBggTestCollectionReader
 			Uri.EscapeDataString(settings.Username),
 			bggId);
 
+		var delay = TimeSpan.Zero;
+		var lastRetryStatus = HttpStatusCode.Accepted;
 		for (var attempt = 1; attempt <= _attempts; attempt++)
 		{
 			if (attempt > 1)
 			{
-				await Task.Delay(TimeSpan.FromSeconds(attempt * 2), _timeProvider, cancellationToken);
+				await Task.Delay(delay, _timeProvider, cancellationToken);
 			}
 
-			var (status, body) = await SendAsync(url, settings.BearerToken, cancellationToken);
+			var (status, body, retryAfter) = await SendAsync(url, settings.BearerToken, cancellationToken);
 
 			if (ChallengePattern().IsMatch(body))
 			{
@@ -57,8 +60,10 @@ public sealed partial class BggTestCollectionReader : IBggTestCollectionReader
 				throw new BggTestReadException(BggLiveTestFailureKind.Outage, $"BGG answered the collection read with status {(int)status}.");
 			}
 
-			if (status == HttpStatusCode.Accepted)
+			if (status is HttpStatusCode.Accepted or HttpStatusCode.TooManyRequests)
 			{
+				lastRetryStatus = status;
+				delay = RetryDelay(status, attempt, retryAfter);
 				continue;
 			}
 
@@ -67,7 +72,14 @@ public sealed partial class BggTestCollectionReader : IBggTestCollectionReader
 				: ParseCollectionItemIds(body, bggId);
 		}
 
-		throw new BggTestReadException(BggLiveTestFailureKind.ReadFailed, $"BGG still answered 202 to the collection read after {_attempts} attempts.");
+		throw new BggTestReadException(BggLiveTestFailureKind.ReadFailed, $"BGG still answered {(int)lastRetryStatus} to the collection read after {_attempts} attempts.");
+	}
+
+	// BGG answers 202 while it builds the collection and 429 when it limits the rate. A Retry-After header wins over the backoff.
+	private static TimeSpan RetryDelay(HttpStatusCode status, int attempt, TimeSpan? retryAfter)
+	{
+		var delay = retryAfter ?? TimeSpan.FromSeconds(attempt * (status == HttpStatusCode.TooManyRequests ? 10 : 2));
+		return delay > _maxRetryDelay ? _maxRetryDelay : delay;
 	}
 
 	private static List<long> ParseCollectionItemIds(string body, int bggId)
@@ -97,7 +109,7 @@ public sealed partial class BggTestCollectionReader : IBggTestCollectionReader
 			.ToList();
 	}
 
-	private async Task<(HttpStatusCode Status, string Body)> SendAsync(string url, string bearerToken, CancellationToken cancellationToken)
+	private async Task<(HttpStatusCode Status, string Body, TimeSpan? RetryAfter)> SendAsync(string url, string bearerToken, CancellationToken cancellationToken)
 	{
 		using var request = new HttpRequestMessage(HttpMethod.Get, url);
 		request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken.Trim());
@@ -107,7 +119,9 @@ public sealed partial class BggTestCollectionReader : IBggTestCollectionReader
 			using var http = _httpClientFactory.CreateClient(BggAccountClients.BggWriteClientName);
 			using var response = await http.SendAsync(request, cancellationToken);
 			var body = await response.Content.ReadAsStringAsync(cancellationToken);
-			return (response.StatusCode, body);
+			var header = response.Headers.RetryAfter;
+			var wait = header?.Delta ?? (header?.Date - _timeProvider.GetUtcNow());
+			return (response.StatusCode, body, wait > TimeSpan.Zero ? wait : null);
 		}
 		catch (HttpRequestException ex)
 		{
