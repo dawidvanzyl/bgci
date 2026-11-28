@@ -41,8 +41,7 @@ test.describe('Sync BGG — sync does not import a game whose remove is pending'
 		await mockBgg.failNextWrites(1);
 		await collection.remove('Azul');
 		await waitUntilWriteHeld(mockBgg, 'remove', isRemoveOf(azulItem.collId));
-		await mockBgg.releaseWrites();
-		await mockBgg.holdWrites('all');
+		await mockBgg.releaseWrites({ keepHold: true });
 		await expect
 			.poll(
 				async () =>

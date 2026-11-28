@@ -108,6 +108,8 @@ The jobs service logs in with `Bgg__Username` and `Bgg__Password`. Tests never c
 - It also holds, fails and records writes. A write is an add or a remove. Logins and the collection item lookup are not writes.
   - `holdWrites('all')` makes every write with a valid session wait until `releaseWrites()`. `holdWrites('next')` holds only the next one.
     `releaseWrites()` answers every held write as it would have been answered without the hold, and turns the hold off.
+    `releaseWrites({ keepHold: true })` answers the held writes and keeps the hold on in the same step. To hold the next
+    attempt, use it in place of `releaseWrites()` and then `holdWrites('all')`: a retry can start between those two calls.
     The jobs service gives up on a write after 30 seconds, so never hold a write for more than 20 seconds.
   - `failNextWrites(n)` makes the next `n` writes with a valid session answer 500 and change nothing. A write without a valid session does not use up the count.
   - `setCollectionLookup(false)` makes the collection item lookup answer an empty collection. `reset()` turns it back on.
