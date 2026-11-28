@@ -1,4 +1,5 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
+import { expect } from '../fixtures/expect';
 import { jobsUrl } from '../fixtures/urls';
 
 export type JobName = 'BGG add' | 'BGG remove';

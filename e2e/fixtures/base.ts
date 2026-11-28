@@ -71,4 +71,4 @@ export const test = base.extend<Fixtures>({
 	],
 });
 
-export { expect } from '@playwright/test';
+export { expect } from './expect';
