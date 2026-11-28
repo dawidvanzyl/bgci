@@ -299,7 +299,7 @@ export class CollectionPage {
 	}
 
 	async searchBgg(query: string): Promise<void> {
-		await this.bggSearchInput.fill(query);
+		await this.fillAndAwaitSearch(this.bggSearchInput, query);
 	}
 
 	/** Picks a search result and waits until the pre-filled form is open. */
