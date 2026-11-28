@@ -146,7 +146,7 @@ services:
       Jobs__QaResetEnabled: "true"
       Jobs__RetryDelaysSeconds__0: "0"
       Jobs__RetryDelaysSeconds__1: "0"
-      Jobs__QueuePollIntervalSeconds: "0.5"
+      Jobs__QueuePollIntervalSeconds: "0.25"
       Jobs__SchedulePollingIntervalSeconds: "0.2"
       Jobs__WaitForEarlierRequestSeconds: "0.5"
     ports:
