@@ -303,7 +303,10 @@ const handleControl = async (req, url, res) => {
 	}
 
 	if (url.pathname === '/__control/release-writes') {
-		state.holdMode = 'none';
+		// With keepHold, the hold stays on in the same step, so no later write can pass before a spec turns it on again.
+		if (!(await readJson(req)).keepHold) {
+			state.holdMode = 'none';
+		}
 		for (const answer of state.held.splice(0)) {
 			answer('release');
 		}

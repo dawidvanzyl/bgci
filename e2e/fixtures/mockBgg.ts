@@ -116,9 +116,13 @@ export class MockBgg {
 		await this.post('/__control/hold-writes', { mode });
 	}
 
-	/** Answers every held write as it would have been answered without the hold, and turns the hold off. */
-	async releaseWrites(): Promise<void> {
-		await this.post('/__control/release-writes', {});
+	/**
+	 * Answers every held write as it would have been answered without the hold, and turns the hold off.
+	 * With `keepHold`, the hold stays on, so the next write waits too. Use it in place of a release and a new hold:
+	 * a write that comes between those two calls is not held.
+	 */
+	async releaseWrites(options: { keepHold?: boolean } = {}): Promise<void> {
+		await this.post('/__control/release-writes', { keepHold: options.keepHold ?? false });
 	}
 
 	/** The next `count` writes with a valid session answer 500 and change nothing. */

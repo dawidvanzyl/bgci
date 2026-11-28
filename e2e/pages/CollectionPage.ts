@@ -1,4 +1,5 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { type Locator, type Page } from '@playwright/test';
+import { expect } from '../fixtures/expect';
 
 export interface GameDetails {
 	name: string;
@@ -275,8 +276,18 @@ export class CollectionPage {
 
 	/** Types the query in the Expansions tab search and waits for the result row. */
 	async typeExpansionSearch(query: string, resultName: string): Promise<void> {
-		await this.expansionSearchInput.fill(query);
+		await this.fillAndAwaitSearch(this.expansionSearchInput, query);
 		await this.expansionSearchResultRow(resultName).waitFor();
+	}
+
+	/**
+	 * Types the query and waits for the answer of the BGG search that it starts. The page searches 400 ms after the last
+	 * key. Without this wait, the next step finds the result rows only on a later retry, up to half a second after they show.
+	 */
+	private async fillAndAwaitSearch(input: Locator, query: string): Promise<void> {
+		const answered = this.page.waitForResponse((response) => response.url().includes('/api/bgg/search?'));
+		await input.fill(query);
+		await answered;
 	}
 
 	expansionSearchResultRow(resultName: string): Locator {
@@ -288,7 +299,7 @@ export class CollectionPage {
 	}
 
 	async searchBgg(query: string): Promise<void> {
-		await this.bggSearchInput.fill(query);
+		await this.fillAndAwaitSearch(this.bggSearchInput, query);
 	}
 
 	/** Picks a search result and waits until the pre-filled form is open. */
@@ -299,7 +310,7 @@ export class CollectionPage {
 
 	/** Searches BGG, picks the result, and saves the pre-filled form. */
 	async importFromBgg(query: string, resultName: string): Promise<void> {
-		await this.bggSearchInput.fill(query);
+		await this.fillAndAwaitSearch(this.bggSearchInput, query);
 		await this.page.locator('#bgg-search-results li', { hasText: resultName }).click();
 		await this.saveButton.click();
 	}

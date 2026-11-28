@@ -1,4 +1,5 @@
-import { expect, type APIRequestContext } from '@playwright/test';
+import type { APIRequestContext } from '@playwright/test';
+import { expect } from './expect';
 import type { CollectionPage } from '../pages/CollectionPage';
 import type { JobsDashboardPage } from '../pages/JobsDashboardPage';
 import type { BggAttempt, MockBgg, MockCollectionItem } from './mockBgg';

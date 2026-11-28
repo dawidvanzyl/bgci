@@ -37,8 +37,7 @@ test.describe('Remove not finished — user adds a game whose BGG remove failed'
 		await mockBgg.failNextWrites(1);
 		await collection.remove('Catan');
 		await waitUntilWriteHeld(mockBgg, 'remove', isRemoveOf(collId));
-		await mockBgg.releaseWrites();
-		await mockBgg.holdWrites('all');
+		await mockBgg.releaseWrites({ keepHold: true });
 		await expect
 			.poll(
 				async () =>
